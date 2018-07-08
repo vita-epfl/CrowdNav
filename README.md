@@ -8,7 +8,7 @@ Robot navigation in a dynamic environment
 ## Details
 ### Environment
 There are n pedestrians in the scene with unknown policies A1, A2, ...,
-An and one agent with know policy B. Unknown polices can be linear, random,
+An and one agent with known policy B. Unknown polices can be linear, random,
 ORCA or following the exact trajectories in trajnet)
 
 ### Agent
