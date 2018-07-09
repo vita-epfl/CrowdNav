@@ -1,7 +1,7 @@
 import numpy as np
 from gym_crowd.envs.policy.policy_factory import policy_factory
 from gym_crowd.envs.utils.action import ActionXY, ActionRot
-from gym_crowd.envs.utils.state import State
+import abc
 
 
 class Agent(object):
@@ -35,16 +35,13 @@ class Agent(object):
     def get_full_state(self):
         return self.px, self.py, self.radius, self.theta
 
+    @abc.abstractmethod
     def act(self, ob):
         """
         Create state object and pass it to policy
         :param ob:
         :return:
         """
-        state = State(self.px, self.py, self.gx, self.gy, self.v_pref, self.radius, ob)
-        action = self.policy.predict(state, self.kinematics)
-
-        return action
 
     def check_validity(self, action):
         if self.kinematics:

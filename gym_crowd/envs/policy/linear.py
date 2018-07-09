@@ -6,6 +6,7 @@ import numpy as np
 class LinearPolicy(Policy):
     def __init__(self):
         super().__init__()
+        self.trainable = False
 
     def predict(self, state, kinematics):
         assert kinematics is False

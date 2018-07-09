@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
-from gym_crowd.envs.utils.agent import Agent
+from gym_crowd.envs.utils.pedestrian import Pedestrian
 
 
 class CrowdSim(gym.Env):
@@ -20,10 +20,12 @@ class CrowdSim(gym.Env):
 
     def configure(self, config):
         self.num_peds = config.getint('env', 'num_peds')
-        self.peds = [Agent(config, 'peds') for _ in range(self.num_peds)]
-        self.navigator = Agent(config, 'navigator')
+        self.peds = [Pedestrian(config, 'peds') for _ in range(self.num_peds)]
 
-    def reset(self):
+    def set_navigator(self, navigator):
+        self.navigator = navigator
+
+    def reset(self, phase='test'):
         """
         Set start and goal positions for all agents
         :return:
@@ -73,15 +75,19 @@ class CrowdSim(gym.Env):
         if collision:
             reward = -0.25
             done = True
+            info = 'collision'
         elif dmin < 0.2:
             reward = -0.1 - dmin / 2
             done = False
+            info = 'to close'
         elif reaching_goal:
             reward = 1
             done = True
+            info = 'reaching goal'
         else:
             reward = 0
             done = False
+            info = ''
 
         # update all agents
         self.navigator.step(action)
@@ -93,7 +99,7 @@ class CrowdSim(gym.Env):
         elif self.navigator.sensor == 'RGB':
             raise NotImplemented
 
-        return ob, reward, done
+        return ob, reward, done, info
 
     def render(self, mode='human', close=False):
         if mode == 'human':
