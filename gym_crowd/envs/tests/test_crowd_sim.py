@@ -1,7 +1,7 @@
 import configparser
 import gym
 from gym_crowd.envs.utils.action import ActionXY
-from dynav.navigator import Navigator
+from dynav.utils.navigator import Navigator
 
 
 def test_crowd_sim():

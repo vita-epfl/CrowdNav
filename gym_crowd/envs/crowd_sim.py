@@ -15,11 +15,14 @@ class CrowdSim(gym.Env):
 
         """
         self.num_peds = None
+        self.time_limit = None
         self.peds = None
         self.navigator = None
+        self.timer = None
 
     def configure(self, config):
         self.num_peds = config.getint('env', 'num_peds')
+        self.time_limit = config.getint('env', 'time_limit')
         self.peds = [Pedestrian(config, 'peds') for _ in range(self.num_peds)]
 
     def set_navigator(self, navigator):
@@ -30,6 +33,8 @@ class CrowdSim(gym.Env):
         Set start and goal positions for all agents
         :return:
         """
+        self.timer = 0
+
         # set ped positions
         assert self.num_peds == 2
         self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
@@ -46,7 +51,11 @@ class CrowdSim(gym.Env):
 
         return ob
 
-    def step(self, action):
+    def reward(self, action):
+        _, reward, _, _ = self.step(action, update=False)
+        return reward
+
+    def step(self, action, update=True):
         ped_actions = []
         for ped in self.peds:
             # observation for peds is always coordinates
@@ -84,15 +93,21 @@ class CrowdSim(gym.Env):
             reward = 1
             done = True
             info = 'reaching goal'
+        elif self.timer >= self.time_limit:
+            reward = 0
+            done = True
+            info = 'overtime'
         else:
             reward = 0
             done = False
             info = ''
 
         # update all agents
-        self.navigator.step(action)
-        for i, ped_action in enumerate(ped_actions):
-            self.peds[i].step(ped_action)
+        if update:
+            self.navigator.step(action)
+            for i, ped_action in enumerate(ped_actions):
+                self.peds[i].step(ped_action)
+            self.timer += 1
 
         if self.navigator.sensor == 'Coordinates':
             ob = [ped.get_observable_state() for ped in self.peds]

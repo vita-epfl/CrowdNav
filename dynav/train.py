@@ -1,45 +1,45 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.autograd import Variable
-from torch.utils.data import DataLoader
 import copy
 import sys
 import logging
-import random
-import itertools
 import argparse
 import configparser
-import math
 import os
-import numpy as np
-import re
 import shutil
+import gym
+from dynav.utils.navigator import Navigator
+from dynav.utils.trainer import Trainer
+from dynav.utils.memory import ReplayMemory
+from dynav.utils.explorer import Explorer
+from gym_crowd.envs.policy.policy_factory import policy_factory
 
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--policy', type=str, default='linear')
+    parser.add_argument('--env_config', type=str, default='configs/env.config')
+    parser.add_argument('--policy', type=str, default='value_network')
+    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
+    parser.add_argument('--train_config', type=str, default='configs/train.config')
+    parser.add_argument('--output_dir', type=str, default='output')
+    parser.add_argument('--weights', type=str)
     parser.add_argument('--gpu', default=False, action='store_true')
     args = parser.parse_args()
-    config_file = args.config
-    model_config = configparser.RawConfigParser()
-    model_config.read(config_file)
+
     env_config = configparser.RawConfigParser()
-    env_config.read('configs/env.config')
+    env_config.read(args.env_config)
 
     # configure paths
-    output_dir = os.path.splitext(os.path.basename(args.config))[0]
-    output_dir = os.path.join('data', output_dir)
+    output_dir = os.path.join('data', args.output_dir)
     if os.path.exists(output_dir):
         # raise FileExistsError('Output folder already exists')
-        print('Output folder already exists')
+        # print('Output folder already exists')
+        shutil.rmtree(output_dir)
+        os.mkdir(output_dir)
     else:
         os.mkdir(output_dir)
     log_file = os.path.join(output_dir, 'output.log')
-    shutil.copy(args.config, output_dir)
-    initialized_weights = os.path.join(output_dir, 'initialized_model.pth')
-    trained_weights = os.path.join(output_dir, 'trained_model.pth')
+    shutil.copy(args.train_config, output_dir)
+    weight_file = os.path.join(output_dir, 'trained_model.pth')
 
     # configure logging
     file_handler = logging.FileHandler(log_file, mode='w')
@@ -47,35 +47,73 @@ def main():
     logging.basicConfig(level=logging.INFO, handlers=[stdout_handler, file_handler],
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
-    # configure device
+    # configure policy
+    policy = policy_factory[args.policy]()
+    assert policy.trainable
+    if args.policy_config is None:
+        parser.error('Policy config has to be specified for a trainable network')
+    policy_config = configparser.RawConfigParser()
+    policy_config.read(args.policy_config)
+    policy.configure(policy_config)
+
+    # configure environment
+    env = gym.make('CrowdSim-v0')
+    env.configure(env_config)
+    navigator = Navigator(env_config, 'navigator')
+    policy.set_env(env)
+    navigator.policy = policy
+    env.set_navigator(navigator)
+
+    # read training parameters
+    if args.train_config is None:
+        parser.error('Train config has to be specified for a trainable network')
+    train_config = configparser.RawConfigParser()
+    train_config.read(args.train_config)
+    train_episodes = train_config.getint('train', 'train_episodes')
+    sample_episodes = train_config.getint('train', 'sample_episodes')
+    test_interval = train_config.getint('train', 'test_interval')
+    test_episodes = train_config.getint('train', 'test_episodes')
+    capacity = train_config.getint('train', 'capacity')
+    epsilon_start = train_config.getfloat('train', 'epsilon_start')
+    epsilon_end = train_config.getfloat('train', 'epsilon_end')
+    epsilon_decay = train_config.getfloat('train', 'epsilon_decay')
+    checkpoint_interval = train_config.getint('train', 'checkpoint_interval')
+
+    # configure trainer and explorer
+    memory = ReplayMemory(capacity)
+    model = policy.get_model()
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
     logging.info('Using device: {}'.format(device))
+    trainer = Trainer(train_config, model, memory, device)
+    navigator.policy.set_device(device)
+    gamma = navigator.policy.gamma
+    explorer = Explorer(env, navigator, memory, gamma, device)
+    # TODO: use imitation learned model as stabilized model
+    explorer.update_stabilized_model(model)
 
-    # configure model
-    state_dim = model_config.getint('model', 'state_dim')
-    kinematic = env_config.getboolean('agent', 'kinematic')
-    model = ValueNetwork(state_dim=state_dim, fc_layers=[150, 100, 100], kinematic=kinematic).to(device)
-    logging.debug('Trainable parameters: {}'.format([name for name, p in model.named_parameters() if p.requires_grad]))
+    episode = 0
+    while episode < train_episodes:
+        # epsilon-greedy
+        if episode < epsilon_decay:
+            epsilon = epsilon_start + (epsilon_end - epsilon_start) / epsilon_decay * episode
+        else:
+            epsilon = epsilon_end
+        navigator.policy.set_epsilon(epsilon)
 
-    # load simulated data from ORCA
-    traj_dir = model_config.get('init', 'traj_dir')
-    gamma = model_config.getfloat('model', 'gamma')
-    capacity = model_config.getint('train', 'capacity')
-    memory = initialize_memory(traj_dir, gamma, capacity, kinematic, device)
+        # test
+        if episode % test_interval == 0:
+            explorer.run_k_episodes(test_episodes, 'test', episode)
+            # update stabilized model
+            stabilized_model = copy.deepcopy(model)
+            explorer.update_stabilized_model(stabilized_model)
 
-    # initialize model
-    if os.path.exists(initialized_weights):
-        model.load_state_dict(torch.load(initialized_weights))
-        logging.info('Load initialized model weights')
-    else:
-        initialize_model(model, memory, model_config, device)
-        torch.save(model.state_dict(), initialized_weights)
-        logging.info('Finish initializing model. Model saved')
+        # sample k episodes into memory and optimize over the generated memory
+        explorer.run_k_episodes(sample_episodes, 'train', episode)
+        trainer.optimize_batch()
+        episode += 1
 
-    # train the model
-    train(model, memory, model_config, env_config, device, trained_weights)
-    torch.save(model.state_dict(), trained_weights)
-    logging.info('Finish initializing model. Model saved')
+        if episode != 0 and episode % checkpoint_interval == 0:
+            torch.save(model.state_dict(), weight_file)
 
 
 if __name__ == '__main__':

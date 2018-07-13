@@ -3,7 +3,7 @@ import logging
 import argparse
 import configparser
 import gym
-from dynav.navigator import Navigator
+from dynav.utils.navigator import Navigator
 from gym_crowd.envs.policy.policy_factory import policy_factory
 
 
