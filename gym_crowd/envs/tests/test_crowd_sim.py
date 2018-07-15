@@ -8,9 +8,9 @@ def test_crowd_sim():
     config = configparser.ConfigParser()
     config['env'] = {'num_peds': 2}
     config['peds'] = {'visible': False, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
-                      'sensor': 'Coordinates', 'kinematics': False}
+                      'sensor': 'coordinates', 'kinematics': False}
     config['navigator'] = {'visible': True, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
-                           'sensor': 'Coordinates', 'kinematics': False}
+                           'sensor': 'coordinates', 'kinematics': False}
 
     env = gym.make('CrowdSim-v0')
     env.configure(config)

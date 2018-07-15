@@ -8,9 +8,10 @@ class LinearPolicy(Policy):
         super().__init__()
         self.trainable = False
 
-    def predict(self, state, kinematics):
-        assert kinematics == 'holonomic'
+    def configure(self, config):
+        assert True
 
+    def predict(self, state):
         self_state = state.self_state
         theta = np.arctan2(self_state.gy-self_state.py, self_state.gx-self_state.px)
         vx = np.cos(theta) * self_state.v_pref

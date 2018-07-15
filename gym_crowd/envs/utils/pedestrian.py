@@ -13,5 +13,5 @@ class Pedestrian(Agent):
         :return:
         """
         state = State(self.get_full_state(), ob)
-        action = self.policy.predict(state, self.kinematics)
+        action = self.policy.predict(state)
         return action

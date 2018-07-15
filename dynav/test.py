@@ -10,7 +10,7 @@ from gym_crowd.envs.policy.policy_factory import policy_factory
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--env_config', type=str, default='configs/env.config')
-    parser.add_argument('--policy', type=str, default='linear')
+    parser.add_argument('--policy', type=str, default='orca')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--gpu', default=False, action='store_true')
@@ -41,12 +41,14 @@ def main():
 
     # run one episode
     ob = env.reset('test')
+    env.render()
     timer = 0
     done = False
     while not done:
         action = navigator.act(ob)
         ob, reward, done, info = env.step(action)
         timer += 1
+        env.render()
     print('It takes {} time steps to finish. Last step is {}'.format(timer, info))
 
 

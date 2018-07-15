@@ -36,7 +36,7 @@ class Agent(object):
         return ObservableState(self.px, self.py, self.vx, self.vy, self.radius)
 
     def get_full_state(self):
-        return FullState(self.px, self.py, self.vx, self.vy, self.radius, self.px, self.py, self.v_pref, self.theta)
+        return FullState(self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta)
 
     @abc.abstractmethod
     def act(self, **kwargs):

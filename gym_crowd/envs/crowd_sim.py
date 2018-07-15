@@ -44,7 +44,7 @@ class CrowdSim(gym.Env):
         self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
 
         # get current observation
-        if self.navigator.sensor == 'Coordinates':
+        if self.navigator.sensor == 'coordinates':
             ob = [ped.get_observable_state() for ped in self.peds]
         elif self.navigator.sensor == 'RGB':
             raise NotImplemented
@@ -61,7 +61,7 @@ class CrowdSim(gym.Env):
             # observation for peds is always coordinates
             ob = [other_ped.get_observable_state() for other_ped in self.peds if other_ped != ped]
             if self.navigator.visible:
-                ob += self.navigator.get_observable_state()
+                ob += [self.navigator.get_observable_state()]
             ped_actions.append(ped.act(ob))
 
         # collision detection for navigator, peds are guaranteed to have no collision
@@ -109,7 +109,7 @@ class CrowdSim(gym.Env):
                 self.peds[i].step(ped_action)
             self.timer += 1
 
-        if self.navigator.sensor == 'Coordinates':
+        if self.navigator.sensor == 'coordinates':
             ob = [ped.get_observable_state() for ped in self.peds]
         elif self.navigator.sensor == 'RGB':
             raise NotImplemented
@@ -119,8 +119,12 @@ class CrowdSim(gym.Env):
     def render(self, mode='human', close=False):
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.scatter([ped.px for ped in self.peds], [ped.py for ped in self.peds], color='b')
-            ax.scatter([self.navigator.px], [self.navigator.py], color='y')
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
+            for ped in self.peds:
+                ped_circle = plt.Circle((ped.px, ped.py), ped.radius, fill=True, color='b')
+                ax.add_artist(ped_circle)
+            ax.add_artist(plt.Circle((self.navigator.px, self.navigator.py), self.navigator.radius, fill=True, color='r'))
             plt.show()
         else:
             raise NotImplemented
