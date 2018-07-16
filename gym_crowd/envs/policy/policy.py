@@ -4,7 +4,7 @@ import abc
 
 class Policy(object):
     def __init__(self):
-        ...
+        self.last_state = None
 
     @abc.abstractmethod
     def configure(self, config):
@@ -16,6 +16,10 @@ class Policy(object):
         Policy takes state as input and output an action
 
         """
+        ...
+
+    @abc.abstractmethod
+    def set_phase(self, phase):
         ...
 
     @staticmethod

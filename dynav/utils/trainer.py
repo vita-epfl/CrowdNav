@@ -9,7 +9,6 @@ class Trainer(object):
         batch_size = config.getint('trainer', 'batch_size')
         learning_rate = config.getfloat('trainer', 'learning_rate')
         step_size = config.getint('trainer', 'step_size')
-        self.num_epochs = config.getint('trainer', 'num_epochs')
         self.model = model
         self.device = device
         self.criterion = nn.MSELoss().to(device)
@@ -18,9 +17,9 @@ class Trainer(object):
         self.optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
         self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size, gamma=0.1)
 
-    def optimize_batch(self):
+    def optimize_batch(self, num_epochs):
         losses = []
-        for epoch in range(self.num_epochs):
+        for epoch in range(num_epochs):
             epoch_loss = 0
             for data in self.data_loader:
                 inputs, values = data

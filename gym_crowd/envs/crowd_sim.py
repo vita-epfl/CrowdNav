@@ -1,5 +1,7 @@
 import gym
 import numpy as np
+import random
+import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from gym_crowd.envs.utils.pedestrian import Pedestrian
@@ -32,19 +34,24 @@ class CrowdSim(gym.Env):
 
     def reset(self, phase='test'):
         """
-        Set start and goal positions for all agents
+        Set px, py, gx, gy, vx, vy, theta for navigator and peds
         :return:
         """
         self.timer = 0
-        self.states = []
 
-        # set ped positions
-        assert self.num_peds == 2
-        self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-        self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
-
-        # set navigator position
-        self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+        assert phase in ['train', 'test']
+        if phase == 'train':
+            random.seed(time.time())
+            self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+            self.peds[0].set(-random.random()*2, -1, random.random()*2, -1, 0, 0, 0)
+            self.peds[1].set(-random.random()*2, 1, random.random()*2, 1, 0, 0, 0)
+            self.peds[0].v_pref = self.peds[0].v_pref * random.random()
+            self.peds[1].v_pref = self.peds[1].v_pref * random.random()
+        else:
+            self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+            self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
+            self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
+        self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
 
         # get current observation
         if self.navigator.sensor == 'coordinates':
@@ -74,7 +81,7 @@ class CrowdSim(gym.Env):
         for i, ped in enumerate(self.peds):
             if collision:
                 break
-            for time in np.arange(0, 1.001, 0.25):
+            for time in np.arange(0, 1.001, 0.1):
                 pos = self.navigator.compute_position(action, time)
                 ped_pos = ped.compute_position(ped_actions[i], time)
                 distance = np.linalg.norm((pos[0]-ped_pos[0], pos[1]-ped_pos[1])) - ped.radius - self.navigator.radius

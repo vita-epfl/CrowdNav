@@ -1,5 +1,6 @@
 import logging
 import torch
+import copy
 
 
 class Explorer(object):
@@ -12,9 +13,9 @@ class Explorer(object):
         self.device = device
 
     def update_stabilized_model(self, stabilized_model):
-        self.stabilized_model = stabilized_model
+        self.stabilized_model = copy.deepcopy(stabilized_model)
 
-    def run_k_episodes(self, k, phase, episode, update_memory=True):
+    def run_k_episodes(self, k, phase, episode, update_memory=True, imitation_learning=False):
         self.navigator.policy.set_phase(phase)
         times = []
         succ = 0
@@ -29,14 +30,14 @@ class Explorer(object):
             while not done:
                 action = self.navigator.act(ob)
                 ob, reward, done, info = self.env.step(action)
-                states.append(self.navigator.policy.get_state())
+                states.append(self.navigator.policy.last_state)
                 rewards.append(reward)
                 timer += 1
 
             if update_memory:
-                self.update_memory(states, rewards)
+                self.update_memory(states, rewards, imitation_learning)
 
-            if info == 'reaching goal':
+            if info == 'reach goal':
                 succ += 1
             elif info == 'collision':
                 failure += 1
@@ -48,14 +49,18 @@ class Explorer(object):
         logging.info('{} in episode {} has success rate: {:.2f}, failure rate: {:.2f}, '
                      'average time to reach goal: {:.0f}'.format(phase, episode, succ / k, failure / k, average_time))
 
-    def update_memory(self, states, rewards):
+    def update_memory(self, states, rewards, imitation_learning):
         steps = len(states)
         for i in range(steps-1):
             state = states[i]
             next_state = states[i]
             reward = rewards[i]
 
-            value = reward + self.gamma * self.stabilized_model(torch.Tensor(next_state), self.device).data.item()
+            if imitation_learning:
+                # In imitation learning, the value of state is defined based on the time to reach the goal
+                value = pow(self.gamma, (steps - 1 - i) * self.navigator.v_pref)
+            else:
+                value = reward + self.gamma * self.stabilized_model(torch.Tensor(next_state), self.device).data.item()
             state = torch.Tensor(state).to(self.device).squeeze()
             value = torch.Tensor([value]).to(self.device)
             self.memory.push((state, value))

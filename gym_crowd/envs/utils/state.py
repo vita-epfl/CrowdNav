@@ -1,9 +1,3 @@
-from collections import namedtuple
-
-# FullState = namedtuple('FullState', ['px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta'])
-# ObservableState = namedtuple('ObservableState', ['px', 'py', 'vx', 'vy', 'radius'])
-
-
 class FullState(object):
     def __init__(self, px, py, vx, vy, radius, gx, gy, v_pref, theta):
         self.px = px
@@ -17,7 +11,11 @@ class FullState(object):
         self.theta = theta
 
         self.position = (self.px, self.py)
+        self.goal_position = (self.gx, self.gy)
         self.velocity = (self.vx, self.vy)
+
+    def __add__(self, other):
+        return other + (self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta)
 
 
 class ObservableState(object):
@@ -30,6 +28,9 @@ class ObservableState(object):
 
         self.position = (self.px, self.py)
         self.velocity = (self.vx, self.vy)
+
+    def __add__(self, other):
+        return other + (self.px, self.py, self.vx, self.vy, self.radius)
 
 
 class JointState(object):

@@ -1,5 +1,5 @@
 # DyNav
-Robot navigation in a dynamic environment
+Robot navigation in an unknown and dynamic environment
 
 
 ## Installation
@@ -29,5 +29,5 @@ policy like RL.
 
 
 ### Evaluation
-Both the collision rate and extra time to reach goal are used to measure
+The success rate, collision rate and extra time to reach goal are used to measure
 the methods.

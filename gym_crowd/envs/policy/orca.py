@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionXY
 import rvo2
@@ -45,6 +46,8 @@ class ORCA(Policy):
         velocity        The default initial two-dimensional linear
                         velocity of a new agent (optional).
 
+        In this work, obstacles are not considered. So the value of time_horizon_obst doesn't matter.
+
         """
         super().__init__()
         self.trainable = False
@@ -53,8 +56,8 @@ class ORCA(Policy):
         self.max_neighbors = 5
         self.time_horizon = 1.5
         self.time_horizon_obst = 2
-        self.radius = 0.4
-        self.max_speed = 2
+        self.radius = 0.3
+        self.max_speed = 1
 
     def configure(self, config):
         # self.time_step = config.getfloat('orca', 'time_step')
@@ -66,9 +69,14 @@ class ORCA(Policy):
         # self.max_speed = config.getfloat('orca', 'max_speed')
         return
 
+    def set_phase(self, phase):
+        return
+
     def predict(self, state):
         """
         Create a rvo2 simulation at each time step and run one step
+        Python-RVO2 API: https://github.com/sybrenstuvel/Python-RVO2/blob/master/src/rvo2.pyx
+        How simulation is done in RVO2: https://github.com/sybrenstuvel/Python-RVO2/blob/master/src/Agent.cpp
 
         :param state:
         :return:
@@ -87,8 +95,6 @@ class ORCA(Policy):
         theta = np.arctan2(self_state.gy - self_state.py, self_state.gx - self_state.px)
         pref_vel = (np.cos(theta) * self_state.v_pref, np.sin(theta) * self_state.v_pref)
         sim.setAgentPrefVelocity(self_agent, pref_vel)
-
-        # TODO: make sure setting preferred velocity for other peds doesn't affect the computing of self agent
         for i, ped_state in enumerate(state.ped_states):
             pref_vel = (1, 1)
             sim.setAgentPrefVelocity(other_agents[i], pref_vel)
@@ -96,5 +102,17 @@ class ORCA(Policy):
         sim.doStep()
         next_position = sim.getAgentPosition(self_agent)
         action = ActionXY(next_position[0]-self_state.px, next_position[1]-self_state.py)
+
+        # ORCA doesn't take goal position into account
+        # use interpolation to check if destination is met in the middle
+        for i in np.arange(0, 1.2, 0.2):
+            pos = np.array(self_state.position) + np.array(action) * i
+            goal_pos = np.array(self_state.goal_position)
+            if np.linalg.norm(pos-goal_pos) < self_state.radius:
+                action = ActionXY(action.vx * i, action.vy * i)
+                break
+
+        # save state for imitation learning
+        self.last_state = state.self_state + state.ped_states[0]
 
         return action

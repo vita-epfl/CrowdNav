@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--gpu', default=False, action='store_true')
-    parser.add_argument('--visualize', default=True, action='store_true')
+    parser.add_argument('--visualize', default=False, action='store_true')
     args = parser.parse_args()
 
     env_config = configparser.RawConfigParser()
@@ -39,15 +39,22 @@ def main():
 
     if args.visualize:
         ob = env.reset('test')
-        # env.render()
         timer = 0
         done = False
         while not done:
             action = navigator.act(ob)
             ob, reward, done, info = env.step(action)
             timer += 1
-            # env.render()
         env.render('video')
+        print('It takes {} steps to finish. Last step is {}'.format(timer, info))
+    else:
+        ob = env.reset('test')
+        timer = 0
+        done = False
+        while not done:
+            action = navigator.act(ob)
+            ob, reward, done, info = env.step(action)
+            timer += 1
         print('It takes {} steps to finish. Last step is {}'.format(timer, info))
 
 

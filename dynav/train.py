@@ -60,7 +60,8 @@ def main():
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
     navigator = Navigator(env_config, 'navigator')
-    policy.set_env(env)
+    if args.policy == 'value_network':
+        policy.set_env(env)
     navigator.policy = policy
     env.set_navigator(navigator)
 
@@ -69,6 +70,7 @@ def main():
         parser.error('Train config has to be specified for a trainable network')
     train_config = configparser.RawConfigParser()
     train_config.read(args.train_config)
+    train_epochs = train_config.getint('train', 'train_epochs')
     train_episodes = train_config.getint('train', 'train_episodes')
     sample_episodes = train_config.getint('train', 'sample_episodes')
     test_interval = train_config.getint('train', 'test_interval')
@@ -88,9 +90,19 @@ def main():
     navigator.policy.set_device(device)
     gamma = navigator.policy.gamma
     explorer = Explorer(env, navigator, memory, gamma, device)
-    # TODO: use imitation learned model as stabilized model
+
+    # imitation learning
+    il_episodes = train_config.getint('imitation_learning', 'il_episodes')
+    il_policy = train_config.get('imitation_learning', 'il_policy')
+    il_epochs = train_config.getint('imitation_learning', 'il_epochs')
+    il_policy = policy_factory[il_policy]()
+    navigator.policy = il_policy
+    explorer.run_k_episodes(il_episodes, 'train', 'IL', update_memory=True, imitation_learning=True)
+    trainer.optimize_batch(il_epochs)
     explorer.update_stabilized_model(model)
 
+    # reinforcement learning
+    navigator.policy = policy
     episode = 0
     while episode < train_episodes:
         # epsilon-greedy
@@ -103,14 +115,12 @@ def main():
         # test
         if episode % test_interval == 0:
             explorer.run_k_episodes(test_episodes, 'test', episode)
-            # update stabilized model
-            stabilized_model = copy.deepcopy(model)
-            explorer.update_stabilized_model(stabilized_model)
+            explorer.update_stabilized_model(model)
 
         # sample k episodes into memory and optimize over the generated memory
 
         explorer.run_k_episodes(sample_episodes, 'train', episode)
-        trainer.optimize_batch()
+        trainer.optimize_batch(train_epochs)
         episode += 1
 
         if episode != 0 and episode % checkpoint_interval == 0:

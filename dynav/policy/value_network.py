@@ -92,7 +92,6 @@ class ValueNetworkPolicy(Policy):
         self.phase = None
         self.gamma = None
         self.device = None
-        self.state = None
 
     def configure(self, config):
         reparameterization = config.getboolean('value_network', 'reparameterization')
@@ -122,9 +121,6 @@ class ValueNetworkPolicy(Policy):
 
     def get_model(self):
         return self.value_network
-
-    def get_state(self):
-        return self.state
 
     def build_action_space(self, v_pref):
         """
@@ -197,15 +193,16 @@ class ValueNetworkPolicy(Policy):
                 for ped_state in state.ped_states:
                     next_self_state = self.propagate(state.self_state, action)
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
-                    joint_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
+                    current_dual_state = torch.Tensor([state.self_state + ped_state]).to(self.device)
+                    next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     value = self.env.reward(action) + pow(self.gamma, state.self_state.v_pref) * \
-                            self.value_network(joint_state, self.device).data.item()
+                            self.value_network(next_dual_state, self.device).data.item()
                     if value < min_value:
                         min_value = value
-                        min_state = joint_state
+                        min_state = current_dual_state
                 if min_value > max_min_value:
                     max_min_value = min_value
                     max_action = action
-                    self.state = min_state
+                    self.last_state = min_state
 
         return max_action
