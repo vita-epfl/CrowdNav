@@ -179,6 +179,9 @@ class ValueNetworkPolicy(Policy):
         Input state is the full state of navigator plus the observable state of other agents
 
         """
+        if self.reach_destination(state):
+            return ActionXY(0, 0)
+
         if self.action_space is None:
             self.action_space = self.build_action_space(state.self_state.v_pref)
 

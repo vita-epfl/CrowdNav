@@ -2,7 +2,16 @@
 Robot navigation in a dynamic environment
 
 
-## Usage
+## Installation
+1. Set up [Python-RVO2](https://github.com/sybrenstuvel/Python-RVO2) library
+2. Install gym environment and dynav
+```
+pip install -e .
+```
+3. Test algorithm
+```
+cd dynav/ & python test.py
+```
 
 
 ## Details

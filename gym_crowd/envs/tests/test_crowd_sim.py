@@ -6,11 +6,11 @@ from dynav.utils.navigator import Navigator
 
 def test_crowd_sim():
     config = configparser.ConfigParser()
-    config['env'] = {'num_peds': 2}
-    config['peds'] = {'visible': False, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
-                      'sensor': 'coordinates', 'kinematics': False}
+    config['env'] = {'num_peds': 2, 'time_limit': 25}
+    config['peds'] = {'visible': True, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
+                      'sensor': 'coordinates', 'kinematics': 'holonomic'}
     config['navigator'] = {'visible': True, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
-                           'sensor': 'coordinates', 'kinematics': False}
+                           'sensor': 'coordinates', 'kinematics': 'holonomic'}
 
     env = gym.make('CrowdSim-v0')
     env.configure(config)

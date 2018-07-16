@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 
 
@@ -19,6 +20,7 @@ class CrowdSim(gym.Env):
         self.peds = None
         self.navigator = None
         self.timer = None
+        self.states = None
 
     def configure(self, config):
         self.num_peds = config.getint('env', 'num_peds')
@@ -34,6 +36,7 @@ class CrowdSim(gym.Env):
         :return:
         """
         self.timer = 0
+        self.states = []
 
         # set ped positions
         assert self.num_peds == 2
@@ -88,11 +91,11 @@ class CrowdSim(gym.Env):
         elif dmin < 0.2:
             reward = -0.1 - dmin / 2
             done = False
-            info = 'to close'
+            info = 'too close'
         elif reaching_goal:
             reward = 1
             done = True
-            info = 'reaching goal'
+            info = 'reach goal'
         elif self.timer >= self.time_limit:
             reward = 0
             done = True
@@ -114,6 +117,8 @@ class CrowdSim(gym.Env):
         elif self.navigator.sensor == 'RGB':
             raise NotImplemented
 
+        self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+
         return ob, reward, done, info
 
     def render(self, mode='human', close=False):
@@ -125,6 +130,38 @@ class CrowdSim(gym.Env):
                 ped_circle = plt.Circle((ped.px, ped.py), ped.radius, fill=True, color='b')
                 ax.add_artist(ped_circle)
             ax.add_artist(plt.Circle((self.navigator.px, self.navigator.py), self.navigator.radius, fill=True, color='r'))
+            plt.show()
+        elif mode == 'video':
+            navigator_positions = [(self.states[i][0].px, self.states[i][0].py) for i in range(len(self.states))]
+            ped_positions = [[(self.states[i][1][j].px, self.states[i][1][j].py) for j in range(len(self.peds))]
+                             for i in range(len(self.states))]
+
+            fig, ax = plt.subplots(figsize=(7, 7))
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
+            navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='b')
+            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color='c')
+                    for i in range(len(self.peds))]
+            text = plt.text(0, 8, 'Step: {}'.format(0), fontsize=12)
+            ax.add_artist(navigator)
+            for ped in peds:
+                ax.add_artist(ped)
+            ax.add_artist(text)
+
+            def update(frame_num):
+                navigator.center = navigator_positions[frame_num]
+                for i, ped in enumerate(peds):
+                    ped.center = ped_positions[frame_num][i]
+
+                text.set_text('Step: {}'.format(frame_num))
+
+            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=800)
+            # if save:
+            #     Writer = animation.writers['ffmpeg']
+            #     writer = Writer(fps=1, metadata=dict(artist='Me'), bitrate=1800)
+            #     output_file = 'data/output.mp4'
+            #     anim.save(output_file, writer=writer)
+
             plt.show()
         else:
             raise NotImplemented

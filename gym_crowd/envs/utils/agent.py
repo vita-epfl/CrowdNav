@@ -42,8 +42,7 @@ class Agent(object):
     def act(self, **kwargs):
         """
         Create state object and pass it to policy
-        :param ob:
-        :return:
+
         """
 
     def check_validity(self, action):
