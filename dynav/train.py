@@ -108,6 +108,7 @@ def main():
             explorer.update_stabilized_model(stabilized_model)
 
         # sample k episodes into memory and optimize over the generated memory
+
         explorer.run_k_episodes(sample_episodes, 'train', episode)
         trainer.optimize_batch()
         episode += 1

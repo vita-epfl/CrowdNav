@@ -38,6 +38,12 @@ class Agent(object):
     def get_full_state(self):
         return FullState(self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta)
 
+    def get_position(self):
+        return self.px, self.py
+
+    def get_velocity(self):
+        return self.vx, self.vy
+
     @abc.abstractmethod
     def act(self, **kwargs):
         """

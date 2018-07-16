@@ -127,13 +127,13 @@ class CrowdSim(gym.Env):
             ax.set_xlim(-5, 5)
             ax.set_ylim(-5, 5)
             for ped in self.peds:
-                ped_circle = plt.Circle((ped.px, ped.py), ped.radius, fill=True, color='b')
+                ped_circle = plt.Circle(ped.get_position(), ped.radius, fill=True, color='b')
                 ax.add_artist(ped_circle)
-            ax.add_artist(plt.Circle((self.navigator.px, self.navigator.py), self.navigator.radius, fill=True, color='r'))
+            ax.add_artist(plt.Circle(self.navigator.get_position(), self.navigator.radius, fill=True, color='r'))
             plt.show()
         elif mode == 'video':
-            navigator_positions = [(self.states[i][0].px, self.states[i][0].py) for i in range(len(self.states))]
-            ped_positions = [[(self.states[i][1][j].px, self.states[i][1][j].py) for j in range(len(self.peds))]
+            navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
+            ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
                              for i in range(len(self.states))]
 
             fig, ax = plt.subplots(figsize=(7, 7))

@@ -22,12 +22,9 @@ def main():
 
     # configure policy
     policy = policy_factory[args.policy]()
-    if policy.trainable:
-        if args.weights is None or args.policy_config is None:
-            parser.error('Weights file and model config has to be specified for a trainable network')
-        policy_config = configparser.RawConfigParser()
-        policy_config.read(args.policy_config)
-        policy.configure(policy_config)
+    policy_config = configparser.RawConfigParser()
+    policy_config.read(args.policy_config)
+    policy.configure(policy_config)
 
     # configure device
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
