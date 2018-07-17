@@ -4,26 +4,24 @@ import copy
 
 
 class Explorer(object):
-    def __init__(self, env, navigator, memory, gamma, device):
+    def __init__(self, env, navigator, device, memory=None, gamma=None):
         self.env = env
         self.navigator = navigator
+        self.device = device
         self.memory = memory
         self.gamma = gamma
         self.stabilized_model = None
-        self.device = device
 
     def update_stabilized_model(self, stabilized_model):
         self.stabilized_model = copy.deepcopy(stabilized_model)
 
-    def run_k_episodes(self, k, phase, episode, update_memory=True, imitation_learning=False):
+    def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None):
         self.navigator.policy.set_phase(phase)
         times = []
-        succ = 0
-        failure = 0
+        success = 0
+        collision = 0
         for _ in range(k):
-            # run one episode
             ob = self.env.reset(phase)
-            timer = 0
             done = False
             states = []
             rewards = []
@@ -32,24 +30,31 @@ class Explorer(object):
                 ob, reward, done, info = self.env.step(action)
                 states.append(self.navigator.policy.last_state)
                 rewards.append(reward)
-                timer += 1
 
             if update_memory:
                 self.update_memory(states, rewards, imitation_learning)
 
             if info == 'reach goal':
-                succ += 1
+                success += 1
+                times.append(self.env.timer)
             elif info == 'collision':
-                failure += 1
-            times.append(timer)
+                collision += 1
+
+        success_rate = success / k
+        collision_rate = collision / k
         if len(times) == 0:
             average_time = 0
         else:
             average_time = sum(times) / len(times)
-        logging.info('{} in episode {} has success rate: {:.2f}, failure rate: {:.2f}, '
-                     'average time to reach goal: {:.0f}'.format(phase, episode, succ / k, failure / k, average_time))
+
+        extra_info = '' if episode is None else 'in episode {} '.format(episode)
+        logging.info('{} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.0f}'.
+                     format(phase.upper(), extra_info, success_rate, collision_rate, average_time))
 
     def update_memory(self, states, rewards, imitation_learning):
+        if self.memory is None or self.gamma is None:
+            raise ValueError('Memory or gamma value is not set!')
+
         steps = len(states)
         for i in range(steps-1):
             state = states[i]

@@ -17,22 +17,26 @@ class CrowdSim(gym.Env):
         Navigator is controlled by a known and learnable policy.
 
         """
-        self.num_peds = None
+        self.train_ped_num = None
+        self.test_ped_num = None
         self.time_limit = None
         self.peds = None
         self.navigator = None
         self.timer = None
         self.states = None
+        self.config = None
+        self.test_cases = 5
+        self.test_counter = 0
 
     def configure(self, config):
-        self.num_peds = config.getint('env', 'num_peds')
+        self.train_ped_num = config.getint('env', 'train_ped_num')
         self.time_limit = config.getint('env', 'time_limit')
-        self.peds = [Pedestrian(config, 'peds') for _ in range(self.num_peds)]
+        self.config = config
 
     def set_navigator(self, navigator):
         self.navigator = navigator
 
-    def reset(self, phase='test'):
+    def reset(self, phase='test', test_case=None):
         """
         Set px, py, gx, gy, vx, vy, theta for navigator and peds
         :return:
@@ -41,16 +45,51 @@ class CrowdSim(gym.Env):
 
         assert phase in ['train', 'test']
         if phase == 'train':
+            self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
             random.seed(time.time())
             self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
             self.peds[0].set(-random.random()*2, -1, random.random()*2, -1, 0, 0, 0)
-            self.peds[1].set(-random.random()*2, 1, random.random()*2, 1, 0, 0, 0)
+            # self.peds[1].set(-random.random()*2, 1, random.random()*2, 1, 0, 0, 0)
             self.peds[0].v_pref = self.peds[0].v_pref * random.random()
-            self.peds[1].v_pref = self.peds[1].v_pref * random.random()
+            # self.peds[1].v_pref = self.peds[1].v_pref * random.random()
         else:
-            self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-            self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-            self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
+            if test_case == 0 or (test_case is None and self.test_counter % self.test_cases == 0):
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
+                self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
+                self.peds[1].set(-1, 0, 1, 0, 0, 0, 0)
+                self.peds[2].set(-1, 1, 1, 1, 0, 0, 0)
+                self.peds[3].set(1, -1, -1, -1, 0, 0, 0)
+                self.peds[4].set(1, 0, -1, 0, 0, 0, 0)
+                self.peds[5].set(1, 1, -1, 1, 0, 0, 0)
+            elif test_case == 1 or (test_case is None and self.test_counter % self.test_cases == 1):
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(2)]
+                self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
+                self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
+            elif test_case == 2 or (test_case is None and self.test_counter % self.test_cases == 2):
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(4)]
+                self.peds[0].set(-1, -1, 1, 1, 0, 0, 0)
+                self.peds[1].set(-1, 1, 1, -1, 0, 0, 0)
+                self.peds[2].set(1, 1, -1, -1, 0, 0, 0)
+                self.peds[3].set(1, -1, -1, 1, 0, 0, 0)
+            elif test_case == 3 or (test_case is None and self.test_counter % self.test_cases == 3):
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                self.peds[0].set(-1, 1, -1, -1, 0, 0, 0)
+                self.peds[1].set(0, 1, 0, -1, 0, 0, 0)
+                self.peds[2].set(1, 1, 1, -1, 0, 0, 0)
+            elif test_case == 4 or (test_case is None and self.test_counter % self.test_cases == 4):
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                self.peds[0].set(-1, 1, 1, -1, 0, 0, 0)
+                self.peds[1].set(-1, 2, 1, 0, 0, 0, 0)
+                self.peds[2].set(-1, 0, 1, -2, 0, 0, 0)
+            else:
+                assert True
+            self.test_counter += 1
+
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
 
         # get current observation
@@ -81,9 +120,9 @@ class CrowdSim(gym.Env):
         for i, ped in enumerate(self.peds):
             if collision:
                 break
-            for time in np.arange(0, 1.001, 0.1):
-                pos = self.navigator.compute_position(action, time)
-                ped_pos = ped.compute_position(ped_actions[i], time)
+            for t in np.arange(0, 1.001, 0.1):
+                pos = self.navigator.compute_position(action, t)
+                ped_pos = ped.compute_position(ped_actions[i], t)
                 distance = np.linalg.norm((pos[0]-ped_pos[0], pos[1]-ped_pos[1])) - ped.radius - self.navigator.radius
                 if distance < 0:
                     collision = True

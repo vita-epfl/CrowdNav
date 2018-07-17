@@ -44,8 +44,8 @@ pedestrian is not controlled by trajnet
 Policy takes state as input and output an action. Current available policies:
 * linear: head straight to goal until collision happens or goal is reached
 * orca: compute collision-free velocity under the assumption each agent will take half responsibility
-* value network: learn a value network to predict the value a given state and action is chosen 
-if the one-step ahead if 
+* value network: learn a value network to predict the value of a state and during inference,
+the action with maximum one step lookahead value will be chosen.
 
 ### State
 There are multiple definition of states in different cases. The state representing all

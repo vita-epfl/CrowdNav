@@ -4,6 +4,7 @@ import argparse
 import configparser
 import gym
 from dynav.utils.navigator import Navigator
+from dynav.utils.explorer import Explorer
 from gym_crowd.envs.policy.policy_factory import policy_factory
 
 
@@ -15,6 +16,8 @@ def main():
     parser.add_argument('--weights', type=str)
     parser.add_argument('--gpu', default=False, action='store_true')
     parser.add_argument('--visualize', default=False, action='store_true')
+    parser.add_argument('--phase', type=str, default='test')
+    parser.add_argument('--test_case', type=int, default=None)
     args = parser.parse_args()
 
     env_config = configparser.RawConfigParser()
@@ -28,6 +31,7 @@ def main():
 
     # configure device
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     logging.info('Using device: {}'.format(device))
 
     # configure environment
@@ -36,9 +40,10 @@ def main():
     navigator = Navigator(env_config, 'navigator')
     navigator.policy = policy
     env.set_navigator(navigator)
+    explorer = Explorer(env, navigator, device)
 
     if args.visualize:
-        ob = env.reset('test')
+        ob = env.reset(args.phase, args.test_case)
         timer = 0
         done = False
         while not done:
@@ -48,14 +53,7 @@ def main():
         env.render('video')
         print('It takes {} steps to finish. Last step is {}'.format(timer, info))
     else:
-        ob = env.reset('test')
-        timer = 0
-        done = False
-        while not done:
-            action = navigator.act(ob)
-            ob, reward, done, info = env.step(action)
-            timer += 1
-        print('It takes {} steps to finish. Last step is {}'.format(timer, info))
+        explorer.run_k_episodes(env.test_cases, 'test')
 
 
 if __name__ == '__main__':

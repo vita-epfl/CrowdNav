@@ -89,7 +89,7 @@ def main():
     trainer = Trainer(train_config, model, memory, device)
     navigator.policy.set_device(device)
     gamma = navigator.policy.gamma
-    explorer = Explorer(env, navigator, memory, gamma, device)
+    explorer = Explorer(env, navigator, device, memory, gamma)
 
     # imitation learning
     il_episodes = train_config.getint('imitation_learning', 'il_episodes')
@@ -97,7 +97,7 @@ def main():
     il_epochs = train_config.getint('imitation_learning', 'il_epochs')
     il_policy = policy_factory[il_policy]()
     navigator.policy = il_policy
-    explorer.run_k_episodes(il_episodes, 'train', 'IL', update_memory=True, imitation_learning=True)
+    explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
     trainer.optimize_batch(il_epochs)
     explorer.update_stabilized_model(model)
 
@@ -114,12 +114,12 @@ def main():
 
         # test
         if episode % test_interval == 0:
-            explorer.run_k_episodes(test_episodes, 'test', episode)
+            explorer.run_k_episodes(env.test_cases, 'test', episode=episode)
             explorer.update_stabilized_model(model)
 
         # sample k episodes into memory and optimize over the generated memory
 
-        explorer.run_k_episodes(sample_episodes, 'train', episode)
+        explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
         trainer.optimize_batch(train_epochs)
         episode += 1
 
