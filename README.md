@@ -48,8 +48,8 @@ Policy takes state as input and output an action. Current available policies:
 the action with maximum one step lookahead value will be chosen.
 
 ### State
-There are multiple definition of states in different cases. The state representing all
-the knowledge of environments is defined as JointState:
+There are multiple definition of states in different cases. The state of an agent representing all
+the knowledge of environments is defined as JointState, and it's different from the state of the whole environment.
 * ObservableState: position, velocity, radius of one agent
 * FullState: position, velocity, radius, goal position, preferred velocity, rotation
 * DualState: concatenation of one agent's full state and one another agent's observable state

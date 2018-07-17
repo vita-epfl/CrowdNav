@@ -18,7 +18,6 @@ class CrowdSim(gym.Env):
 
         """
         self.train_ped_num = None
-        self.test_ped_num = None
         self.time_limit = None
         self.peds = None
         self.navigator = None
@@ -185,14 +184,15 @@ class CrowdSim(gym.Env):
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-5, 5)
             ax.set_ylim(-5, 5)
-            navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='b')
-            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color='c')
+            navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
+            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color='C{}'.format(i))
                     for i in range(len(self.peds))]
             text = plt.text(0, 8, 'Step: {}'.format(0), fontsize=12)
             ax.add_artist(navigator)
             for ped in peds:
                 ax.add_artist(ped)
             ax.add_artist(text)
+            plt.legend([navigator], ['navigator'])
 
             def update(frame_num):
                 navigator.center = navigator_positions[frame_num]
@@ -201,7 +201,7 @@ class CrowdSim(gym.Env):
 
                 text.set_text('Step: {}'.format(frame_num))
 
-            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=800)
+            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=400)
             # if save:
             #     Writer = animation.writers['ffmpeg']
             #     writer = Writer(fps=1, metadata=dict(artist='Me'), bitrate=1800)
