@@ -2,6 +2,7 @@ import torch
 import logging
 import argparse
 import configparser
+import numpy as np
 import gym
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
@@ -18,6 +19,7 @@ def main():
     parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
+    parser.add_argument('--val_episodes', type=int, default=100)
     args = parser.parse_args()
 
     env_config = configparser.RawConfigParser()
@@ -51,10 +53,12 @@ def main():
     policy.set_device(device)
     if args.policy == 'value_network':
         policy.set_env(env)
-        policy.set_epsilon(0.1)
 
     if args.visualize:
-        ob = env.reset(args.phase, args.test_case)
+        if args.phase == 'test':
+            ob = env.reset(args.phase, args.test_case)
+        elif args.phase == 'val':
+            ob = env.reset(args.phase)
         done = False
         while not done:
             action = navigator.act(ob)
@@ -62,7 +66,10 @@ def main():
         env.render('video')
         print('It takes {} steps to finish. Last step is {}'.format(env.timer, info))
     else:
-        explorer.run_k_episodes(env.test_cases, args.phase)
+        if args.phase == 'test':
+            explorer.run_k_episodes(env.test_cases, args.phase)
+        elif args.phase == 'val':
+            explorer.run_k_episodes(args.val_episodes, args.phase)
 
 
 if __name__ == '__main__':

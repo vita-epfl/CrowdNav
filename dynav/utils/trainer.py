@@ -37,7 +37,7 @@ class Trainer(object):
                 self.optimizer.step()
                 epoch_loss += loss.data.item()
 
-            logging.debug('Loss in epoch {} is {:.2f}'.format(epoch, epoch_loss))
+            logging.debug('Loss in epoch {}: {:.2f}'.format(epoch, epoch_loss))
             losses.append(epoch_loss / len(self.memory))
         average_epoch_loss = sum(losses) / len(losses)
-        return average_epoch_loss
+        logging.debug('Average loss over epochs: {:.5f}'.format(average_epoch_loss))

@@ -1,6 +1,8 @@
 import logging
 import torch
 import copy
+import time
+import numpy as np
 
 
 class Explorer(object):
@@ -16,10 +18,16 @@ class Explorer(object):
         self.stabilized_model = copy.deepcopy(stabilized_model)
 
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None):
+        if phase == 'train':
+            np.random.seed(time.time())
+        else:
+            # val cases should be the same for different runs
+            np.random.seed(0)
         self.navigator.policy.set_phase(phase)
         times = []
         success = 0
         collision = 0
+        timeout = 0
         failure_cases = []
         for i in range(k):
             ob = self.env.reset(phase)
@@ -41,16 +49,22 @@ class Explorer(object):
             elif info == 'collision':
                 collision += 1
                 failure_cases.append(i)
+            elif info == 'timeout':
+                timeout += 1
+            else:
+                raise ValueError('Invalid info from environment')
 
         success_rate = success / k
         collision_rate = collision / k
+        timeout_rate = timeout / k
+        assert success_rate + collision_rate + timeout_rate == 1
         if len(times) == 0:
             average_time = 0
         else:
             average_time = sum(times) / len(times)
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
-        logging.info('{} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.0f}'.
+        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.0f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, average_time))
 
         if phase == 'test':

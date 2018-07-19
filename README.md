@@ -17,19 +17,58 @@ pip install -r requirements.txt
 The codes are organized in two parts: gym_crowd/ folder contains the environment and
 dynav/ folder contains codes for training and testing the algorithms. All the commands 
 below should be run inside the dynav/ folder.
-1. Test ORCA in case 0 and visualize it with animation
-```
-python test.py --policy orca --visualize --test_case 0
-```
-2. Train value network
+
+
+1. Train a trainable policy.
 ```
 python train.py --policy value_network
 ```
-3. Test and visualize trained value network
+2. Test policies in VAL or TEST test cases. rl_model.pth is reinforcement learning trained model and il_model.pth
+is imitation learning trained model.
 ```
-python test.py --policy value_network --weights data/output/trained_model.pth --visualize --test_case 0
+python test.py --policy orca --phase test
+python test.py --policy orca --phase val
+python test.py --policy value_network --weights data/output/il_model.pth --phase test
+python test.py --policy value_network --weights data/output/il_model.pth --phase val
+python test.py --policy value_network --weights data/output/rl_model.pth --phase test
+python test.py --policy value_network --weights data/output/rl_model.pth --phase val
+```
+3. Run policy for one episode and visualize the result.
+```
+python test.py --policy orca --visualize --phase test --test_case 0
+python test.py --policy orca --visualize --phase val
+python test.py --policy value_network --weights data/output/il_model.pth --phase test --visualize --test_case 0
+python test.py --policy value_network --weights data/output/il_model.pth --phase val --visualize
 ```
 
+## Results
+### Evaluation on val(100 random test cases with one pedestrian controlled by ORCA) 
+| Policy        | Success rate  | Collision rate  | Time to reach goal |
+| ------------- |----   | ----- |----   |
+| ORCA          | 1.00  | 0.00  | 6     |
+| VN(IL)        | 0.53  | 0.01  | 10    |
+| VN(RL)        | 0.59  | 0.02  | 9     |
+
+### Evaluation on test(5 test cases with multiple pedestrians controlled by ORCA)
+| Policy        | Success rate  | Collision rate  | Time to reach goal |
+| ------------- |----   | ----- |----   |
+| ORCA          | 1.00  | 0.00  | 7     |
+| VN(IL)        | 0.40  | 0.20  | 13    |
+| VN(RL)        | 0.40  | 0.00  | 16    |
+
+### Evaluation on val(100 random test cases with one pedestrian controlled by trajnet) 
+| Policy        | Success rate  | Collision rate  | Time to reach goal |
+| ------------- |----   | ----- |----   |
+| ORCA          |       |       |       |
+| VN(IL)        |       |       |       |
+| VN(RL)        |       |       |       |
+
+### Evaluation on test(5 test cases with multiple pedestrians controlled by trajnet)
+| Policy        | Success rate  | Collision rate  | Time to reach goal |
+| ------------- |----   | ----- |----   |
+| ORCA          |       |       |       |
+| VN(IL)        |       |       |       |
+| VN(RL)        |       |       |       |
 
 ## Definitions and implementations
 ### Environment

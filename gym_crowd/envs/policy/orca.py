@@ -97,11 +97,14 @@ class ORCA(Policy):
         # Set the preferred velocity to be a vector of unit magnitude (speed) in the direction of the goal.
         goal_direction = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
         norm = np.linalg.norm(goal_direction)
-        pref_vel = goal_direction / np.linalg.norm(goal_direction) if norm != 0 else np.array((0., 0.))
+        if norm > 1:
+            pref_vel = goal_direction / norm if norm != 0 else np.array((0., 0.))
+        else:
+            pref_vel = goal_direction
 
-        # Perturb a little to avoid deadlocks due to perfect symmetry. Doesn't work, causes collision.
+        # Perturb a little to avoid deadlocks due to perfect symmetry.
         # perturb_angle = np.random.random() * 2 * np.pi
-        # perturb_dist = np.random.random() * 0.00000000
+        # perturb_dist = np.random.random() * 0.0001
         # perturb_vel = np.array((np.cos(perturb_angle), np.sin(perturb_angle))) * perturb_dist
         # pref_vel += perturb_vel
 

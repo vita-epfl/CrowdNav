@@ -31,18 +31,20 @@ def main():
     # configure paths
     output_dir = os.path.join('data', args.output_dir)
     if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-        os.mkdir(output_dir)
+        # shutil.rmtree(output_dir)
+        # os.mkdir(output_dir)
+        print('Output directory already exists!')
     else:
         os.mkdir(output_dir)
     log_file = os.path.join(output_dir, 'output.log')
     shutil.copy(args.train_config, output_dir)
-    weight_file = os.path.join(output_dir, 'trained_model.pth')
+    il_weight_file = os.path.join(output_dir, 'il_model.pth')
+    rl_weight_file = os.path.join(output_dir, 'rl_model.pth')
 
     # configure logging
     file_handler = logging.FileHandler(log_file, mode='w')
     stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(level=logging.DEBUG, handlers=[stdout_handler, file_handler],
+    logging.basicConfig(level=logging.INFO, handlers=[stdout_handler, file_handler],
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
 
     # configure policy
@@ -60,8 +62,6 @@ def main():
     env.configure(env_config)
     navigator = Navigator(env_config, 'navigator')
     env.set_navigator(navigator)
-    if args.policy == 'value_network':
-        policy.set_env(env)
 
     # read training parameters
     if args.train_config is None:
@@ -85,21 +85,28 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
     logging.info('Using device: {}'.format(device))
     trainer = Trainer(train_config, model, memory, device)
-    navigator.policy.set_device(device)
-    gamma = navigator.policy.gamma
-    explorer = Explorer(env, navigator, device, memory, gamma)
+    explorer = Explorer(env, navigator, device, memory, policy.gamma)
 
     # imitation learning
-    il_episodes = train_config.getint('imitation_learning', 'il_episodes')
-    il_policy = train_config.get('imitation_learning', 'il_policy')
-    il_epochs = train_config.getint('imitation_learning', 'il_epochs')
-    il_policy = policy_factory[il_policy]()
-    navigator.set_policy(il_policy)
-    explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
-    trainer.optimize_batch(il_epochs)
+    if os.path.exists(il_weight_file):
+        model.load_state_dict(torch.load(il_weight_file))
+        logging.info('Load imitation learning trained weights.')
+    else:
+        il_episodes = train_config.getint('imitation_learning', 'il_episodes')
+        il_policy = train_config.get('imitation_learning', 'il_policy')
+        il_epochs = train_config.getint('imitation_learning', 'il_epochs')
+        il_policy = policy_factory[il_policy]()
+        navigator.set_policy(il_policy)
+        explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
+        trainer.optimize_batch(il_epochs)
+        torch.save(model.state_dict(), il_weight_file)
+        logging.info('Finish imitation learning. Weights saved.')
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
+    if args.policy == 'value_network':
+        policy.set_env(env)
+    policy.set_device(device)
     navigator.set_policy(policy)
     episode = 0
     while episode < train_episodes:
@@ -122,7 +129,11 @@ def main():
         episode += 1
 
         if episode != 0 and episode % checkpoint_interval == 0:
-            torch.save(model.state_dict(), weight_file)
+            torch.save(model.state_dict(), rl_weight_file)
+
+    # final test
+    explorer.run_k_episodes(val_episodes, 'val', episode=episode)
+    explorer.run_k_episodes(env.test_cases, 'test', episode=episode)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import random
 import itertools
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
@@ -119,8 +118,8 @@ class ValueNetworkPolicy(Policy):
             rotations = [i / 4 * np.pi / 3 - np.pi / 6 for i in range(5)]
             action_space = [ActionRot(*x) for x in itertools.product(velocities, rotations)]
             for i in range(25):
-                random_velocity = random.random() * v_pref
-                random_rotation = random.random() * np.pi / 3 - np.pi / 6
+                random_velocity = np.random.random() * v_pref
+                random_rotation = np.random.random() * np.pi / 3 - np.pi / 6
                 action_space.append(ActionRot(random_velocity, random_rotation))
             action_space.append(ActionRot(0, 0))
         else:
@@ -130,8 +129,8 @@ class ValueNetworkPolicy(Policy):
             for velocity, rotation in itertools.product(velocities, rotations):
                 action_space.append(ActionXY(velocity * np.cos(rotation), velocity * np.sin(rotation)))
             for i in range(25):
-                random_velocity = random.random() * v_pref
-                random_rotation = random.random() * 2 * np.pi
+                random_velocity = np.random.random() * v_pref
+                random_rotation = np.random.random() * 2 * np.pi
                 action_space.append(ActionXY(random_velocity * np.cos(random_rotation),
                                              random_velocity * np.sin(random_rotation)))
             action_space.append(ActionXY(0, 0))
@@ -171,17 +170,19 @@ class ValueNetworkPolicy(Policy):
         Input state is the joint state of navigator plus the observable state of other agents
 
         """
-        if not all([self.env, self.epsilon, self.phase, self.device]):
+        if any([self.env is None, self.phase is None, self.device is None]):
             raise AttributeError('Env, epsilon, phase, device attributes have to be set!')
+        if self.phase == 'train' and self.epsilon is None:
+            raise AttributeError('Epsilon attribute has to be set in training phase')
 
         if self.reach_destination(state):
             return ActionXY(0, 0)
         if self.action_space is None:
             self.action_space = self.build_action_space(state.self_state.v_pref)
 
-        probability = random.random()
+        probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
-            max_action = random.choice(self.action_space)
+            max_action = np.random.choice(self.action_space)
         else:
             max_min_value = float('-inf')
             max_action = None

@@ -1,7 +1,5 @@
 import gym
 import numpy as np
-import random
-import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from gym_crowd.envs.utils.pedestrian import Pedestrian
@@ -48,9 +46,8 @@ class CrowdSim(gym.Env):
         assert phase in ['train', 'val', 'test']
         if phase == 'train' or phase == 'val':
             self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
-            random.seed(time.time())
             self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-            angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2), high=3/2*np.pi-np.arcsin(0.3/2))
+            angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
             self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
         else:
             if test_case == 0 or (test_case is None and self.test_counter % self.test_cases == 0):
@@ -138,22 +135,22 @@ class CrowdSim(gym.Env):
                 else:
                     dmin = distance
         reaching_goal = np.linalg.norm((pos[0]-self.navigator.gx, pos[1]-self.navigator.gy)) < self.navigator.radius
-        if collision:
+        if self.timer >= self.time_limit:
+            reward = 0
+            done = True
+            info = 'timeout'
+        elif collision:
             reward = -0.25
             done = True
             info = 'collision'
-        elif dmin < 0.2:
-            reward = -0.1 - dmin / 2
-            done = False
-            info = 'too close'
         elif reaching_goal:
             reward = 1
             done = True
             info = 'reach goal'
-        elif self.timer >= self.time_limit:
-            reward = 0
-            done = True
-            info = 'overtime'
+        elif dmin < 0.2:
+            reward = -0.1 - dmin / 2
+            done = False
+            info = 'too close'
         else:
             reward = 0
             done = False

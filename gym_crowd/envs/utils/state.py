@@ -17,6 +17,10 @@ class FullState(object):
     def __add__(self, other):
         return other + (self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta)
 
+    def __str__(self):
+        return ' '.join([str(x) for x in [self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy,
+                                          self.v_pref, self.theta]])
+
 
 class ObservableState(object):
     def __init__(self, px, py, vx, vy, radius):
@@ -31,6 +35,9 @@ class ObservableState(object):
 
     def __add__(self, other):
         return other + (self.px, self.py, self.vx, self.vy, self.radius)
+
+    def __str__(self):
+        return ' '.join([str(x) for x in [self.px, self.py, self.vx, self.vy, self.radius]])
 
 
 class JointState(object):
