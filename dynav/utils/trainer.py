@@ -7,6 +7,9 @@ import logging
 
 class Trainer(object):
     def __init__(self, config, model, memory, device):
+        """
+        Train the trainable model of a policy
+        """
         batch_size = config.getint('trainer', 'batch_size')
         learning_rate = config.getfloat('trainer', 'learning_rate')
         step_size = config.getint('trainer', 'step_size')

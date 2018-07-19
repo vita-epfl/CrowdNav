@@ -31,8 +31,6 @@ def main():
     # configure paths
     output_dir = os.path.join('data', args.output_dir)
     if os.path.exists(output_dir):
-        # raise FileExistsError('Output folder already exists')
-        # print('Output folder already exists')
         shutil.rmtree(output_dir)
         os.mkdir(output_dir)
     else:
@@ -49,7 +47,8 @@ def main():
 
     # configure policy
     policy = policy_factory[args.policy]()
-    assert policy.trainable
+    if not policy.trainable:
+        parser.error('Policy has to be trainable')
     if args.policy_config is None:
         parser.error('Policy config has to be specified for a trainable network')
     policy_config = configparser.RawConfigParser()
@@ -60,10 +59,9 @@ def main():
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
     navigator = Navigator(env_config, 'navigator')
+    env.set_navigator(navigator)
     if args.policy == 'value_network':
         policy.set_env(env)
-    navigator.policy = policy
-    env.set_navigator(navigator)
 
     # read training parameters
     if args.train_config is None:
@@ -96,13 +94,13 @@ def main():
     il_policy = train_config.get('imitation_learning', 'il_policy')
     il_epochs = train_config.getint('imitation_learning', 'il_epochs')
     il_policy = policy_factory[il_policy]()
-    navigator.policy = il_policy
+    navigator.set_policy(il_policy)
     explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
     trainer.optimize_batch(il_epochs)
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
-    navigator.policy = policy
+    navigator.set_policy(policy)
     episode = 0
     while episode < train_episodes:
         # epsilon-greedy

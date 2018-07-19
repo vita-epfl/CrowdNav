@@ -83,22 +83,19 @@ class ValueNetworkPolicy(Policy):
         super().__init__()
         self.trainable = True
         self.kinematics = None
-        self.value_network = None
         self.discrete = None
         self.action_space = None
         # TODO: modify the code and remove the environment
         self.env = None
         self.epsilon = None
-        self.phase = None
         self.gamma = None
-        self.device = None
 
     def configure(self, config):
         reparameterization = config.getboolean('value_network', 'reparameterization')
         state_dim = config.getint('value_network', 'state_dim')
         fc_layers = [int(x) for x in config.get('value_network', 'fc_layers').split(', ')]
         self.kinematics = config.get('value_network', 'kinematics')
-        self.value_network = ValueNetwork(reparameterization, state_dim, self.kinematics, fc_layers)
+        self.model = ValueNetwork(reparameterization, state_dim, self.kinematics, fc_layers)
         self.gamma = config.getfloat('value_network', 'gamma')
         self.discrete = config.getboolean('value_network', 'discrete')
 
@@ -113,18 +110,9 @@ class ValueNetworkPolicy(Policy):
     def set_epsilon(self, epsilon):
         self.epsilon = epsilon
 
-    def set_phase(self, phase):
-        self.phase = phase
-
-    def set_device(self, device):
-        self.device = device
-
-    def get_model(self):
-        return self.value_network
-
     def build_action_space(self, v_pref):
         """
-        Action space consists of 25 precomputed actions and 10 randomly sampled actions.
+        Action space consists of 25 uniformly sampled actions in permitted range and 10 randomly sampled actions.
         """
         if self.kinematics == 'unicycle':
             velocities = [(i + 1) / 5 * v_pref for i in range(5)]
@@ -144,7 +132,8 @@ class ValueNetworkPolicy(Policy):
             for i in range(25):
                 random_velocity = random.random() * v_pref
                 random_rotation = random.random() * 2 * np.pi
-                action_space.append(ActionXY(random_velocity * np.cos(random_rotation), random_velocity * np.sin(random_rotation)))
+                action_space.append(ActionXY(random_velocity * np.cos(random_rotation),
+                                             random_velocity * np.sin(random_rotation)))
             action_space.append(ActionXY(0, 0))
 
         return action_space
@@ -182,9 +171,11 @@ class ValueNetworkPolicy(Policy):
         Input state is the joint state of navigator plus the observable state of other agents
 
         """
+        if not all([self.env, self.epsilon, self.phase, self.device]):
+            raise AttributeError('Env, epsilon, phase, device attributes have to be set!')
+
         if self.reach_destination(state):
             return ActionXY(0, 0)
-
         if self.action_space is None:
             self.action_space = self.build_action_space(state.self_state.v_pref)
 
@@ -203,7 +194,7 @@ class ValueNetworkPolicy(Policy):
                     current_dual_state = torch.Tensor([state.self_state + ped_state]).to(self.device)
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     value = self.env.reward(action) + pow(self.gamma, state.self_state.v_pref) * \
-                            self.value_network(next_dual_state, self.device).data.item()
+                        self.model(next_dual_state, self.device).data.item()
                     if value < min_value:
                         min_value = value
                         min_state = current_dual_state

@@ -7,6 +7,10 @@ import abc
 
 class Agent(object):
     def __init__(self, config, section):
+        """
+        Base class for navigator and pedestrian. Have the physical attributes of an agent.
+
+        """
         self.visible = config.getboolean(section, 'visible')
         self.v_pref = config.getfloat(section, 'v_pref')
         self.radius = config.getfloat(section, 'radius')
@@ -45,11 +49,12 @@ class Agent(object):
         return self.vx, self.vy
 
     @abc.abstractmethod
-    def act(self, **kwargs):
+    def act(self, ob):
         """
-        Create state object and pass it to policy
+        Compute state using received observation and pass it to policy
 
         """
+        return
 
     def check_validity(self, action):
         if self.kinematics == 'holonomic':
@@ -70,6 +75,9 @@ class Agent(object):
         return px, py
 
     def step(self, action):
+        """
+        Perform an action and update the state
+        """
         self.check_validity(action)
         pos = self.compute_position(action)
         self.px, self.py = pos

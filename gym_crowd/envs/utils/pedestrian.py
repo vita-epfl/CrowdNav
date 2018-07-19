@@ -8,7 +8,7 @@ class Pedestrian(Agent):
 
     def act(self, ob):
         """
-        The state for pedestrian is its and all other pedestrians' position and goals
+        The state for pedestrian is its full state and all other agents' observable states
         :param ob:
         :return:
         """

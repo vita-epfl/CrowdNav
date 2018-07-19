@@ -8,17 +8,30 @@ Robot navigation in an unknown and dynamic environment
 ```
 pip install -e .
 ```
-3. Train RL algorithm
+3. Install all the dependencies
 ```
-cd dynav/ & python train.py
+pip install -r requirements.txt
 ```
-3. Test and visualize
+
+## Getting started
+The codes are organized in two parts: gym_crowd/ folder contains the environment and
+dynav/ folder contains codes for training and testing the algorithms. All the commands 
+below should be run inside the dynav/ folder.
+1. Test ORCA in case 0 and visualize it with animation
 ```
-cd dynav/ & python test.py --visualize
+python test.py --policy orca --visualize --test_case 0
+```
+2. Train value network
+```
+python train.py --policy value_network
+```
+3. Test and visualize trained value network
+```
+python test.py --policy value_network --weights data/output/trained_model.pth --visualize --test_case 0
 ```
 
 
-## Details
+## Definitions and implementations
 ### Environment
 The environment contains n+1 agents. N of them are pedestrians controlled by certain unknown
 but fixed policy. The other is navigator and it's controlled by one known policy.

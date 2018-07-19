@@ -4,11 +4,27 @@ import abc
 
 class Policy(object):
     def __init__(self):
+        """
+        Base class for all policies, has an abstract method predict().
+        """
+        self.trainable = False
+        self.phase = None
+        self.model = None
+        self.device = None
         self.last_state = None
 
     @abc.abstractmethod
     def configure(self, config):
-        ...
+        return
+
+    def set_phase(self, phase):
+        self.phase = phase
+
+    def set_device(self, device):
+        self.device = device
+
+    def get_model(self):
+        return self.model
 
     @abc.abstractmethod
     def predict(self, state):
@@ -16,11 +32,7 @@ class Policy(object):
         Policy takes state as input and output an action
 
         """
-        ...
-
-    @abc.abstractmethod
-    def set_phase(self, phase):
-        ...
+        return
 
     @staticmethod
     def reach_destination(state):

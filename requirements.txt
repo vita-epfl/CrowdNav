@@ -1,0 +1,5 @@
+gym
+torch
+torchvision
+matplotlib
+numpy

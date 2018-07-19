@@ -12,7 +12,8 @@ class CrowdSim(gym.Env):
 
     def __init__(self):
         """
-        Agents consist of pedestrians and navigator.
+        Movement simulation for n+1 agents
+        Agent can either be pedestrian or navigator.
         Pedestrians are controlled by a unknown and fixed policy.
         Navigator is controlled by a known and learnable policy.
 
@@ -40,6 +41,8 @@ class CrowdSim(gym.Env):
         Set px, py, gx, gy, vx, vy, theta for navigator and peds
         :return:
         """
+        if self.navigator is None:
+            raise AttributeError('Navigator has to be set!')
         self.timer = 0
 
         assert phase in ['train', 'val', 'test']
@@ -49,9 +52,6 @@ class CrowdSim(gym.Env):
             self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
             angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2), high=3/2*np.pi-np.arcsin(0.3/2))
             self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
-            # self.peds[1].set(-random.random()*2, 1, random.random()*2, 1, 0, 0, 0)
-            # self.peds[0].v_pref = self.peds[0].v_pref * random.random()
-            # self.peds[1].v_pref = self.peds[1].v_pref * random.random()
         else:
             if test_case == 0 or (test_case is None and self.test_counter % self.test_cases == 0):
                 self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
@@ -101,10 +101,18 @@ class CrowdSim(gym.Env):
         return ob
 
     def reward(self, action):
+        """
+        Only compute reward but don't update the state.
+
+        """
         _, reward, _, _ = self.step(action, update=False)
         return reward
 
     def step(self, action, update=True):
+        """
+        Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
+
+        """
         ped_actions = []
         for ped in self.peds:
             # observation for peds is always coordinates
