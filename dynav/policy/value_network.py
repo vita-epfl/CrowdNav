@@ -136,13 +136,15 @@ class ValueNetworkPolicy(Policy):
                 action_space.append(ActionRot(random_velocity, random_rotation))
             action_space.append(ActionRot(0, 0))
         else:
-            vxs = [(i + 1) / 5 * v_pref for i in range(5)]
-            vys = [(i + 1) / 5 * v_pref for i in range(5)]
-            action_space = [ActionXY(*x) for x in itertools.product(vxs, vys)]
+            velocities = [(i + 1) / 5 * v_pref for i in range(5)]
+            rotations = [i / 4 * 2 * np.pi for i in range(5)]
+            action_space = []
+            for velocity, rotation in itertools.product(velocities, rotations):
+                action_space.append(ActionXY(velocity * np.cos(rotation), velocity * np.sin(rotation)))
             for i in range(25):
-                random_vx = random.random() * v_pref
-                random_vy = random.random() * v_pref
-                action_space.append(ActionXY(random_vx, random_vy))
+                random_velocity = random.random() * v_pref
+                random_rotation = random.random() * 2 * np.pi
+                action_space.append(ActionXY(random_velocity * np.cos(random_rotation), random_velocity * np.sin(random_rotation)))
             action_space.append(ActionXY(0, 0))
 
         return action_space
@@ -151,28 +153,33 @@ class ValueNetworkPolicy(Policy):
         delta_t = 1
         if isinstance(state, ObservableState):
             # propagate state of peds
-            new_px = state.px + action.vx * delta_t
-            new_py = state.py + action.vy * delta_t
-            state = ObservableState(new_px, new_py, action.vx, action.vy, state.radius)
+            next_px = state.px + action.vx * delta_t
+            next_py = state.py + action.vy * delta_t
+            next_state = ObservableState(next_px, next_py, action.vx, action.vy, state.radius)
         elif isinstance(state, FullState):
             # propagate state of current agent
             # perform action without rotation
             if self.kinematics == 'holonomic':
-                new_px = state.px + action.vx * delta_t
-                new_py = state.py + action.vy * delta_t
+                next_px = state.px + action.vx * delta_t
+                next_py = state.py + action.vy * delta_t
+                next_state = FullState(next_px, next_py, state.vx, state.vy, state.radius,
+                                       state.gx, state.gy, state.v_pref, state.theta)
             else:
-                new_px = state.px + np.cos(action.r + state.theta) * action.v * delta_t
-                new_py = state.py + np.sin(action.r + state.theta) * action.v * delta_t
-            state = FullState(new_px, new_py, state.vx, state.vy, state.radius,
-                              state.gx, state.gy, state.v_pref, state.theta)
+                next_px = state.px + np.cos(action.r + state.theta) * action.v * delta_t
+                next_py = state.py + np.sin(action.r + state.theta) * action.v * delta_t
+                next_theta = state.theta + action.r
+                next_vx = action.v * np.cos(next_theta)
+                next_vy = action.v * np.sin(next_theta)
+                next_state = FullState(next_px, next_py, next_vx, next_vy, state.radius, state.gx, state.gy,
+                                       state.v_pref, next_theta)
         else:
             raise ValueError('Type error')
 
-        return state
+        return next_state
 
     def predict(self, state):
         """
-        Input state is the full state of navigator plus the observable state of other agents
+        Input state is the joint state of navigator plus the observable state of other agents
 
         """
         if self.reach_destination(state):

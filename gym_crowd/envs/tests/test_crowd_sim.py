@@ -6,7 +6,7 @@ from dynav.utils.navigator import Navigator
 
 def test_crowd_sim():
     config = configparser.ConfigParser()
-    config['env'] = {'num_peds': 2, 'time_limit': 25}
+    config['env'] = {'train_ped_num': 2, 'time_limit': 25}
     config['peds'] = {'visible': True, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
                       'sensor': 'coordinates', 'kinematics': 'holonomic'}
     config['navigator'] = {'visible': True, 'policy': 'linear', 'radius': 0.3, 'v_pref': 1,
@@ -19,13 +19,13 @@ def test_crowd_sim():
     env.set_navigator(navigator)
 
     # failure case
-    env.reset()
+    env.reset('test', test_case=0)
     action = ActionXY(0, 1)
     ob, reward, done, info = env.step(action)
     assert reward == -0.25
 
     # success case
-    env.reset()
+    env.reset('test', test_case=0)
     env.step(ActionXY(0, 0.1))
     env.step(ActionXY(0, 0.1))
     ob, reward, done, info = env.step(ActionXY(0, 3.8))

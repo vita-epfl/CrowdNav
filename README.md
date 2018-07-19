@@ -60,6 +60,14 @@ There are two types of actions depending on what kinematics constraint the agent
 * ActionXY: (x-axis velocity, y-axis velocity) if kinematics == 'holonomic'
 * ActionRot: (velocity, rotation angle) if kinematics == 'unicycle'
 
+### Phase
+Environment has different setup for different phases and the behavior of policy also 
+depends what phase it is in.
+* Train: environment randomly initialized the position and goal for pedestrians and RL policy
+uses epsilon-greedy to balance exploration and exploitation.
+* Val: environment is the same as train, but RL policy uses a stable epsilon.
+* Test: environment has some fixed test cases and RL policy uses a stable epsilon. 
+
 ### Evaluation
 The success rate, collision rate and extra time to reach goal are used to measure
 the methods.

@@ -5,7 +5,7 @@ import configparser
 import gym
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
-from gym_crowd.envs.policy.policy_factory import policy_factory
+from dynav.policy.policy_factory import policy_factory
 
 
 def main():
@@ -28,6 +28,11 @@ def main():
     policy_config = configparser.RawConfigParser()
     policy_config.read(args.policy_config)
     policy.configure(policy_config)
+    if policy.trainable:
+        if args.weights is None:
+            parser.error('Trainable policy must be specified with a saved weights')
+        policy.get_model().load_state_dict(torch.load(args.weights))
+        policy.set_phase(args.phase)
 
     # configure device
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
@@ -40,18 +45,20 @@ def main():
     navigator = Navigator(env_config, 'navigator')
     navigator.policy = policy
     env.set_navigator(navigator)
+
     explorer = Explorer(env, navigator, device)
+    if args.policy == 'value_network':
+        policy.set_env(env)
+        policy.set_device(device)
 
     if args.visualize:
         ob = env.reset(args.phase, args.test_case)
-        timer = 0
         done = False
         while not done:
             action = navigator.act(ob)
             ob, reward, done, info = env.step(action)
-            timer += 1
         env.render('video')
-        print('It takes {} steps to finish. Last step is {}'.format(timer, info))
+        print('It takes {} steps to finish. Last step is {}'.format(env.timer, info))
     else:
         explorer.run_k_episodes(env.test_cases, 'test')
 

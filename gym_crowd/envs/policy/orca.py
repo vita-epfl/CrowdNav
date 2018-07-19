@@ -94,10 +94,18 @@ class ORCA(Policy):
         other_agents = [sim.addAgent(ped_state.position, *params, ped_state.radius, self.max_speed, ped_state.velocity)
                         for ped_state in state.ped_states]
 
-        # set preferred velocity
-        theta = np.arctan2(self_state.gy - self_state.py, self_state.gx - self_state.px)
-        pref_vel = (np.cos(theta) * self_state.v_pref, np.sin(theta) * self_state.v_pref)
-        sim.setAgentPrefVelocity(self_agent, pref_vel)
+        # Set the preferred velocity to be a vector of unit magnitude (speed) in the direction of the goal.
+        goal_direction = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
+        norm = np.linalg.norm(goal_direction)
+        pref_vel = goal_direction / np.linalg.norm(goal_direction) if norm != 0 else np.array((0., 0.))
+
+        # Perturb a little to avoid deadlocks due to perfect symmetry. Doesn't work, causes collision.
+        # perturb_angle = np.random.random() * 2 * np.pi
+        # perturb_dist = np.random.random() * 0.00000000
+        # perturb_vel = np.array((np.cos(perturb_angle), np.sin(perturb_angle))) * perturb_dist
+        # pref_vel += perturb_vel
+
+        sim.setAgentPrefVelocity(self_agent, tuple(pref_vel))
         for i, ped_state in enumerate(state.ped_states):
             pref_vel = (1, 1)
             sim.setAgentPrefVelocity(other_agents[i], pref_vel)

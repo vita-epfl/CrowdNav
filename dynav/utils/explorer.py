@@ -20,7 +20,8 @@ class Explorer(object):
         times = []
         success = 0
         collision = 0
-        for _ in range(k):
+        failure_cases = []
+        for i in range(k):
             ob = self.env.reset(phase)
             done = False
             states = []
@@ -39,6 +40,7 @@ class Explorer(object):
                 times.append(self.env.timer)
             elif info == 'collision':
                 collision += 1
+                failure_cases.append(i)
 
         success_rate = success / k
         collision_rate = collision / k
@@ -51,7 +53,10 @@ class Explorer(object):
         logging.info('{} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.0f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, average_time))
 
-    def update_memory(self, states, rewards, imitation_learning):
+        if phase == 'test':
+            logging.debug('Failure cases: ' + ' '.join([str(x) for x in failure_cases]))
+
+    def update_memory(self, states, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:
             raise ValueError('Memory or gamma value is not set!')
 

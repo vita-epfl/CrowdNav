@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+import logging
 
 
 class Trainer(object):
@@ -27,13 +28,13 @@ class Trainer(object):
                 values = Variable(values)
 
                 self.optimizer.zero_grad()
-
                 outputs = self.model(inputs, self.device)
                 loss = self.criterion(outputs, values)
                 loss.backward()
                 self.optimizer.step()
                 epoch_loss += loss.data.item()
-            # logging.info('Loss in epoch {} is {}'.format(epoch, epoch_loss))
+
+            logging.debug('Loss in epoch {} is {:.2f}'.format(epoch, epoch_loss))
             losses.append(epoch_loss / len(self.memory))
         average_epoch_loss = sum(losses) / len(losses)
         return average_epoch_loss

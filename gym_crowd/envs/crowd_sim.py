@@ -42,17 +42,23 @@ class CrowdSim(gym.Env):
         """
         self.timer = 0
 
-        assert phase in ['train', 'test']
-        if phase == 'train':
+        assert phase in ['train', 'val', 'test']
+        if phase == 'train' or phase == 'val':
             self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
             random.seed(time.time())
             self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-            self.peds[0].set(-random.random()*2, -1, random.random()*2, -1, 0, 0, 0)
+            angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2), high=3/2*np.pi-np.arcsin(0.3/2))
+            self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
             # self.peds[1].set(-random.random()*2, 1, random.random()*2, 1, 0, 0, 0)
-            self.peds[0].v_pref = self.peds[0].v_pref * random.random()
+            # self.peds[0].v_pref = self.peds[0].v_pref * random.random()
             # self.peds[1].v_pref = self.peds[1].v_pref * random.random()
         else:
             if test_case == 0 or (test_case is None and self.test_counter % self.test_cases == 0):
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(2)]
+                self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
+                self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
+            elif test_case == 1 or (test_case is None and self.test_counter % self.test_cases == 1):
                 self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
                 self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
                 self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
@@ -61,11 +67,6 @@ class CrowdSim(gym.Env):
                 self.peds[3].set(1, -1, -1, -1, 0, 0, 0)
                 self.peds[4].set(1, 0, -1, 0, 0, 0, 0)
                 self.peds[5].set(1, 1, -1, 1, 0, 0, 0)
-            elif test_case == 1 or (test_case is None and self.test_counter % self.test_cases == 1):
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(2)]
-                self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-                self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
             elif test_case == 2 or (test_case is None and self.test_counter % self.test_cases == 2):
                 self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
                 self.peds = [Pedestrian(self.config, 'peds') for _ in range(4)]
@@ -156,13 +157,12 @@ class CrowdSim(gym.Env):
             for i, ped_action in enumerate(ped_actions):
                 self.peds[i].step(ped_action)
             self.timer += 1
+            self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
 
         if self.navigator.sensor == 'coordinates':
             ob = [ped.get_observable_state() for ped in self.peds]
         elif self.navigator.sensor == 'RGB':
             raise NotImplemented
-
-        self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
 
         return ob, reward, done, info
 
