@@ -40,6 +40,10 @@ python test.py --policy orca --visualize --phase val
 python test.py --policy value_network --weights data/output/il_model.pth --phase test --visualize --test_case 0
 python test.py --policy value_network --weights data/output/il_model.pth --phase val --visualize
 ```
+4. Plot training log
+```
+python utils/plot.py data/output/output.log
+```
 
 ## Results
 ### Evaluation on val(100 random test cases with one pedestrian controlled by ORCA) 
@@ -116,9 +120,9 @@ There are two types of actions depending on what kinematics constraint the agent
 Environment has different setup for different phases and the behavior of policy also 
 depends what phase it is in.
 * Train: environment randomly initialized the position and goal for pedestrians and RL policy
-uses epsilon-greedy to balance exploration and exploitation.
-* Val: environment is the same as train, but RL policy uses a stable epsilon.
-* Test: environment has some fixed test cases and RL policy uses a stable epsilon. 
+uses epsilon-greedy to stabilize the training.
+* Val: environment is the same as train, but RL policy doesn't use epsilon-greedy.
+* Test: environment has some fixed test cases and RL policy doesn't use epsilon-greed. 
 
 ### Evaluation
 The success rate, collision rate and extra time to reach goal are used to measure

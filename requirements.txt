@@ -3,3 +3,4 @@ torch
 torchvision
 matplotlib
 numpy
+scipy

@@ -39,6 +39,7 @@ class ValueNetwork(nn.Module):
                                            nn.Linear(fc_layers[2], 1))
 
     def rotate(self, state):
+        # TODO: rewrite the code to run on single device
         # first translate the coordinate then rotate around the origin
         # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
         #  0     1      2     3      4        5     6         7        8       9      10     11    12       13
@@ -71,8 +72,10 @@ class ValueNetwork(nn.Module):
         return torch.Tensor(new_state)
 
     def forward(self, state, device):
+        device = state.device
         if self.reparameterization:
             state = self.rotate(state)
+        self.value_network.to(device)
         value = self.value_network(state.to(device))
         return value
 
@@ -105,6 +108,10 @@ class ValueNetworkPolicy(Policy):
 
     def set_env(self, env):
         self.env = env
+
+    def set_device(self, device):
+        self.device = device
+        self.model.to(device)
 
     def set_epsilon(self, epsilon):
         self.epsilon = epsilon
@@ -182,7 +189,9 @@ class ValueNetworkPolicy(Policy):
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
-            max_action = np.random.choice(self.action_space)
+            max_action = self.action_space[np.random.choice(len(self.action_space))]
+            assert len(state.ped_states) == 1
+            self.last_state = torch.Tensor([state.self_state + state.ped_states[0]]).to(self.device)
         else:
             max_min_value = float('-inf')
             max_action = None

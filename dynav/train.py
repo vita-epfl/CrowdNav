@@ -31,11 +31,15 @@ def main():
     # configure paths
     output_dir = os.path.join('data', args.output_dir)
     if os.path.exists(output_dir):
-        # shutil.rmtree(output_dir)
-        # os.mkdir(output_dir)
-        print('Output directory already exists!')
+        key = input('Output directory already exists! Overwrite the folder? (y/n)')
+        if key == 'y':
+            shutil.rmtree(output_dir)
+            os.mkdir(output_dir)
     else:
         os.mkdir(output_dir)
+        shutil.copy(args.env_config, output_dir)
+        shutil.copy(args.policy_config, output_dir)
+        shutil.copy(args.train_config, output_dir)
     log_file = os.path.join(output_dir, 'output.log')
     shutil.copy(args.train_config, output_dir)
     il_weight_file = os.path.join(output_dir, 'il_model.pth')

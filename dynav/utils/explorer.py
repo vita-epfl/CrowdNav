@@ -19,7 +19,7 @@ class Explorer(object):
 
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None):
         if phase == 'train':
-            np.random.seed(time.time())
+            np.random.seed(int(time.time()))
         else:
             # val cases should be the same for different runs
             np.random.seed(0)
@@ -37,6 +37,7 @@ class Explorer(object):
             while not done:
                 action = self.navigator.act(ob)
                 ob, reward, done, info = self.env.step(action)
+                assert self.navigator.policy.last_state is not None
                 states.append(self.navigator.policy.last_state)
                 rewards.append(reward)
 
@@ -57,7 +58,7 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         timeout_rate = timeout / k
-        assert success_rate + collision_rate + timeout_rate == 1
+        assert np.isclose(success_rate + collision_rate + timeout_rate, 1)
         if len(times) == 0:
             average_time = 0
         else:
@@ -84,7 +85,7 @@ class Explorer(object):
                 # In imitation learning, the value of state is defined based on the time to reach the goal
                 value = pow(self.gamma, (steps - 1 - i) * self.navigator.v_pref)
             else:
-                value = reward + self.gamma * self.stabilized_model(torch.Tensor(next_state), self.device).data.item()
-            state = torch.Tensor(state).to(self.device).squeeze()
+                value = reward + self.gamma * self.stabilized_model(next_state, self.device).data.item()
+            state = state.to(self.device).squeeze()
             value = torch.Tensor([value]).to(self.device)
             self.memory.push((state, value))
