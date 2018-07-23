@@ -44,7 +44,7 @@ class CrowdSim(gym.Env):
                                                                     as_paths=True, sample={'syi.ndjson': 0.05})),
                                 'val': list(trajnettools.load_all(os.path.join(val_dir, 'biwi_hotel.ndjson'),
                                                                   as_paths=True, sample={'syi.ndjson': 0.05})),
-                                'test': list(trajnettools.load_all(os.path.join(val_dir, 'biwi_hotel.ndjson'),
+                                'test': list(trajnettools.load_all(os.path.join(val_dir, 'crowds_students001.ndjson'),
                                                                    as_paths=True, sample={'syi.ndjson': 0.05}))})
             for phase in ['train', 'val', 'test']:
                 logging.info('Number of scenes in phase {}: {}'.format(phase.upper(), len(self.scenes[phase])))
@@ -212,7 +212,7 @@ class CrowdSim(gym.Env):
 
         return ob, reward, done, info
 
-    def render(self, mode='human', close=False):
+    def render(self, mode='human', output_file=None):
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-5, 5)
@@ -248,11 +248,10 @@ class CrowdSim(gym.Env):
                 text.set_text('Step: {}'.format(frame_num))
 
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=400)
-            # if save:
-            #     Writer = animation.writers['ffmpeg']
-            #     writer = Writer(fps=1, metadata=dict(artist='Me'), bitrate=1800)
-            #     output_file = 'data/output.mp4'
-            #     anim.save(output_file, writer=writer)
+            if output_file is not None:
+                ffmpeg_writer = animation.writers['ffmpeg']
+                writer = ffmpeg_writer(fps=2.5, metadata=dict(artist='Me'), bitrate=1800)
+                anim.save(output_file, writer=writer)
 
             plt.show()
         else:

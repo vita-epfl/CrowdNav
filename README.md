@@ -62,12 +62,12 @@ python utils/plot.py data/output/output.log
 | VN(RL)        | 0.20  | 0.00  | 16    |
 
 
-### Evaluation on test(trajnet data)
+### Evaluation on test(trajnet data, crowds_students001 subset)
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
 | ORCA          | 0.55  | 0.37  | 8     |
-| VN(IL)        | 0.60  | 0.00  | 13    |
-| VN(RL)        | 0.20  | 0.00  | 16    |
+| VN(IL)        | 0.00  | 0.00  | 0     |
+| VN(RL)        | 0.00  | 0.00  | 0     |
 
 ## Definitions and implementations
 ### Environment

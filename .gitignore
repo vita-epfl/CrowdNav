@@ -4,3 +4,4 @@
 __pycache__
 data/
 .cache/
+*.mp4

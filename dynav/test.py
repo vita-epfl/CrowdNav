@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
     parser.add_argument('--val_episodes', type=int, default=100)
+    parser.add_argument('--output_file', type=str, default=None)
     args = parser.parse_args()
 
     # configure policy
@@ -62,7 +63,7 @@ def main():
         while not done:
             action = navigator.act(ob)
             ob, reward, done, info = env.step(action)
-        env.render('video')
+        env.render('video', args.output_file)
         print('It takes {} steps to finish. Last step is {}'.format(env.timer, info))
     else:
         if args.phase == 'test':
