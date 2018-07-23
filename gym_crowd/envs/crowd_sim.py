@@ -1,7 +1,11 @@
+import os
+import gym_crowd
 import gym
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import trajnettools
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 
 
@@ -23,13 +27,31 @@ class CrowdSim(gym.Env):
         self.timer = None
         self.states = None
         self.config = None
-        self.test_cases = 5
-        self.test_counter = 0
+        self.test_cases = None
+        self.test_counter = None
+        self.scenes = None
 
     def configure(self, config):
+        self.config = config
         self.train_ped_num = config.getint('env', 'train_ped_num')
         self.time_limit = config.getint('env', 'time_limit')
-        self.config = config
+        if self.config.get('peds', 'policy') == 'trajnet':
+            # load trajnet data
+            trajnet_dir = os.path.join(os.path.dirname(gym_crowd.__file__), 'envs/data/trajnet')
+            train_dir = os.path.join(trajnet_dir, 'train')
+            val_dir = os.path.join(trajnet_dir, 'val')
+            self.scenes = dict({'train': list(trajnettools.load_all(os.path.join(train_dir, 'biwi_hotel.ndjson'),
+                                                                    as_paths=True, sample={'syi.ndjson': 0.05})),
+                                'val': list(trajnettools.load_all(os.path.join(val_dir, 'biwi_hotel.ndjson'),
+                                                                  as_paths=True, sample={'syi.ndjson': 0.05})),
+                                'test': list(trajnettools.load_all(os.path.join(val_dir, 'biwi_hotel.ndjson'),
+                                                                   as_paths=True, sample={'syi.ndjson': 0.05}))})
+            for phase in ['train', 'val', 'test']:
+                logging.info('Number of scenes in phase {}: {}'.format(phase.upper(), len(self.scenes[phase])))
+            self.test_cases = len(self.scenes['test'])
+        else:
+            self.test_cases = 0
+        self.test_counter = 0
 
     def set_navigator(self, navigator):
         self.navigator = navigator
@@ -44,48 +66,67 @@ class CrowdSim(gym.Env):
         self.timer = 0
 
         assert phase in ['train', 'val', 'test']
-        if phase == 'train' or phase == 'val':
-            self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
-            self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-            angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
-            self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
-        else:
-            if test_case == 0 or (test_case is None and self.test_counter % self.test_cases == 0):
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(2)]
-                self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-                self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
-            elif test_case == 1 or (test_case is None and self.test_counter % self.test_cases == 1):
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
-                self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-                self.peds[1].set(-1, 0, 1, 0, 0, 0, 0)
-                self.peds[2].set(-1, 1, 1, 1, 0, 0, 0)
-                self.peds[3].set(1, -1, -1, -1, 0, 0, 0)
-                self.peds[4].set(1, 0, -1, 0, 0, 0, 0)
-                self.peds[5].set(1, 1, -1, 1, 0, 0, 0)
-            elif test_case == 2 or (test_case is None and self.test_counter % self.test_cases == 2):
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(4)]
-                self.peds[0].set(-1, -1, 1, 1, 0, 0, 0)
-                self.peds[1].set(-1, 1, 1, -1, 0, 0, 0)
-                self.peds[2].set(1, 1, -1, -1, 0, 0, 0)
-                self.peds[3].set(1, -1, -1, 1, 0, 0, 0)
-            elif test_case == 3 or (test_case is None and self.test_counter % self.test_cases == 3):
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
-                self.peds[0].set(-1, 1, -1, -1, 0, 0, 0)
-                self.peds[1].set(0, 1, 0, -1, 0, 0, 0)
-                self.peds[2].set(1, 1, 1, -1, 0, 0, 0)
-            elif test_case == 4 or (test_case is None and self.test_counter % self.test_cases == 4):
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
-                self.peds[0].set(-1, 1, 1, -1, 0, 0, 0)
-                self.peds[1].set(-1, 2, 1, 0, 0, 0, 0)
-                self.peds[2].set(-1, 0, 1, -2, 0, 0, 0)
+        if self.scenes is not None:
+            if phase == 'train':
+                pass
+            elif phase == 'val':
+                pass
             else:
-                assert True
-            self.test_counter += 1
+                scene_index = test_case if test_case is not None else self.test_counter
+                self.test_counter = (self.test_counter + 1) % self.test_cases
+                scene = self.scenes[phase][scene_index][1]
+                ped_num = len(scene)
+                if test_case is not None:
+                    logging.info('{} pedestrians in scene {}'.format(ped_num, scene_index))
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(ped_num)]
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                for i in range(ped_num):
+                    # assign ith trajectory to ith ped's policy
+                    self.peds[i].policy.configure(scene[i])
+                    self.peds[i].set(scene[i][0].x, scene[i][0].y, scene[i][-1].x, scene[i][-1].y, 0, 0, 0)
+        else:
+            if phase == 'train' or phase == 'val':
+                self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
+                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
+                self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
+            else:
+                if test_case == 0 or (test_case is None and self.test_counter % self.test_cases == 0):
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(2)]
+                    self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
+                    self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
+                elif test_case == 1 or (test_case is None and self.test_counter % self.test_cases == 1):
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
+                    self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
+                    self.peds[1].set(-1, 0, 1, 0, 0, 0, 0)
+                    self.peds[2].set(-1, 1, 1, 1, 0, 0, 0)
+                    self.peds[3].set(1, -1, -1, -1, 0, 0, 0)
+                    self.peds[4].set(1, 0, -1, 0, 0, 0, 0)
+                    self.peds[5].set(1, 1, -1, 1, 0, 0, 0)
+                elif test_case == 2 or (test_case is None and self.test_counter % self.test_cases == 2):
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(4)]
+                    self.peds[0].set(-1, -1, 1, 1, 0, 0, 0)
+                    self.peds[1].set(-1, 1, 1, -1, 0, 0, 0)
+                    self.peds[2].set(1, 1, -1, -1, 0, 0, 0)
+                    self.peds[3].set(1, -1, -1, 1, 0, 0, 0)
+                elif test_case == 3 or (test_case is None and self.test_counter % self.test_cases == 3):
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                    self.peds[0].set(-1, 1, -1, -1, 0, 0, 0)
+                    self.peds[1].set(0, 1, 0, -1, 0, 0, 0)
+                    self.peds[2].set(1, 1, 1, -1, 0, 0, 0)
+                elif test_case == 4 or (test_case is None and self.test_counter % self.test_cases == 4):
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                    self.peds[0].set(-1, 1, 1, -1, 0, 0, 0)
+                    self.peds[1].set(-1, 2, 1, 0, 0, 0, 0)
+                    self.peds[2].set(-1, 0, 1, -2, 0, 0, 0)
+                else:
+                    assert True
+                self.test_counter += 1
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
 
@@ -187,10 +228,10 @@ class CrowdSim(gym.Env):
                              for i in range(len(self.states))]
 
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-5, 5)
-            ax.set_ylim(-5, 5)
+            ax.set_xlim(-10, 10)
+            ax.set_ylim(-10, 10)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
-            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color='C{}'.format(i))
+            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                     for i in range(len(self.peds))]
             text = plt.text(0, 8, 'Step: {}'.format(0), fontsize=12)
             ax.add_artist(navigator)

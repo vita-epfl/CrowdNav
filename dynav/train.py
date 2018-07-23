@@ -25,9 +25,6 @@ def main():
     parser.add_argument('--gpu', default=False, action='store_true')
     args = parser.parse_args()
 
-    env_config = configparser.RawConfigParser()
-    env_config.read(args.env_config)
-
     # configure paths
     output_dir = os.path.join('data', args.output_dir)
     if os.path.exists(output_dir):
@@ -35,6 +32,9 @@ def main():
         if key == 'y':
             shutil.rmtree(output_dir)
             os.mkdir(output_dir)
+            shutil.copy(args.env_config, output_dir)
+            shutil.copy(args.policy_config, output_dir)
+            shutil.copy(args.train_config, output_dir)
     else:
         os.mkdir(output_dir)
         shutil.copy(args.env_config, output_dir)
@@ -62,6 +62,8 @@ def main():
     policy.configure(policy_config)
 
     # configure environment
+    env_config = configparser.RawConfigParser()
+    env_config.read(args.env_config)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
     navigator = Navigator(env_config, 'navigator')

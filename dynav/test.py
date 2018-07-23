@@ -22,9 +22,6 @@ def main():
     parser.add_argument('--val_episodes', type=int, default=100)
     args = parser.parse_args()
 
-    env_config = configparser.RawConfigParser()
-    env_config.read(args.env_config)
-
     # configure policy
     policy = policy_factory[args.policy]()
     policy_config = configparser.RawConfigParser()
@@ -42,6 +39,8 @@ def main():
     logging.info('Using device: {}'.format(device))
 
     # configure environment
+    env_config = configparser.RawConfigParser()
+    env_config.read(args.env_config)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
     navigator = Navigator(env_config, 'navigator')

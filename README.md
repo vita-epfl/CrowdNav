@@ -4,14 +4,15 @@ Robot navigation in an unknown and dynamic environment
 
 ## Installation
 1. Set up [Python-RVO2](https://github.com/sybrenstuvel/Python-RVO2) library
-2. Install gym environment and dynav
+2. Install environment and dynav into pip
 ```
 pip install -e .
 ```
-3. Install all the dependencies
+3. Install all the dependencies as listed in requirements.txt
 ```
 pip install -r requirements.txt
 ```
+4. Install trajnettools and place trajnet data (train/ and val/) under gym_crowd/envs/data/
 
 ## Getting started
 The codes are organized in two parts: gym_crowd/ folder contains the environment and
@@ -26,19 +27,19 @@ python train.py --policy value_network
 2. Test policies in VAL or TEST test cases. rl_model.pth is reinforcement learning trained model and il_model.pth
 is imitation learning trained model.
 ```
-python test.py --policy orca --phase test
 python test.py --policy orca --phase val
-python test.py --policy value_network --weights data/output/il_model.pth --phase test
+python test.py --policy orca --phase test
 python test.py --policy value_network --weights data/output/il_model.pth --phase val
-python test.py --policy value_network --weights data/output/rl_model.pth --phase test
+python test.py --policy value_network --weights data/output/il_model.pth --phase test
 python test.py --policy value_network --weights data/output/rl_model.pth --phase val
+python test.py --policy value_network --weights data/output/rl_model.pth --phase test
 ```
 3. Run policy for one episode and visualize the result.
 ```
-python test.py --policy orca --visualize --phase test --test_case 0
 python test.py --policy orca --visualize --phase val
-python test.py --policy value_network --weights data/output/il_model.pth --phase test --visualize --test_case 0
+python test.py --policy orca --visualize --phase test --test_case 0
 python test.py --policy value_network --weights data/output/il_model.pth --phase val --visualize
+python test.py --policy value_network --weights data/output/il_model.pth --phase test --visualize --test_case 0
 ```
 4. Plot training log
 ```
@@ -50,29 +51,23 @@ python utils/plot.py data/output/output.log
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
 | ORCA          | 1.00  | 0.00  | 6     |
-| VN(IL)        | 0.53  | 0.01  | 10    |
-| VN(RL)        | 0.59  | 0.02  | 9     |
+| VN(IL)        | 0.41  | 0.00  | 10    |
+| VN(RL)        | 0.70  | 0.00  | 12     |
 
 ### Evaluation on test(5 test cases with multiple pedestrians controlled by ORCA)
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
 | ORCA          | 1.00  | 0.00  | 7     |
-| VN(IL)        | 0.40  | 0.20  | 13    |
-| VN(RL)        | 0.40  | 0.00  | 16    |
+| VN(IL)        | 0.60  | 0.00  | 13    |
+| VN(RL)        | 0.20  | 0.00  | 16    |
 
-### Evaluation on val(100 random test cases with one pedestrian controlled by trajnet) 
+
+### Evaluation on test(trajnet data)
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
-| ORCA          |       |       |       |
-| VN(IL)        |       |       |       |
-| VN(RL)        |       |       |       |
-
-### Evaluation on test(5 test cases with multiple pedestrians controlled by trajnet)
-| Policy        | Success rate  | Collision rate  | Time to reach goal |
-| ------------- |----   | ----- |----   |
-| ORCA          |       |       |       |
-| VN(IL)        |       |       |       |
-| VN(RL)        |       |       |       |
+| ORCA          | 0.55  | 0.37  | 8     |
+| VN(IL)        | 0.60  | 0.00  | 13    |
+| VN(RL)        | 0.20  | 0.00  | 16    |
 
 ## Definitions and implementations
 ### Environment
@@ -119,10 +114,15 @@ There are two types of actions depending on what kinematics constraint the agent
 ### Phase
 Environment has different setup for different phases and the behavior of policy also 
 depends what phase it is in.
-* Train: environment randomly initialized the position and goal for pedestrians and RL policy
+#### Simulated data
+* Train: environment randomly initialized the position and goal for pedestrians (on a circle) and RL policy
 uses epsilon-greedy to stabilize the training.
 * Val: environment is the same as train, but RL policy doesn't use epsilon-greedy.
 * Test: environment has some fixed test cases and RL policy doesn't use epsilon-greed. 
+#### Trajnet data
+* Train: environment set the pedestrian positions according to the train split of one dataset
+* Val: environment set the pedestrian positions according to the val split of the same dataset
+* Test: environment set the pedestrian positions according to the val split of another dataset
 
 ### Evaluation
 The success rate, collision rate and extra time to reach goal are used to measure

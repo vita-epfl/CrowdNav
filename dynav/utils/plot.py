@@ -14,6 +14,7 @@ def main():
     parser.add_argument('--plot_train', default=True, action='store_true')
     parser.add_argument('--plot_val', default=True, action='store_true')
     parser.add_argument('--plot_test', default=False, action='store_true')
+    parser.add_argument('--window_size', type=int, default=10)
     args = parser.parse_args()
 
     with open(args.log_file, 'r') as fo:
@@ -59,9 +60,8 @@ def main():
         train_time.append(int(r[3]))
 
     # smoothing
-    smooth_window = 10
     train_episode = np.array(train_episode)
-    train_episode_new = np.linspace(train_episode.min(), train_episode.max(), int(len(train_episode)/smooth_window))
+    train_episode_new = np.linspace(train_episode.min(), train_episode.max(), int(len(train_episode)/args.window_size))
     train_sr_smooth = spline(train_episode, train_sr, train_episode_new)
     train_cr_smooth = spline(train_episode, train_cr, train_episode_new)
     train_time_smooth = spline(train_episode, train_time, train_episode_new)

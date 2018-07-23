@@ -199,6 +199,7 @@ class ValueNetworkPolicy(Policy):
                 min_value = float('inf')
                 min_state = None
                 for ped_state in state.ped_states:
+                    # TODO: batch computing
                     next_self_state = self.propagate(state.self_state, action)
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
                     current_dual_state = torch.Tensor([state.self_state + ped_state]).to(self.device)
