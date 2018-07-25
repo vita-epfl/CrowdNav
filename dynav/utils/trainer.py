@@ -31,7 +31,7 @@ class Trainer(object):
                 values = Variable(values)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(inputs, self.device)
+                outputs = self.model(inputs)
                 loss = self.criterion(outputs, values)
                 loss.backward()
                 self.optimizer.step()

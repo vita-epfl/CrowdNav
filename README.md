@@ -22,24 +22,24 @@ below should be run inside the dynav/ folder.
 
 1. Train a trainable policy.
 ```
-python train.py --policy value_network
+python train.py --policy cadrl
 ```
 2. Test policies in VAL or TEST test cases. rl_model.pth is reinforcement learning trained model and il_model.pth
 is imitation learning trained model.
 ```
 python test.py --policy orca --phase val
 python test.py --policy orca --phase test
-python test.py --policy value_network --weights data/output/il_model.pth --phase val
-python test.py --policy value_network --weights data/output/il_model.pth --phase test
-python test.py --policy value_network --weights data/output/rl_model.pth --phase val
-python test.py --policy value_network --weights data/output/rl_model.pth --phase test
+python test.py --policy cadrl --weights data/output/il_model.pth --phase val
+python test.py --policy cadrl --weights data/output/il_model.pth --phase test
+python test.py --policy cadrl --weights data/output/rl_model.pth --phase val
+python test.py --policy cadrl --weights data/output/rl_model.pth --phase test
 ```
 3. Run policy for one episode and visualize the result.
 ```
-python test.py --policy orca --visualize --phase val
-python test.py --policy orca --visualize --phase test --test_case 0
-python test.py --policy value_network --weights data/output/il_model.pth --phase val --visualize
-python test.py --policy value_network --weights data/output/il_model.pth --phase test --visualize --test_case 0
+python test.py --policy orca --phase val --visualize
+python test.py --policy orca --phase test --visualize --test_case 0
+python test.py --policy cadrl --weights data/output/il_model.pth --phase val --visualize
+python test.py --policy cadrl --weights data/output/il_model.pth --phase test --visualize --test_case 0
 ```
 4. Plot training log
 ```
@@ -51,25 +51,25 @@ python utils/plot.py data/output/output.log
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
 | ORCA          | 1.00  | 0.00  | 6     |
-| VN(IL)        | 0.41  | 0.00  | 10    |
-| VN(RL)        | 0.70  | 0.00  | 12     |
+| CADRL(IL)     | 0.39  | 0.00  | 14    |
+| CADRL(RL)     | 0.81  | 0.00  | 15    |
 
-### Evaluation on test(5 test cases with multiple pedestrians controlled by ORCA)
+### Evaluation on test(5 hand-crafted and 95 randomly simulated test cases with multiple pedestrians controlled by ORCA)
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
-| ORCA          | 1.00  | 0.00  | 7     |
-| VN(IL)        | 0.60  | 0.00  | 13    |
-| VN(RL)        | 0.20  | 0.00  | 16    |
+| ORCA          | 1.00  | 0.00  | 5     |
+| CADRL(IL)     | 0.01  | 0.00  | 19    |
+| CADRL(RL)     | 0.06  | 0.00  | 16    |
 
 
 ### Evaluation on test(trajnet data, crowds_students001 subset)
 | Policy        | Success rate  | Collision rate  | Time to reach goal |
 | ------------- |----   | ----- |----   |
 | ORCA          | 0.55  | 0.37  | 8     |
-| VN(IL)        | 0.00  | 0.00  | 0     |
-| VN(RL)        | 0.00  | 0.00  | 0     |
+| CADRL(IL)     | 0.00  | 0.00  | 0     |
+| CADRL(RL)     | 0.00  | 0.00  | 0     |
 
-## Definitions and implementations
+## Framework Overview
 ### Environment
 The environment contains n+1 agents. N of them are pedestrians controlled by certain unknown
 but fixed policy. The other is navigator and it's controlled by one known policy.
@@ -93,10 +93,11 @@ pedestrian is not controlled by trajnet
 
 ### Policy
 Policy takes state as input and output an action. Current available policies:
-* linear: head straight to goal until collision happens or goal is reached
-* orca: compute collision-free velocity under the assumption each agent will take half responsibility
-* value network: learn a value network to predict the value of a state and during inference,
+* potential field(TODO): head straight to goal until collision happens or goal is reached
+* ORCA: compute collision-free velocity under the assumption each agent will take half responsibility
+* CADRL: learn a value network to predict the value of a state and during inference,
 the action with maximum one step lookahead value will be chosen.
+* SRL: do social pooling for surrounding pedestrians and use that as state representation
 
 ### State
 There are multiple definition of states in different cases. The state of an agent representing all
@@ -120,9 +121,9 @@ uses epsilon-greedy to stabilize the training.
 * Val: environment is the same as train, but RL policy doesn't use epsilon-greedy.
 * Test: environment has some fixed test cases and RL policy doesn't use epsilon-greed. 
 #### Trajnet data
-* Train: environment set the pedestrian positions according to the train split of one dataset
-* Val: environment set the pedestrian positions according to the val split of the same dataset
-* Test: environment set the pedestrian positions according to the val split of another dataset
+* Train: environment sets the pedestrian positions according to the train split of one dataset
+* Val: environment sets the pedestrian positions according to the val split of the same dataset
+* Test: environment sets the pedestrian positions according to the val split of another dataset
 
 ### Evaluation
 The success rate, collision rate and extra time to reach goal are used to measure

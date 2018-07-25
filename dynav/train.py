@@ -1,5 +1,4 @@
 import torch
-import copy
 import sys
 import logging
 import argparse
@@ -16,8 +15,8 @@ from dynav.policy.policy_factory import policy_factory
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
-    parser.add_argument('--policy', type=str, default='value_network')
+    parser.add_argument('--env_config', type=str, default='configs/orca_env.config')
+    parser.add_argument('--policy', type=str, default='cadrl')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--train_config', type=str, default='configs/train.config')
     parser.add_argument('--output_dir', type=str, default='output')
@@ -50,6 +49,8 @@ def main():
     stdout_handler = logging.StreamHandler(sys.stdout)
     logging.basicConfig(level=logging.INFO, handlers=[stdout_handler, file_handler],
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+    device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
+    logging.info('Using device: {}'.format(device))
 
     # configure policy
     policy = policy_factory[args.policy]()
@@ -78,7 +79,6 @@ def main():
     train_episodes = train_config.getint('train', 'train_episodes')
     sample_episodes = train_config.getint('train', 'sample_episodes')
     test_interval = train_config.getint('train', 'test_interval')
-    val_episodes = train_config.getint('train', 'val_episodes')
     capacity = train_config.getint('train', 'capacity')
     epsilon_start = train_config.getfloat('train', 'epsilon_start')
     epsilon_end = train_config.getfloat('train', 'epsilon_end')
@@ -88,8 +88,6 @@ def main():
     # configure trainer and explorer
     memory = ReplayMemory(capacity)
     model = policy.get_model()
-    device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
-    logging.info('Using device: {}'.format(device))
     trainer = Trainer(train_config, model, memory, device)
     explorer = Explorer(env, navigator, device, memory, policy.gamma)
 
@@ -110,7 +108,7 @@ def main():
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
-    if args.policy == 'value_network':
+    if args.policy == 'cadrl':
         policy.set_env(env)
     policy.set_device(device)
     navigator.set_policy(policy)
@@ -125,8 +123,8 @@ def main():
 
         # test
         if episode % test_interval == 0:
-            explorer.run_k_episodes(val_episodes, 'val', episode=episode)
-            explorer.run_k_episodes(env.test_cases, 'test', episode=episode)
+            explorer.run_k_episodes(env.val_size, 'val', episode=episode)
+            explorer.run_k_episodes(env.test_size, 'test', episode=episode)
             explorer.update_stabilized_model(model)
 
         # sample k episodes into memory and optimize over the generated memory
@@ -138,8 +136,8 @@ def main():
             torch.save(model.state_dict(), rl_weight_file)
 
     # final test
-    explorer.run_k_episodes(val_episodes, 'val', episode=episode)
-    explorer.run_k_episodes(env.test_cases, 'test', episode=episode)
+    explorer.run_k_episodes(env.val_size, 'val', episode=episode)
+    explorer.run_k_episodes(env.test_size, 'test', episode=episode)
 
 
 if __name__ == '__main__':

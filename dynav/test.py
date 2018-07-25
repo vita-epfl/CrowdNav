@@ -2,7 +2,6 @@ import torch
 import logging
 import argparse
 import configparser
-import numpy as np
 import gym
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
@@ -11,7 +10,7 @@ from dynav.policy.policy_factory import policy_factory
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
+    parser.add_argument('--env_config', type=str, default='configs/trajnet_env.config')
     parser.add_argument('--policy', type=str, default='orca')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--weights', type=str)
@@ -19,9 +18,14 @@ def main():
     parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
-    parser.add_argument('--val_episodes', type=int, default=100)
     parser.add_argument('--output_file', type=str, default=None)
     args = parser.parse_args()
+
+    # configure logging and device
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
+                        datefmt="%Y-%m-%d %H:%M:%S")
+    device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
+    logging.info('Using device: {}'.format(device))
 
     # configure policy
     policy = policy_factory[args.policy]()
@@ -32,12 +36,6 @@ def main():
         if args.weights is None:
             parser.error('Trainable policy must be specified with a saved weights')
         policy.get_model().load_state_dict(torch.load(args.weights))
-
-    # configure device
-    device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
-                        datefmt="%Y-%m-%d %H:%M:%S")
-    logging.info('Using device: {}'.format(device))
 
     # configure environment
     env_config = configparser.RawConfigParser()
@@ -51,14 +49,15 @@ def main():
 
     policy.set_phase(args.phase)
     policy.set_device(device)
-    if args.policy == 'value_network':
+    if args.policy == 'cadrl':
         policy.set_env(env)
 
     if args.visualize:
-        if args.phase == 'test':
-            ob = env.reset(args.phase, args.test_case)
-        elif args.phase == 'val':
+        if args.phase == 'val':
             ob = env.reset(args.phase)
+        elif args.phase == 'test':
+            ob = env.reset(args.phase, args.test_case)
+
         done = False
         while not done:
             action = navigator.act(ob)
@@ -66,10 +65,10 @@ def main():
         env.render('video', args.output_file)
         print('It takes {} steps to finish. Last step is {}'.format(env.timer, info))
     else:
-        if args.phase == 'test':
-            explorer.run_k_episodes(env.test_cases, args.phase)
-        elif args.phase == 'val':
-            explorer.run_k_episodes(args.val_episodes, args.phase)
+        if args.phase == 'val':
+            explorer.run_k_episodes(env.val_size, args.phase)
+        elif args.phase == 'test':
+            explorer.run_k_episodes(env.test_size, args.phase)
 
 
 if __name__ == '__main__':

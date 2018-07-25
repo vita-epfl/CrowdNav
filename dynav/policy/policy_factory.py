@@ -1,4 +1,4 @@
 from gym_crowd.envs.policy.policy_factory import policy_factory
-from dynav.policy.value_network import ValueNetworkPolicy
+from dynav.policy.cadrl import CADRL
 
-policy_factory['value_network'] = ValueNetworkPolicy
+policy_factory['cadrl'] = CADRL
