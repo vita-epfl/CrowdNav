@@ -118,6 +118,6 @@ class ORCA(Policy):
         action = ActionXY(next_position[0]-self_state.px, next_position[1]-self_state.py)
 
         # save state for imitation learning
-        self.last_state = state.self_state + state.ped_states[0]
+        self.last_state = state
 
         return action

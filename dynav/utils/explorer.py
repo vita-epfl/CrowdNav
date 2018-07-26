@@ -5,12 +5,13 @@ import numpy as np
 
 
 class Explorer(object):
-    def __init__(self, env, navigator, device, memory=None, gamma=None):
+    def __init__(self, env, navigator, device, memory=None, gamma=None, target_policy=None):
         self.env = env
         self.navigator = navigator
         self.device = device
         self.memory = memory
         self.gamma = gamma
+        self.target_policy = target_policy
         self.stabilized_model = None
 
     def update_stabilized_model(self, stabilized_model):
@@ -27,15 +28,17 @@ class Explorer(object):
             ob = self.env.reset(phase)
             done = False
             states = []
+            actions = []
             rewards = []
             while not done:
                 action = self.navigator.act(ob)
                 ob, reward, done, info = self.env.step(action)
                 states.append(self.navigator.policy.last_state)
+                actions.append(action)
                 rewards.append(reward)
 
             if update_memory:
-                self.update_memory(states, rewards, imitation_learning)
+                self.update_memory(states, actions, rewards, imitation_learning)
 
             if info == 'reach goal':
                 success += 1
@@ -64,7 +67,7 @@ class Explorer(object):
         if phase == 'test':
             logging.debug('Failure cases: ' + ' '.join([str(x) for x in failure_cases]))
 
-    def update_memory(self, states, rewards, imitation_learning=False):
+    def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:
             raise ValueError('Memory or gamma value is not set!')
 
@@ -75,13 +78,11 @@ class Explorer(object):
             reward = rewards[i]
 
             if imitation_learning:
-                # In imitation learning, the value of state is defined based on the time to reach the goal
-                value = pow(self.gamma, (steps - 1 - i) * self.navigator.v_pref)
+                # in imitation learning, the value of state is defined based on the time to reach the goal
+                state = self.target_policy.transform(state)
+                value = torch.Tensor([pow(self.gamma, (steps - 1 - i) * self.navigator.v_pref)]).to(self.device)
             else:
-                value = reward + self.gamma * self.stabilized_model(next_state).data.item()
-            if isinstance(state, tuple):
-                state = torch.Tensor(state).to(self.device)
-            else:
-                state = state.to(self.device).squeeze()
-            value = torch.Tensor([value]).to(self.device)
+                value = reward + self.gamma * self.stabilized_model(next_state.unsqueeze(0)).data.item()
+                value = torch.Tensor([value]).to(self.device)
+
             self.memory.push((state, value))

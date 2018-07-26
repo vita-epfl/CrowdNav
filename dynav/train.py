@@ -61,6 +61,7 @@ def main():
     policy_config = configparser.RawConfigParser()
     policy_config.read(args.policy_config)
     policy.configure(policy_config)
+    policy.set_device(device)
 
     # configure environment
     env_config = configparser.RawConfigParser()
@@ -89,7 +90,7 @@ def main():
     memory = ReplayMemory(capacity)
     model = policy.get_model()
     trainer = Trainer(train_config, model, memory, device)
-    explorer = Explorer(env, navigator, device, memory, policy.gamma)
+    explorer = Explorer(env, navigator, device, memory, policy.gamma, target_policy=policy)
 
     # imitation learning
     if os.path.exists(il_weight_file):
@@ -108,9 +109,8 @@ def main():
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
-    if args.policy == 'cadrl':
+    if args.policy in ['cadrl', 'srl']:
         policy.set_env(env)
-    policy.set_device(device)
     navigator.set_policy(policy)
     episode = 0
     while episode < train_episodes:

@@ -142,8 +142,8 @@ class CrowdSim(gym.Env):
                     self.peds = []
                     for i in range(5):
                         ped = Pedestrian(self.config, 'peds')
-                        ped.set(np.random.random()*5, np.random.random()*5, np.random.random()*5,
-                                np.random.random()*5, 0, 0, 0)
+                        ped.set(np.random.random()*5-2.5, np.random.random()*5-2.5, np.random.random()*5-2.5,
+                                np.random.random()*5-2.5, 0, 0, 0)
                         self.peds.append(ped)
                 self.case_counter = (self.case_counter + 1) % self.test_size
 
@@ -247,8 +247,8 @@ class CrowdSim(gym.Env):
                              for i in range(len(self.states))]
 
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-10, 10)
-            ax.set_ylim(-10, 10)
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
             peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                     for i in range(len(self.peds))]

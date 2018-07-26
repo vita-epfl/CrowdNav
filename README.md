@@ -12,7 +12,7 @@ pip install -e .
 ```
 pip install -r requirements.txt
 ```
-4. Install trajnettools and place trajnet data (train/ and val/) under gym_crowd/envs/data/
+4. Install trajnettools and place trajnet data (train/ and val/) under gym_crowd/envs/data/trajnet
 
 ## Getting started
 The codes are organized in two parts: gym_crowd/ folder contains the environment and
@@ -36,10 +36,10 @@ python test.py --policy cadrl --weights data/output/rl_model.pth --phase test
 ```
 3. Run policy for one episode and visualize the result.
 ```
-python test.py --policy orca --phase val --visualize
-python test.py --policy orca --phase test --visualize --test_case 0
-python test.py --policy cadrl --weights data/output/il_model.pth --phase val --visualize
-python test.py --policy cadrl --weights data/output/il_model.pth --phase test --visualize --test_case 0
+python test.py --env_config configs/orca_env.config --policy orca --phase val --visualize
+python test.py --env_config configs/orca_env.config --policy orca --phase test --visualize --test_case 0
+python test.py --env_config configs/orca_env.config --policy cadrl --weights data/output/il_model.pth --phase val --visualize
+python test.py --env_config configs/orca_env.config --policy cadrl --weights data/output/il_model.pth --phase test --visualize --test_case 0
 ```
 4. Plot training log
 ```

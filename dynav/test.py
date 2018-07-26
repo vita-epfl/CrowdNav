@@ -10,7 +10,7 @@ from dynav.policy.policy_factory import policy_factory
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default='configs/trajnet_env.config')
+    parser.add_argument('--env_config', type=str, default='configs/orca_env.config')
     parser.add_argument('--policy', type=str, default='orca')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--weights', type=str)

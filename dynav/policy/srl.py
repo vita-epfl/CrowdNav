@@ -13,15 +13,17 @@ class ValueNetwork(nn.Module):
         self.state_dim = state_dim
         self.kinematics = kinematics
         self.fc_layers = fc_layers
-        self.value_network = nn.Sequential(nn.Linear(state_dim, fc_layers[0]), nn.ReLU(),
-                                           nn.Linear(fc_layers[0], fc_layers[1]), nn.ReLU(),
-                                           nn.Linear(fc_layers[1], fc_layers[2]), nn.ReLU(),
-                                           nn.Linear(fc_layers[2], 1))
+        self.mlp1 = nn.Sequential(nn.Linear(state_dim, fc_layers[0]), nn.ReLU(),
+                                  nn.Linear(fc_layers[0], fc_layers[1]), nn.ReLU(),
+                                  nn.Linear(fc_layers[1], fc_layers[2]), nn.ReLU(),
+                                  nn.Linear(fc_layers[2], 100))
+        self.mlp2 = nn.Sequential(nn.Linear(100, 1))
 
     def rotate(self, state):
         """
-        Input state tensor is of size (batch_size, state_length)
 
+        :param state: tensor of size (batch_size, # of peds, length of joint state)
+        :return:
         """
         # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
         #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
@@ -58,13 +60,20 @@ class ValueNetwork(nn.Module):
         return new_state
 
     def forward(self, state):
-        # transform the world coordinates to self-centric coordinates
-        state = self.rotate(state)
-        value = self.value_network(state)
+        """
+        First transform the world coordinates to self-centric coordinates and then do forward computation
+
+        :param state: tensor of shape(batch_size, # of pads, length of a joint state)
+        :return:
+        """
+        size = state.shape
+        state = self.rotate(torch.reshape(state, (-1, size[2])))
+        output = torch.reshape(self.mlp1(state), (size[0], size[1], -1))
+        value = self.mlp2(torch.max(output, 1)[0])
         return value
 
 
-class CADRL(Policy):
+class SRL(Policy):
     def __init__(self):
         super().__init__()
         self.trainable = True
@@ -185,7 +194,7 @@ class CADRL(Policy):
         if self.phase == 'train' and probability < self.epsilon:
             max_action = action_space[np.random.choice(len(action_space))]
         else:
-            max_min_value = float('-inf')
+            max_value = float('-inf')
             max_action = None
             for action in action_space:
                 batch_next_states = []
@@ -194,12 +203,11 @@ class CADRL(Policy):
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     batch_next_states.append(next_dual_state)
-                batch_next_states = torch.cat(batch_next_states, dim=0)
-                outputs = self.model(batch_next_states)
-                min_output, min_index = torch.min(outputs, 0)
-                min_value = self.env.reward(action) + pow(self.gamma, state.self_state.v_pref) * min_output.data.item()
-                if min_value > max_min_value:
-                    max_min_value = min_value
+                batch_next_states = torch.cat(batch_next_states, dim=0).unsqueeze(0)
+                output = self.model(batch_next_states)
+                value = self.env.reward(action) + pow(self.gamma, state.self_state.v_pref) * output.data.item()
+                if value > max_value:
+                    max_value = value
                     max_action = action
 
         if self.phase == 'train':
@@ -212,7 +220,7 @@ class CADRL(Policy):
         Take the state passed from agent and transform it to tensor for batch training
 
         :param state:
-        :return: tensor of shape (len(state), )
+        :return: tensor of shape (# of peds, len(state))
         """
-        assert len(state.ped_states) == 1
-        return torch.Tensor(state.self_state + state.ped_states[0]).to(self.device)
+        return torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
+                          for ped_state in state.ped_states], dim=0)
