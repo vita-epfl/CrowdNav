@@ -76,6 +76,7 @@ class ValueNetwork(nn.Module):
 class SRL(Policy):
     def __init__(self):
         super().__init__()
+        self.name = 'srl'
         self.trainable = True
         self.kinematics = None
         self.discrete = None

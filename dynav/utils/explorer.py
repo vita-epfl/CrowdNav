@@ -17,13 +17,14 @@ class Explorer(object):
     def update_stabilized_model(self, stabilized_model):
         self.stabilized_model = copy.deepcopy(stabilized_model)
 
-    def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None):
+    def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None, print_failure=False):
         self.navigator.policy.set_phase(phase)
         times = []
         success = 0
         collision = 0
         timeout = 0
-        failure_cases = []
+        collision_cases = []
+        timeout_cases = []
         for i in range(k):
             ob = self.env.reset(phase)
             done = False
@@ -45,9 +46,10 @@ class Explorer(object):
                 times.append(self.env.timer)
             elif info == 'collision':
                 collision += 1
-                failure_cases.append(i)
+                collision_cases.append(i)
             elif info == 'timeout':
                 timeout += 1
+                timeout_cases.append(i)
             else:
                 raise ValueError('Invalid info from environment')
 
@@ -64,8 +66,9 @@ class Explorer(object):
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.0f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, average_time))
 
-        if phase == 'test':
-            logging.debug('Failure cases: ' + ' '.join([str(x) for x in failure_cases]))
+        if print_failure:
+            logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
+            logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:

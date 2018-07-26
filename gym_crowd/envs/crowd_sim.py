@@ -59,6 +59,21 @@ class CrowdSim(gym.Env):
     def set_navigator(self, navigator):
         self.navigator = navigator
 
+    def generate_random_ped_position(self, ped, width):
+        # TODO: also check other peds
+        # assure the initial position of pedestrian won't have collision with navigator
+        while True:
+            px = (np.random.random() - 0.5) * width
+            py = (np.random.random() - 0.5) * width
+            if np.linalg.norm((px - self.navigator.px, py - self.navigator.py)) > ped.radius + self.navigator.radius:
+                break
+        while True:
+            gx = (np.random.random() - 0.5) * width
+            gy = (np.random.random() - 0.5) * width
+            if np.linalg.norm((gx - self.navigator.gx, gy - self.navigator.gy)) > ped.radius + self.navigator.radius:
+                break
+        return px, py, gx, gy
+
     def reset(self, phase='test', test_case=None):
         """
         Set px, py, gx, gy, vx, vy, theta for navigator and peds
@@ -67,6 +82,10 @@ class CrowdSim(gym.Env):
         if self.navigator is None:
             raise AttributeError('Navigator has to be set!')
         self.timer = 0
+        if test_case is not None:
+            self.case_counter = test_case
+        single_agent_simulation = ['cadrl', 'orca', 'srl']
+        multiple_agent_simulation = ['srl', 'orca']
 
         assert phase in ['train', 'val', 'test']
         if self.config.get('peds', 'policy') == 'trajnet':
@@ -90,18 +109,40 @@ class CrowdSim(gym.Env):
         else:
             if phase == 'train':
                 np.random.seed(int(time.time()))
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
-                # add some random noise
-                self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
+                if self.navigator.policy.name in single_agent_simulation:
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
+                    angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
+                    # add some random noise
+                    self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi),
+                                     2*np.sin(angle+np.pi), 0, 0, 0)
+                elif self.navigator.policy.name in multiple_agent_simulation:
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    self.peds = []
+                    for i in range(5):
+                        ped = Pedestrian(self.config, 'peds')
+                        ped.set(*self.generate_random_ped_position(ped), 0, 0, 0)
+                        self.peds.append(ped)
+                else:
+                    raise NotImplemented
             elif phase == 'val':
                 np.random.seed(0 + self.case_counter)
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
-                self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi), 2*np.sin(angle+np.pi), 0, 0, 0)
-                self.case_counter = (self.case_counter + 1) % self.val_size
+                if self.navigator.policy.name in single_agent_simulation:
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
+                    angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
+                    self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi),
+                                     2*np.sin(angle+np.pi), 0, 0, 0)
+                    self.case_counter = (self.case_counter + 1) % self.val_size
+                elif self.navigator.policy.name in multiple_agent_simulation:
+                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    self.peds = []
+                    for i in range(5):
+                        ped = Pedestrian(self.config, 'peds')
+                        ped.set(*self.generate_random_ped_position(ped), 0, 0, 0)
+                        self.peds.append(ped)
+                else:
+                    raise NotImplemented
             else:
                 if test_case == 0 or (test_case is None and self.case_counter == 0):
                     self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
@@ -138,12 +179,21 @@ class CrowdSim(gym.Env):
                     self.peds[2].set(-1, 0, 1, -2, 0, 0, 0)
                 else:
                     np.random.seed(1000 + self.case_counter)
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                    square_width = 10
+                    while True:
+                        px = (np.random.random() - 0.5) * square_width
+                        py = (np.random.random() - 0.5) * square_width
+                        gx = (np.random.random() - 0.5) * square_width
+                        gy = (np.random.random() - 0.5) * square_width
+                        if np.linalg.norm((px - gx, py - gy)) > square_width / 2:
+                            break
+                    self.navigator.set(px, py, gx, gy, 0, 0, np.pi / 2)
+                    # self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+
                     self.peds = []
-                    for i in range(5):
+                    for i in range(10):
                         ped = Pedestrian(self.config, 'peds')
-                        ped.set(np.random.random()*5-2.5, np.random.random()*5-2.5, np.random.random()*5-2.5,
-                                np.random.random()*5-2.5, 0, 0, 0)
+                        ped.set(*self.generate_random_ped_position(ped, square_width), 0, 0, 0)
                         self.peds.append(ped)
                 self.case_counter = (self.case_counter + 1) % self.test_size
 
@@ -247,16 +297,16 @@ class CrowdSim(gym.Env):
                              for i in range(len(self.states))]
 
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-5, 5)
-            ax.set_ylim(-5, 5)
+            ax.set_xlim(-7, 7)
+            ax.set_ylim(-7, 7)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
             peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                     for i in range(len(self.peds))]
-            text = plt.text(0, 8, 'Step: {}'.format(0), fontsize=12)
+            text = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
+            ax.add_artist(text)
             ax.add_artist(navigator)
             for ped in peds:
                 ax.add_artist(ped)
-            ax.add_artist(text)
             plt.legend([navigator], ['navigator'])
 
             def update(frame_num):

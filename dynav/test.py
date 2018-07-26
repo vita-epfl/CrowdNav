@@ -49,15 +49,11 @@ def main():
 
     policy.set_phase(args.phase)
     policy.set_device(device)
-    if args.policy == 'cadrl':
+    if args.policy in ['cadrl', 'srl']:
         policy.set_env(env)
 
     if args.visualize:
-        if args.phase == 'val':
-            ob = env.reset(args.phase)
-        elif args.phase == 'test':
-            ob = env.reset(args.phase, args.test_case)
-
+        ob = env.reset(args.phase, args.test_case)
         done = False
         while not done:
             action = navigator.act(ob)
@@ -66,9 +62,9 @@ def main():
         print('It takes {} steps to finish. Last step is {}'.format(env.timer, info))
     else:
         if args.phase == 'val':
-            explorer.run_k_episodes(env.val_size, args.phase)
+            explorer.run_k_episodes(env.val_size, args.phase, print_failure=True)
         elif args.phase == 'test':
-            explorer.run_k_episodes(env.test_size, args.phase)
+            explorer.run_k_episodes(env.test_size, args.phase, print_failure=True)
 
 
 if __name__ == '__main__':

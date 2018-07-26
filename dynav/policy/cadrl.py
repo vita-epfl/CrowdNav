@@ -67,6 +67,7 @@ class ValueNetwork(nn.Module):
 class CADRL(Policy):
     def __init__(self):
         super().__init__()
+        self.name = 'cadrl'
         self.trainable = True
         self.kinematics = None
         self.discrete = None

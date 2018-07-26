@@ -54,9 +54,10 @@ class ORCA(Policy):
 
         """
         super().__init__()
+        self.name = 'orca'
         self.trainable = False
         self.time_step = 1
-        self.neighbor_dist = 5
+        self.neighbor_dist = 10
         self.max_neighbors = 10
         self.time_horizon = 2
         self.time_horizon_obst = 2
@@ -104,7 +105,7 @@ class ORCA(Policy):
 
         # Perturb a little to avoid deadlocks due to perfect symmetry.
         # perturb_angle = np.random.random() * 2 * np.pi
-        # perturb_dist = np.random.random() * 0.0001
+        # perturb_dist = np.random.random() * 0.01
         # perturb_vel = np.array((np.cos(perturb_angle), np.sin(perturb_angle))) * perturb_dist
         # pref_vel += perturb_vel
 
