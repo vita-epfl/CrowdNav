@@ -159,9 +159,20 @@ class CrowdSim(gym.Env):
                     raise NotImplemented
                 self.case_counter = (self.case_counter + 1) % self.val_size
             else:
-                np.random.seed(1000 + self.case_counter)
-                self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
-                self.case_counter = (self.case_counter + 1) % self.test_size
+                if self.case_counter >= 0:
+                    np.random.seed(1000 + self.case_counter)
+                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
+                    self.case_counter = (self.case_counter + 1) % self.test_size
+                else:
+                    # for hand-crafted cases
+                    if self.case_counter == -1:
+                        self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
+                        self.peds[0].set(-0.75, -3, 1, -3, 0, 0, 0)
+                        self.peds[1].set(-1.75, -2, 2, -2, 0, 0, 0)
+                        self.peds[2].set(-2.75, -1, 3, -1, 0, 0, 0)
+                        self.peds[3].set(-3.75, 0, 4, 0, 0, 0, 0)
+                        self.peds[4].set(-4.75, 1, 5, 1, 0, 0, 0)
+                        self.peds[5].set(-5.75, 2, 6, 2, 0, 0, 0)
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
 
