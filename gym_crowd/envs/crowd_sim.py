@@ -1,12 +1,14 @@
-import os
-import gym_crowd
-import gym
 import logging
+import os
 import time
-import numpy as np
-import matplotlib.pyplot as plt
+
+import gym
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
 import trajnettools
+
+import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 
 
@@ -21,7 +23,6 @@ class CrowdSim(gym.Env):
         Navigator is controlled by a known and learnable policy.
 
         """
-        self.train_ped_num = None
         self.time_limit = None
         self.peds = None
         self.navigator = None
@@ -35,7 +36,6 @@ class CrowdSim(gym.Env):
 
     def configure(self, config):
         self.config = config
-        self.train_ped_num = config.getint('env', 'train_ped_num')
         self.time_limit = config.getint('env', 'time_limit')
         if self.config.get('peds', 'policy') == 'trajnet':
             # load trajnet data
@@ -59,20 +59,51 @@ class CrowdSim(gym.Env):
     def set_navigator(self, navigator):
         self.navigator = navigator
 
-    def generate_random_ped_position(self, ped, width):
-        # TODO: also check other peds
-        # assure the initial position of pedestrian won't have collision with navigator
-        while True:
-            px = (np.random.random() - 0.5) * width
-            py = (np.random.random() - 0.5) * width
-            if np.linalg.norm((px - self.navigator.px, py - self.navigator.py)) > ped.radius + self.navigator.radius:
-                break
-        while True:
-            gx = (np.random.random() - 0.5) * width
-            gy = (np.random.random() - 0.5) * width
-            if np.linalg.norm((gx - self.navigator.gx, gy - self.navigator.gy)) > ped.radius + self.navigator.radius:
-                break
-        return px, py, gx, gy
+    def generate_random_ped_position(self, ped_num, rule, square_width=None, radius=None):
+        """
+        Generate ped position according to certain rule
+        Rule square_crossing: generate start/goal position at two sides of y-axis
+        Rule circle_crossing: generate start position on a circle, goal position is at the opposite side
+
+        :param ped_num:
+        :param square_width:
+        :param rule:
+        :param radius:
+        :return:
+        """
+        assert rule in ['square_crossing', 'circle_crossing']
+        if rule == 'square_crossing':
+            # TODO: also check other peds
+            self.peds = []
+            for i in range(ped_num):
+                ped = Pedestrian(self.config, 'peds')
+                while True:
+                    px = np.random.random() * square_width * -0.5
+                    py = (np.random.random() - 0.5) * square_width
+                    if np.linalg.norm(
+                            (px - self.navigator.px, py - self.navigator.py)) > ped.radius + self.navigator.radius:
+                        break
+                while True:
+                    gx = np.random.random() * square_width * 0.5
+                    gy = (np.random.random() - 0.5) * square_width
+                    if np.linalg.norm(
+                            (gx - self.navigator.gx, gy - self.navigator.gy)) > ped.radius + self.navigator.radius:
+                        break
+                if np.random.random() > 0.5:
+                    ped.set(px, py, gx, gy, 0, 0, 0)
+                else:
+                    ped.set(gx, gy, px, py, 0, 0, 0)
+                self.peds.append(ped)
+        elif rule == 'circle_crossing':
+            assert ped_num == 1
+            self.peds = [Pedestrian(self.config, 'peds') for _ in range(ped_num)]
+            angle = np.random.uniform(low=-np.pi / 2 + np.arcsin(0.3 / 2) * radius,
+                                      high=3 / 2 * np.pi - np.arcsin(0.3 / 2) * radius)
+            # add some noise to simulate all the possible cases navigator could meet with pedestrian
+            px_noise = (np.random.random() - 0.5) * self.peds[0].v_pref
+            py_noise = (np.random.random() - 0.5) * self.peds[0].v_pref
+            self.peds[0].set(radius * np.cos(angle) + px_noise, radius * np.sin(angle) + py_noise,
+                             radius * np.cos(angle + np.pi), radius * np.sin(angle + np.pi), 0, 0, 0)
 
     def reset(self, phase='test', test_case=None):
         """
@@ -101,100 +132,35 @@ class CrowdSim(gym.Env):
                 if test_case is not None:
                     logging.info('{} pedestrians in scene {}'.format(ped_num, scene_index))
                 self.peds = [Pedestrian(self.config, 'peds') for _ in range(ped_num)]
-                self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
+                self.navigator.set(0, -4, 0, 4, 0, 0, np.pi / 2)
                 for i in range(ped_num):
                     # assign ith trajectory to ith ped's policy
                     self.peds[i].policy.configure(scene[i])
                     self.peds[i].set(scene[i][0].x, scene[i][0].y, scene[i][-1].x, scene[i][-1].y, 0, 0, 0)
         else:
+            square_width = 10
+            radius = 4
+            self.navigator.set(0, -radius, 0, radius, 0, 0, np.pi / 2)
             if phase == 'train':
                 np.random.seed(int(time.time()))
                 if self.navigator.policy.name in single_agent_simulation:
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
-                    angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
-                    # add some random noise
-                    self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi),
-                                     2*np.sin(angle+np.pi), 0, 0, 0)
+                    self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
                 elif self.navigator.policy.name in multiple_agent_simulation:
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                    self.peds = []
-                    for i in range(5):
-                        ped = Pedestrian(self.config, 'peds')
-                        ped.set(*self.generate_random_ped_position(ped), 0, 0, 0)
-                        self.peds.append(ped)
+                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 else:
                     raise NotImplemented
             elif phase == 'val':
                 np.random.seed(0 + self.case_counter)
                 if self.navigator.policy.name in single_agent_simulation:
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.train_ped_num)]
-                    angle = np.random.uniform(low=-np.pi/2+np.arcsin(0.3/2)*2, high=3/2*np.pi-np.arcsin(0.3/2)*2)
-                    self.peds[0].set(2*np.cos(angle), 2*np.sin(angle), 2*np.cos(angle+np.pi),
-                                     2*np.sin(angle+np.pi), 0, 0, 0)
-                    self.case_counter = (self.case_counter + 1) % self.val_size
+                    self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
                 elif self.navigator.policy.name in multiple_agent_simulation:
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                    self.peds = []
-                    for i in range(5):
-                        ped = Pedestrian(self.config, 'peds')
-                        ped.set(*self.generate_random_ped_position(ped), 0, 0, 0)
-                        self.peds.append(ped)
+                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 else:
                     raise NotImplemented
+                self.case_counter = (self.case_counter + 1) % self.val_size
             else:
-                if test_case == 0 or (test_case is None and self.case_counter == 0):
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(2)]
-                    self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-                    self.peds[1].set(-1, 1, 1, 1, 0, 0, 0)
-                elif test_case == 1 or (test_case is None and self.case_counter == 1):
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
-                    self.peds[0].set(-1, -1, 1, -1, 0, 0, 0)
-                    self.peds[1].set(-1, 0, 1, 0, 0, 0, 0)
-                    self.peds[2].set(-1, 1, 1, 1, 0, 0, 0)
-                    self.peds[3].set(1, -1, -1, -1, 0, 0, 0)
-                    self.peds[4].set(1, 0, -1, 0, 0, 0, 0)
-                    self.peds[5].set(1, 1, -1, 1, 0, 0, 0)
-                elif test_case == 2 or (test_case is None and self.case_counter == 2):
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi/2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(4)]
-                    self.peds[0].set(-1, -1, 1, 1, 0, 0, 0)
-                    self.peds[1].set(-1, 1, 1, -1, 0, 0, 0)
-                    self.peds[2].set(1, 1, -1, -1, 0, 0, 0)
-                    self.peds[3].set(1, -1, -1, 1, 0, 0, 0)
-                elif test_case == 3 or (test_case is None and self.case_counter == 3):
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
-                    self.peds[0].set(-1, 1, -1, -1, 0, 0, 0)
-                    self.peds[1].set(0, 1, 0, -1, 0, 0, 0)
-                    self.peds[2].set(1, 1, 1, -1, 0, 0, 0)
-                elif test_case == 4 or (test_case is None and self.case_counter == 4):
-                    self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
-                    self.peds[0].set(-1, 1, 1, -1, 0, 0, 0)
-                    self.peds[1].set(-1, 2, 1, 0, 0, 0, 0)
-                    self.peds[2].set(-1, 0, 1, -2, 0, 0, 0)
-                else:
-                    np.random.seed(1000 + self.case_counter)
-                    square_width = 10
-                    while True:
-                        px = (np.random.random() - 0.5) * square_width
-                        py = (np.random.random() - 0.5) * square_width
-                        gx = (np.random.random() - 0.5) * square_width
-                        gy = (np.random.random() - 0.5) * square_width
-                        if np.linalg.norm((px - gx, py - gy)) > square_width / 2:
-                            break
-                    self.navigator.set(px, py, gx, gy, 0, 0, np.pi / 2)
-                    # self.navigator.set(0, -2, 0, 2, 0, 0, np.pi / 2)
-
-                    self.peds = []
-                    for i in range(10):
-                        ped = Pedestrian(self.config, 'peds')
-                        ped.set(*self.generate_random_ped_position(ped, square_width), 0, 0, 0)
-                        self.peds.append(ped)
+                np.random.seed(1000 + self.case_counter)
+                self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 self.case_counter = (self.case_counter + 1) % self.test_size
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
@@ -245,7 +211,7 @@ class CrowdSim(gym.Env):
                 else:
                     dmin = distance
         reaching_goal = np.linalg.norm((pos[0]-self.navigator.gx, pos[1]-self.navigator.gy)) < self.navigator.radius
-        if self.timer >= self.time_limit:
+        if self.timer >= self.time_limit-1:
             reward = 0
             done = True
             info = 'timeout'
