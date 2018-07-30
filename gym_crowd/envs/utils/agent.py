@@ -25,6 +25,8 @@ class Agent(object):
         self.vy = None
         self.theta = None
 
+        self.time_step = None
+
         assert self.kinematics in ['holonomic', 'unicycle']
 
     def set(self, px, py, gx, gy, vx, vy, theta):
@@ -62,15 +64,15 @@ class Agent(object):
         else:
             assert isinstance(action, ActionRot)
 
-    def compute_position(self, action, time=1):
+    def compute_position(self, action, delta_t):
         self.check_validity(action)
         if self.kinematics == 'holonomic':
-            px = self.px + action.vx * time
-            py = self.py + action.vy * time
+            px = self.px + action.vx * delta_t
+            py = self.py + action.vy * delta_t
         else:
             theta = self.theta + action.r
-            px = self.px + np.cos(theta) * action.v * time
-            py = self.py + np.sin(theta) * action.v * time
+            px = self.px + np.cos(theta) * action.v * delta_t
+            py = self.py + np.sin(theta) * action.v * delta_t
 
         return px, py
 
@@ -79,7 +81,7 @@ class Agent(object):
         Perform an action and update the state
         """
         self.check_validity(action)
-        pos = self.compute_position(action)
+        pos = self.compute_position(action, self.time_step)
         self.px, self.py = pos
         if self.kinematics == 'holonomic':
             self.vx = action.vx

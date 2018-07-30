@@ -1,8 +1,8 @@
 import numpy as np
-import torch
+import rvo2
+
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionXY
-import rvo2
 
 
 class ORCA(Policy):
@@ -56,7 +56,6 @@ class ORCA(Policy):
         super().__init__()
         self.name = 'orca'
         self.trainable = False
-        self.time_step = 1
         self.neighbor_dist = 10
         self.max_neighbors = 10
         self.time_horizon = 2
@@ -83,7 +82,7 @@ class ORCA(Policy):
         Python-RVO2 API: https://github.com/sybrenstuvel/Python-RVO2/blob/master/src/rvo2.pyx
         How simulation is done in RVO2: https://github.com/sybrenstuvel/Python-RVO2/blob/master/src/Agent.cpp
 
-        Agent doesn't stop moving after it reaches the goal, because once it stop moving, the reciprocal rule is broken.
+        Agent doesn't stop moving after it reaches the goal, because once it stops moving, the reciprocal rule is broken
 
         :param state:
         :return:
@@ -98,7 +97,7 @@ class ORCA(Policy):
         # Set the preferred velocity to be a vector of unit magnitude (speed) in the direction of the goal.
         goal_direction = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
         norm = np.linalg.norm(goal_direction)
-        if norm > 1:
+        if norm > self.max_speed:
             pref_vel = goal_direction / norm if norm != 0 else np.array((0., 0.))
         else:
             pref_vel = goal_direction
@@ -111,12 +110,13 @@ class ORCA(Policy):
 
         sim.setAgentPrefVelocity(self_agent, tuple(pref_vel))
         for i, ped_state in enumerate(state.ped_states):
-            pref_vel = (1, 1)
+            pref_vel = (self.max_speed, 0)
             sim.setAgentPrefVelocity(other_agents[i], pref_vel)
 
         sim.doStep()
         next_position = sim.getAgentPosition(self_agent)
-        action = ActionXY(next_position[0]-self_state.px, next_position[1]-self_state.py)
+        action = ActionXY((next_position[0] - self_state.px) / self.time_step,
+                          (next_position[1] - self_state.py) / self.time_step)
 
         # save state for imitation learning
         self.last_state = state

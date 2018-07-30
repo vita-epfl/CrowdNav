@@ -12,6 +12,7 @@ class Policy(object):
         self.model = None
         self.device = None
         self.last_state = None
+        self.time_step = None
 
     @abc.abstractmethod
     def configure(self, config):

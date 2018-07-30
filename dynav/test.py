@@ -2,6 +2,7 @@ import torch
 import logging
 import argparse
 import configparser
+import numpy as np
 import gym
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
@@ -22,7 +23,7 @@ def main():
     args = parser.parse_args()
 
     # configure logging and device
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
     logging.info('Using device: {}'.format(device))
@@ -55,11 +56,15 @@ def main():
     if args.visualize:
         ob = env.reset(args.phase, args.test_case)
         done = False
+        last_pos = np.array(navigator.get_position())
         while not done:
             action = navigator.act(ob)
             ob, reward, done, info = env.step(action)
+            current_pos = np.array(navigator.get_position())
+            logging.debug('Speed: {:.2f}'.format(np.linalg.norm(current_pos - last_pos) / navigator.time_step))
+            last_pos = current_pos
         env.render('video', args.output_file)
-        print('It takes {} steps to finish. Last step is {}'.format(env.timer, info))
+        logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.timer, info))
     else:
         if args.phase == 'val':
             explorer.run_k_episodes(env.val_size, args.phase, print_failure=True)

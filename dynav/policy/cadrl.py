@@ -138,23 +138,22 @@ class CADRL(Policy):
         return action_space
 
     def propagate(self, state, action):
-        delta_t = 1
         if isinstance(state, ObservableState):
             # propagate state of peds
-            next_px = state.px + action.vx * delta_t
-            next_py = state.py + action.vy * delta_t
+            next_px = state.px + action.vx * self.time_step
+            next_py = state.py + action.vy * self.time_step
             next_state = ObservableState(next_px, next_py, action.vx, action.vy, state.radius)
         elif isinstance(state, FullState):
             # propagate state of current agent
             # perform action without rotation
             if self.kinematics == 'holonomic':
-                next_px = state.px + action.vx * delta_t
-                next_py = state.py + action.vy * delta_t
+                next_px = state.px + action.vx * self.time_step
+                next_py = state.py + action.vy * self.time_step
                 next_state = FullState(next_px, next_py, state.vx, state.vy, state.radius,
                                        state.gx, state.gy, state.v_pref, state.theta)
             else:
-                next_px = state.px + np.cos(action.r + state.theta) * action.v * delta_t
-                next_py = state.py + np.sin(action.r + state.theta) * action.v * delta_t
+                next_px = state.px + np.cos(action.r + state.theta) * action.v * self.time_step
+                next_py = state.py + np.sin(action.r + state.theta) * action.v * self.time_step
                 next_theta = state.theta + action.r
                 next_vx = action.v * np.cos(next_theta)
                 next_vy = action.v * np.sin(next_theta)

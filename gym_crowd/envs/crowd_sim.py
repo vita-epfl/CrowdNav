@@ -1,13 +1,11 @@
 import logging
 import os
 import time
-
 import gym
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import trajnettools
-
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 
@@ -24,6 +22,7 @@ class CrowdSim(gym.Env):
 
         """
         self.time_limit = None
+        self.time_step = None
         self.peds = None
         self.navigator = None
         self.timer = None
@@ -37,6 +36,7 @@ class CrowdSim(gym.Env):
     def configure(self, config):
         self.config = config
         self.time_limit = config.getint('env', 'time_limit')
+        self.time_step = config.getfloat('env', 'time_step')
         if self.config.get('peds', 'policy') == 'trajnet':
             # load trajnet data
             trajnet_dir = os.path.join(os.path.dirname(gym_crowd.__file__), 'envs/data/trajnet')
@@ -112,13 +112,13 @@ class CrowdSim(gym.Env):
         """
         if self.navigator is None:
             raise AttributeError('Navigator has to be set!')
-        self.timer = 0
+        assert phase in ['train', 'val', 'test']
         if test_case is not None:
             self.case_counter = test_case
         single_agent_simulation = ['cadrl', 'orca', 'srl']
         multiple_agent_simulation = ['srl', 'orca']
+        self.timer = 0
 
-        assert phase in ['train', 'val', 'test']
         if self.config.get('peds', 'policy') == 'trajnet':
             if phase == 'train':
                 pass
@@ -173,6 +173,10 @@ class CrowdSim(gym.Env):
                         self.peds[3].set(-3.75, 0, 4, 0, 0, 0, 0)
                         self.peds[4].set(-4.75, 1, 5, 1, 0, 0, 0)
                         self.peds[5].set(-5.75, 2, 6, 2, 0, 0, 0)
+
+        for agent in [self.navigator] + self.peds:
+            agent.time_step = self.time_step
+            agent.policy.time_step = self.time_step
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
 
@@ -248,7 +252,7 @@ class CrowdSim(gym.Env):
             self.navigator.step(action)
             for i, ped_action in enumerate(ped_actions):
                 self.peds[i].step(ped_action)
-            self.timer += 1
+            self.timer += self.time_step
             self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
 
         if self.navigator.sensor == 'coordinates':
@@ -291,12 +295,12 @@ class CrowdSim(gym.Env):
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
 
-                text.set_text('Step: {}'.format(frame_num))
+                text.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
-            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=400)
+            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step*1000)
             if output_file is not None:
                 ffmpeg_writer = animation.writers['ffmpeg']
-                writer = ffmpeg_writer(fps=2.5, metadata=dict(artist='Me'), bitrate=1800)
+                writer = ffmpeg_writer(fps=1/self.time_step, metadata=dict(artist='Me'), bitrate=1800)
                 anim.save(output_file, writer=writer)
 
             plt.show()
