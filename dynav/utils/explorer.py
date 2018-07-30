@@ -1,7 +1,6 @@
 import logging
 import torch
 import copy
-import numpy as np
 
 
 class Explorer(object):
@@ -55,15 +54,14 @@ class Explorer(object):
 
         success_rate = success / k
         collision_rate = collision / k
-        timeout_rate = timeout / k
-        assert np.isclose(success_rate + collision_rate + timeout_rate, 1)
+        assert success + collision + timeout == k
         if len(times) == 0:
             average_time = 0
         else:
             average_time = sum(times) / len(times)
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
-        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.0f}'.
+        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.2f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, average_time))
 
         if print_failure:
@@ -83,9 +81,10 @@ class Explorer(object):
             if imitation_learning:
                 # in imitation learning, the value of state is defined based on the time to reach the goal
                 state = self.target_policy.transform(state)
-                value = torch.Tensor([pow(self.gamma, (steps - 1 - i) * self.navigator.v_pref)]).to(self.device)
+                value = pow(self.gamma, (steps - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
             else:
-                value = reward + self.gamma * self.stabilized_model(next_state.unsqueeze(0)).data.item()
-                value = torch.Tensor([value]).to(self.device)
+                gamma_bar = pow(self.gamma, self.navigator.time_step * self.navigator.v_pref)
+                value = reward + gamma_bar * self.stabilized_model(next_state.unsqueeze(0)).data.item()
+            value = torch.Tensor([value]).to(self.device)
 
             self.memory.push((state, value))

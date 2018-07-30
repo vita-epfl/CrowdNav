@@ -1,12 +1,14 @@
 import logging
 import os
 import time
+
 import gym
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.linalg import norm
 import trajnettools
+from numpy.linalg import norm
+
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
@@ -243,6 +245,7 @@ class CrowdSim(gym.Env):
             info = 'collision'
         elif reaching_goal:
             reward = 1
+            # reward = 1 - (self.timer - 8) / 20
             done = True
             info = 'reach goal'
         elif dmin < 0.2:
