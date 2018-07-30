@@ -5,9 +5,11 @@ import gym
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.linalg import norm
 import trajnettools
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
+from gym_crowd.envs.utils.utils import point_to_segment_dist
 
 
 class CrowdSim(gym.Env):
@@ -77,22 +79,23 @@ class CrowdSim(gym.Env):
             self.peds = []
             for i in range(ped_num):
                 ped = Pedestrian(self.config, 'peds')
-                while True:
-                    px = np.random.random() * square_width * -0.5
-                    py = (np.random.random() - 0.5) * square_width
-                    if np.linalg.norm(
-                            (px - self.navigator.px, py - self.navigator.py)) > ped.radius + self.navigator.radius:
-                        break
-                while True:
-                    gx = np.random.random() * square_width * 0.5
-                    gy = (np.random.random() - 0.5) * square_width
-                    if np.linalg.norm(
-                            (gx - self.navigator.gx, gy - self.navigator.gy)) > ped.radius + self.navigator.radius:
-                        break
                 if np.random.random() > 0.5:
-                    ped.set(px, py, gx, gy, 0, 0, 0)
+                    sign = -1
                 else:
-                    ped.set(gx, gy, px, py, 0, 0, 0)
+                    sign = 1
+                while True:
+                    px = np.random.random() * square_width * 0.5 * sign
+                    py = (np.random.random() - 0.5) * square_width
+                    if norm((px - self.navigator.px, py - self.navigator.py)) > \
+                            ped.radius + self.navigator.radius:
+                        break
+                while True:
+                    gx = np.random.random() * square_width * 0.5 * -sign
+                    gy = (np.random.random() - 0.5) * square_width
+                    if norm((gx - self.navigator.gx, gy - self.navigator.gy)) > \
+                            ped.radius + self.navigator.radius:
+                        break
+                ped.set(px, py, gx, gy, 0, 0, 0)
                 self.peds.append(ped)
         elif rule == 'circle_crossing':
             assert ped_num == 1
@@ -209,23 +212,27 @@ class CrowdSim(gym.Env):
                 ob += [self.navigator.get_observable_state()]
             ped_actions.append(ped.act(ob))
 
-        # collision detection for navigator, peds are guaranteed to have no collision
-        # TODO: more advanced version of collision detection
+        # collision detection
         dmin = float('inf')
         collision = False
         for i, ped in enumerate(self.peds):
-            if collision:
+            px = ped.px - self.navigator.px
+            py = ped.py - self.navigator.py
+            vx = ped_actions[i].vx - action.vx
+            vy = ped_actions[i].vy - action.vy
+            ex = px + vx * self.time_step
+            ey = py + vy * self.time_step
+            closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
+            if closest_dist < ped.radius + self.navigator.radius:
+                collision = True
                 break
-            for t in np.arange(0, 1.001, 0.1):
-                pos = self.navigator.compute_position(action, t)
-                ped_pos = ped.compute_position(ped_actions[i], t)
-                distance = np.linalg.norm((pos[0]-ped_pos[0], pos[1]-ped_pos[1])) - ped.radius - self.navigator.radius
-                if distance < 0:
-                    collision = True
-                    break
-                else:
-                    dmin = distance
-        reaching_goal = np.linalg.norm((pos[0]-self.navigator.gx, pos[1]-self.navigator.gy)) < self.navigator.radius
+            elif closest_dist < dmin:
+                dmin = closest_dist
+
+        # check if reaching the goal
+        end_position = np.array(self.navigator.compute_position(action, self.time_step))
+        reaching_goal = norm(end_position - np.array(self.navigator.get_goal_position())) < self.navigator.radius
+
         if self.timer >= self.time_limit-1:
             reward = 0
             done = True

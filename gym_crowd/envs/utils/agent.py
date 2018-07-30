@@ -47,6 +47,9 @@ class Agent(object):
     def get_position(self):
         return self.px, self.py
 
+    def get_goal_position(self):
+        return self.gx, self.gy
+
     def get_velocity(self):
         return self.vx, self.vy
 
