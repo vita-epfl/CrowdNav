@@ -63,7 +63,8 @@ def main():
             current_pos = np.array(navigator.get_position())
             logging.debug('Speed: {:.2f}'.format(np.linalg.norm(current_pos - last_pos) / navigator.time_step))
             last_pos = current_pos
-        env.render('video', args.output_file)
+        # env.render('video', args.output_file)
+        env.render('traj', args.output_file)
         logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.timer, info))
     else:
         if args.phase == 'val':

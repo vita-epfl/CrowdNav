@@ -13,6 +13,7 @@ import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
 
+import warnings
 
 class CrowdSim(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -227,9 +228,24 @@ class CrowdSim(gym.Env):
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
             if closest_dist < ped.radius + self.navigator.radius:
                 collision = True
+                warnings.warn("Navigator collides")
+                print("\tDistance between agent and p{} is {:.2f}".format(i,closest_dist))                
                 break
             elif closest_dist < dmin:
                 dmin = closest_dist
+
+        # collision detection between pedestrians 
+        ped_num = len(self.peds)
+        for i in range(ped_num):
+            for j in range(i+1,ped_num):
+                dx = self.peds[i].px - self.peds[j].px
+                dy = self.peds[i].py - self.peds[j].py
+                dist = (dx**2 + dy**2)**(1/2)                
+                if dist < ped.radius * 2:
+                    collision = True                 
+                    closest_dist = dist
+                    warnings.warn("Pedestrians collide")
+                    print("\tDistance between p{} and p{} is {:.2f}".format(i,j,dist))
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
@@ -260,8 +276,10 @@ class CrowdSim(gym.Env):
         # update all agents
         if update:
             self.navigator.step(action)
+            # print("navigator action: {:.2f}, {:.2f}, {:.2f}".format(action.vx, action.vy, (action.vx**2.0 + action.vy**2.0)**(0.5) ))
             for i, ped_action in enumerate(ped_actions):
                 self.peds[i].step(ped_action)
+                # print("ped #{} action: {:.2f}, {:.2f}, {:.2f}".format(i, ped_action.vx, ped_action.vy, (ped_action.vx**2.0 + ped_action.vy**2.0)**(0.5) ))
             self.timer += self.time_step
             self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
 
@@ -281,6 +299,24 @@ class CrowdSim(gym.Env):
                 ped_circle = plt.Circle(ped.get_position(), ped.radius, fill=True, color='b')
                 ax.add_artist(ped_circle)
             ax.add_artist(plt.Circle(self.navigator.get_position(), self.navigator.radius, fill=True, color='r'))
+            plt.show()
+        if mode == 'traj':
+            navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
+            ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
+                             for i in range(len(self.states))]
+            fig, ax = plt.subplots(figsize=(7, 7))
+            ax.set_xlim(-7, 7)
+            ax.set_ylim(-7, 7)
+            for k in range(len(self.states)):
+                navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color='red')
+                peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
+                        for i in range(len(self.peds))]
+                ax.add_artist(navigator)
+                for ped in peds:
+                    ax.add_artist(ped)      
+            text = plt.text(0, 6, 'Trajectories', fontsize=12)
+            ax.add_artist(text)
+            plt.legend([navigator], ['navigator'])
             plt.show()
         elif mode == 'video':
             navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
