@@ -58,8 +58,8 @@ class ORCA(Policy):
         self.trainable = False
         self.neighbor_dist = 10
         self.max_neighbors = 10
-        self.time_horizon = 2
-        self.time_horizon_obst = 2
+        self.time_horizon = 5
+        self.time_horizon_obst = 5
         self.radius = 0.3
         self.max_speed = 1
         self.sim = None

@@ -19,7 +19,10 @@ def reward(state, action, kinematics, time_step):
     self_state = state.self_state
     dmin = float('inf')
     collision = False
-    for i, ped_state in enumerate(state.ped_states):
+    for ped_state in state.ped_states:
+        # transform coordinates to be self-agent centric
+        # so self-agent will be at (0, 0), the trajectory of ped is a line segment with
+        # two end point (px, py) and (ex, ey). Compute the closest distance from point to line segment.
         px = ped_state.px - self_state.px
         py = ped_state.py - self_state.py
         vx = ped_state.vx - action.vx
@@ -35,7 +38,7 @@ def reward(state, action, kinematics, time_step):
 
     # check if reaching the goal
     end_position = np.array(self_state.position) + np.array(action) * time_step
-    reaching_goal = norm(end_position - np.array(self_state.position)) < self_state.radius
+    reaching_goal = norm(end_position - np.array(self_state.goal_position)) < self_state.radius
 
     if collision:
         reward_value = -0.25

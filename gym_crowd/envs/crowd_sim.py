@@ -146,7 +146,6 @@ class CrowdSim(gym.Env):
             radius = 4
             self.navigator.set(0, -radius, 0, radius, 0, 0, np.pi / 2)
             if phase == 'train':
-                np.random.seed(int(time.time()))
                 if self.navigator.policy.name in single_agent_simulation:
                     self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
                 elif self.navigator.policy.name in multiple_agent_simulation:

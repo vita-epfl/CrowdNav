@@ -64,7 +64,7 @@ def main():
         env.render('video', args.output_file)
         logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.timer, info))
     else:
-        if args.phase == 'val':
+        if args.phase == 'val' or args.phase == 'train':
             explorer.run_k_episodes(env.val_size, args.phase, print_failure=True)
         elif args.phase == 'test':
             explorer.run_k_episodes(env.test_size, args.phase, print_failure=True)
