@@ -16,6 +16,7 @@ class Explorer(object):
     def update_stabilized_model(self, stabilized_model):
         self.stabilized_model = copy.deepcopy(stabilized_model)
 
+    # @profile
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None, print_failure=False):
         self.navigator.policy.set_phase(phase)
         times = []

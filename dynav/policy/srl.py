@@ -5,6 +5,7 @@ import itertools
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
 from gym_crowd.envs.utils.state import ObservableState, FullState
+from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
@@ -80,7 +81,6 @@ class SRL(Policy):
         self.trainable = True
         self.kinematics = None
         self.discrete = None
-        self.env = None
         self.epsilon = None
         self.gamma = None
         self.sampling = None
@@ -100,9 +100,6 @@ class SRL(Policy):
         assert self.action_space_size in [50, 100]
         assert self.sampling in ['uniform', 'exponential']
         assert self.kinematics in ['holonomic', 'unicycle']
-
-    def set_env(self, env):
-        self.env = env
 
     def set_device(self, device):
         self.device = device
@@ -181,8 +178,8 @@ class SRL(Policy):
         thus the reward function is needed
 
         """
-        if any([self.env is None, self.phase is None, self.device is None]):
-            raise AttributeError('Env, epsilon, phase, device attributes have to be set!')
+        if self.phase is None or self.device is None:
+            raise AttributeError('Phase, device attributes have to be set!')
         if self.phase == 'train' and self.epsilon is None:
             raise AttributeError('Epsilon attribute has to be set in training phase')
 
@@ -205,7 +202,8 @@ class SRL(Policy):
                     batch_next_states.append(next_dual_state)
                 batch_next_states = torch.cat(batch_next_states, dim=0).unsqueeze(0)
                 output = self.model(batch_next_states)
-                value = self.env.reward(action) + pow(self.gamma, state.self_state.v_pref) * output.data.item()
+                value = reward(state, action, self.kinematics, self.time_step) + \
+                    pow(self.gamma, state.self_state.v_pref) * output.data.item()
                 if value > max_value:
                     max_value = value
                     max_action = action

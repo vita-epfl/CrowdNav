@@ -50,8 +50,6 @@ def main():
 
     policy.set_phase(args.phase)
     policy.set_device(device)
-    if args.policy in ['cadrl', 'srl']:
-        policy.set_env(env)
 
     if args.visualize:
         ob = env.reset(args.phase, args.test_case)

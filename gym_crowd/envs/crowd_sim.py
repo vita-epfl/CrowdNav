@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-
 import gym
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -249,7 +248,7 @@ class CrowdSim(gym.Env):
             done = True
             info = 'reach goal'
         elif dmin < 0.2:
-            reward = -0.1 - dmin / 2
+            reward = -0.1 + dmin / 2
             done = False
             info = 'too close'
         else:

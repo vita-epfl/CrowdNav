@@ -109,8 +109,6 @@ def main():
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
-    if args.policy in ['cadrl', 'srl']:
-        policy.set_env(env)
     navigator.set_policy(policy)
     episode = 0
     while episode < train_episodes:

@@ -62,6 +62,7 @@ class ORCA(Policy):
         self.time_horizon_obst = 2
         self.radius = 0.3
         self.max_speed = 1
+        self.sim = None
 
     def configure(self, config):
         # self.time_step = config.getfloat('orca', 'time_step')
@@ -89,10 +90,17 @@ class ORCA(Policy):
         """
         self_state = state.self_state
         params = self.neighbor_dist, self.max_neighbors, self.time_horizon, self.time_horizon_obst
-        sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
-        self_agent = sim.addAgent(self_state.position, *params, self_state.radius, self_state.v_pref, self_state.velocity)
-        other_agents = [sim.addAgent(ped_state.position, *params, ped_state.radius, self.max_speed, ped_state.velocity)
-                        for ped_state in state.ped_states]
+        if self.sim is None:
+            self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
+            self.sim.addAgent(self_state.position, *params, self_state.radius, self_state.v_pref, self_state.velocity)
+            for ped_state in state.ped_states:
+                self.sim.addAgent(ped_state.position, *params, ped_state.radius, self.max_speed, ped_state.velocity)
+        else:
+            self.sim.setAgentPosition(0, self_state.position)
+            self.sim.setAgentVelocity(0, self_state.velocity)
+            for i, ped_state in enumerate(state.ped_states):
+                self.sim.setAgentPosition(i + 1, ped_state.position)
+                self.sim.setAgentVelocity(i + 1, ped_state.velocity)
 
         # Set the preferred velocity to be a vector of unit magnitude (speed) in the direction of the goal.
         goal_direction = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
@@ -108,13 +116,13 @@ class ORCA(Policy):
         # perturb_vel = np.array((np.cos(perturb_angle), np.sin(perturb_angle))) * perturb_dist
         # pref_vel += perturb_vel
 
-        sim.setAgentPrefVelocity(self_agent, tuple(pref_vel))
+        self.sim.setAgentPrefVelocity(0, tuple(pref_vel))
         for i, ped_state in enumerate(state.ped_states):
-            pref_vel = (self.max_speed, 0)
-            sim.setAgentPrefVelocity(other_agents[i], pref_vel)
+            # random assignment
+            self.sim.setAgentPrefVelocity(i + 1, (self.max_speed, 0))
 
-        sim.doStep()
-        next_position = sim.getAgentPosition(self_agent)
+        self.sim.doStep()
+        next_position = self.sim.getAgentPosition(0)
         action = ActionXY((next_position[0] - self_state.px) / self.time_step,
                           (next_position[1] - self_state.py) / self.time_step)
 

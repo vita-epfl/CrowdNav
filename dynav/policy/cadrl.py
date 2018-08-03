@@ -5,6 +5,7 @@ import itertools
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
 from gym_crowd.envs.utils.state import ObservableState, FullState
+from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
@@ -71,7 +72,6 @@ class CADRL(Policy):
         self.trainable = True
         self.kinematics = None
         self.discrete = None
-        self.env = None
         self.epsilon = None
         self.gamma = None
         self.sampling = None
@@ -91,9 +91,6 @@ class CADRL(Policy):
         assert self.action_space_size in [50, 100]
         assert self.sampling in ['uniform', 'exponential']
         assert self.kinematics in ['holonomic', 'unicycle']
-
-    def set_env(self, env):
-        self.env = env
 
     def set_device(self, device):
         self.device = device
@@ -172,8 +169,8 @@ class CADRL(Policy):
         thus the reward function is needed
 
         """
-        if any([self.env is None, self.phase is None, self.device is None]):
-            raise AttributeError('Env, epsilon, phase, device attributes have to be set!')
+        if self.phase is None or self.device is None:
+            raise AttributeError('Phase, device attributes have to be set!')
         if self.phase == 'train' and self.epsilon is None:
             raise AttributeError('Epsilon attribute has to be set in training phase')
 
@@ -197,7 +194,8 @@ class CADRL(Policy):
                 batch_next_states = torch.cat(batch_next_states, dim=0)
                 outputs = self.model(batch_next_states)
                 min_output, min_index = torch.min(outputs, 0)
-                min_value = self.env.reward(action) + pow(self.gamma, state.self_state.v_pref) * min_output.data.item()
+                min_value = reward(state, action, self.kinematics, self.time_step) + \
+                    pow(self.gamma, state.self_state.v_pref) * min_output.data.item()
                 if min_value > max_min_value:
                     max_min_value = min_value
                     max_action = action
