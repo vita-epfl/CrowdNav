@@ -175,13 +175,8 @@ class CrowdSim(gym.Env):
                 else:
                     # for hand-crafted cases
                     if self.case_counter == -1:
-                        self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
-                        self.peds[0].set(-0.75, -3, 1, -3, 0, 0, 0)
-                        self.peds[1].set(-1.75, -2, 2, -2, 0, 0, 0)
-                        self.peds[2].set(-2.75, -1, 3, -1, 0, 0, 0)
-                        self.peds[3].set(-3.75, 0, 4, 0, 0, 0, 0)
-                        self.peds[4].set(-4.75, 1, 5, 1, 0, 0, 0)
-                        self.peds[5].set(-5.75, 2, 6, 2, 0, 0, 0)
+                        self.peds = [Pedestrian(self.config, 'peds') for _ in range(1)]
+                        self.peds[0].set(-3.8, -1.33, 3.8, 1.33, 0, 0, 0)
 
         for agent in [self.navigator] + self.peds:
             agent.time_step = self.time_step
@@ -197,15 +192,7 @@ class CrowdSim(gym.Env):
 
         return ob
 
-    def reward(self, action):
-        """
-        Only compute reward but don't update the state.
-
-        """
-        _, reward, _, _ = self.step(action, update=False)
-        return reward
-
-    def step(self, action, update=True):
+    def step(self, action):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
 
@@ -275,13 +262,13 @@ class CrowdSim(gym.Env):
             done = False
             info = ''
 
+        # print(self.timer, self.navigator.get_position(), self.peds[0].get_position())
         # update all agents
-        if update:
-            self.navigator.step(action)
-            for i, ped_action in enumerate(ped_actions):
-                self.peds[i].step(ped_action)
-            self.timer += self.time_step
-            self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+        self.navigator.step(action)
+        for i, ped_action in enumerate(ped_actions):
+            self.peds[i].step(ped_action)
+        self.timer += self.time_step
+        self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
 
         if self.navigator.sensor == 'coordinates':
             ob = [ped.get_observable_state() for ped in self.peds]
@@ -326,6 +313,7 @@ class CrowdSim(gym.Env):
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-7, 7)
             ax.set_ylim(-7, 7)
+            ax.scatter([0], [4])
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
             peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                     for i in range(len(self.peds))]
