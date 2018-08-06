@@ -35,7 +35,7 @@ def main():
             shutil.copy(args.policy_config, output_dir)
             shutil.copy(args.train_config, output_dir)
     else:
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
         shutil.copy(args.env_config, output_dir)
         shutil.copy(args.policy_config, output_dir)
         shutil.copy(args.train_config, output_dir)

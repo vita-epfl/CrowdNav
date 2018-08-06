@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
     parser.add_argument('--output_file', type=str, default=None)
+    parser.add_argument('--traj', default=False, action='store_true')
     args = parser.parse_args()
 
     # configure logging and device
@@ -61,7 +62,11 @@ def main():
             current_pos = np.array(navigator.get_position())
             logging.debug('Speed: {:.2f}'.format(np.linalg.norm(current_pos - last_pos) / navigator.time_step))
             last_pos = current_pos
-        env.render('video', args.output_file)
+        if args.traj:
+            env.render('traj', args.output_file)
+        else:
+            env.render('video', args.output_file)
+
         logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.timer, info))
     else:
         if args.phase == 'val' or args.phase == 'train':

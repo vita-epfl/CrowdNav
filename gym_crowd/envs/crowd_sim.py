@@ -1,13 +1,12 @@
 import logging
 import os
-import time
 import gym
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import trajnettools
 from numpy.linalg import norm
-
+import warnings
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
@@ -76,7 +75,6 @@ class CrowdSim(gym.Env):
         """
         assert rule in ['square_crossing', 'circle_crossing']
         if rule == 'square_crossing':
-            # TODO: also check other peds
             self.peds = []
             for i in range(ped_num):
                 ped = Pedestrian(self.config, 'peds')
@@ -87,14 +85,22 @@ class CrowdSim(gym.Env):
                 while True:
                     px = np.random.random() * square_width * 0.5 * sign
                     py = (np.random.random() - 0.5) * square_width
-                    if norm((px - self.navigator.px, py - self.navigator.py)) > \
-                            ped.radius + self.navigator.radius:
+                    collision = False
+                    for agent in [self.navigator] + self.peds:
+                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius:
+                            collision = True
+                            break
+                    if not collision:
                         break
                 while True:
                     gx = np.random.random() * square_width * 0.5 * -sign
                     gy = (np.random.random() - 0.5) * square_width
-                    if norm((gx - self.navigator.gx, gy - self.navigator.gy)) > \
-                            ped.radius + self.navigator.radius:
+                    collision = False
+                    for agent in [self.navigator] + self.peds:
+                        if norm((gx - agent.gx, gy - agent.gy)) > ped.radius + agent.radius:
+                            collision = True
+                            break
+                    if not collision:
                         break
                 ped.set(px, py, gx, gy, 0, 0, 0)
                 self.peds.append(ped)
@@ -225,9 +231,23 @@ class CrowdSim(gym.Env):
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
             if closest_dist < ped.radius + self.navigator.radius:
                 collision = True
+                warnings.warn("Navigator collides")
+                print("\tDistance between navigator and p{} is {:.2f}".format(i, closest_dist))
                 break
             elif closest_dist < dmin:
                 dmin = closest_dist
+
+        # collision detection between pedestrians
+        ped_num = len(self.peds)
+        for i in range(ped_num):
+            for j in range(i+1, ped_num):
+                dx = self.peds[i].px - self.peds[j].px
+                dy = self.peds[i].py - self.peds[j].py
+                dist = (dx**2 + dy**2)**(1/2)                
+                if dist < self.peds[i].radius + self.peds[j].radius:
+                    collision = True
+                    warnings.warn("Pedestrians collide")
+                    print("\tDistance between p{} and p{} is {:.2f}".format(i, j, dist))
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
@@ -279,6 +299,24 @@ class CrowdSim(gym.Env):
                 ped_circle = plt.Circle(ped.get_position(), ped.radius, fill=True, color='b')
                 ax.add_artist(ped_circle)
             ax.add_artist(plt.Circle(self.navigator.get_position(), self.navigator.radius, fill=True, color='r'))
+            plt.show()
+        if mode == 'traj':
+            navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
+            ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
+                             for i in range(len(self.states))]
+            fig, ax = plt.subplots(figsize=(7, 7))
+            ax.set_xlim(-7, 7)
+            ax.set_ylim(-7, 7)
+            for k in range(len(self.states)):
+                navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color='red')
+                peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
+                        for i in range(len(self.peds))]
+                ax.add_artist(navigator)
+                for ped in peds:
+                    ax.add_artist(ped)      
+            text = plt.text(0, 6, 'Trajectories', fontsize=12)
+            ax.add_artist(text)
+            plt.legend([navigator], ['navigator'])
             plt.show()
         elif mode == 'video':
             navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
