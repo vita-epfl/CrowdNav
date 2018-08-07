@@ -96,7 +96,7 @@ class CrowdSim(gym.Env):
                     gy = (np.random.random() - 0.5) * square_width
                     collision = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((gx - agent.gx, gy - agent.gy)) > ped.radius + agent.radius:
+                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius:
                             collision = True
                             break
                     if not collision:
@@ -174,8 +174,13 @@ class CrowdSim(gym.Env):
                 else:
                     # for hand-crafted cases
                     if self.case_counter == -1:
-                        self.peds = [Pedestrian(self.config, 'peds') for _ in range(1)]
-                        self.peds[0].set(-3.8, -1.33, 3.8, 1.33, 0, 0, 0)
+                        self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
+                        self.peds[0].set(-0.75, -3, 1, -3, 0, 0, 0)
+                        self.peds[1].set(-1.75, -2, 2, -2, 0, 0, 0)
+                        self.peds[2].set(-2.75, -1, 3, -1, 0, 0, 0)
+                        self.peds[3].set(-3.75, 0, 4, 0, 0, 0, 0)
+                        self.peds[4].set(-4.75, 1, 5, 1, 0, 0, 0)
+                        self.peds[5].set(-5.75, 2, 6, 2, 0, 0, 0)
 
         for agent in [self.navigator] + self.peds:
             agent.time_step = self.time_step
