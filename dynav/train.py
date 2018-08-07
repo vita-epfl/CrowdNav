@@ -101,6 +101,7 @@ def main():
         il_policy = train_config.get('imitation_learning', 'il_policy')
         il_epochs = train_config.getint('imitation_learning', 'il_epochs')
         il_policy = policy_factory[il_policy]()
+        il_policy.training_simulation = policy.training_simulation
         navigator.set_policy(il_policy)
         explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
         trainer.optimize_batch(il_epochs)

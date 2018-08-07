@@ -54,8 +54,8 @@ class ORCA(Policy):
 
         """
         super().__init__()
-        self.name = 'orca'
         self.trainable = False
+        self.training_simulation = None
         self.neighbor_dist = 10
         self.max_neighbors = 10
         self.time_horizon = 5

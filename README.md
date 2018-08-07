@@ -47,27 +47,14 @@ python utils/plot.py data/output/output.log
 ```
 
 ## Results
-### Evaluation on val(100 random test cases with one pedestrian controlled by ORCA) 
-| Policy        | Success rate  | Collision rate  | Time to reach goal |
+### Evaluation on test(synthetic data) 
+| Policy        | Success rate  | Collision rate  | Time to reach goal(fps=4) |
 | ------------- |----   | ----- |----   |
-| ORCA          | 1.00  | 0.00  | 6     |
-| CADRL(IL)     | 0.39  | 0.00  | 14    |
-| CADRL(RL)     | 0.81  | 0.00  | 15    |
+| ORCA          | 1.00  | 0.00  | 9.05  |
+| CADRL         | 0.80  | 0.20  | 8.27  |
+| SRL(1)        | 0.78  | 0.22  | 8.26  |
+| SRL(5)        | 0.00  | 0.00  | 0.00  |
 
-### Evaluation on test(5 hand-crafted and 95 randomly simulated test cases with multiple pedestrians controlled by ORCA)
-| Policy        | Success rate  | Collision rate  | Time to reach goal |
-| ------------- |----   | ----- |----   |
-| ORCA          | 1.00  | 0.00  | 5     |
-| CADRL(IL)     | 0.01  | 0.00  | 19    |
-| CADRL(RL)     | 0.06  | 0.00  | 16    |
-
-
-### Evaluation on test(trajnet data, crowds_students001 subset)
-| Policy        | Success rate  | Collision rate  | Time to reach goal |
-| ------------- |----   | ----- |----   |
-| ORCA          | 0.55  | 0.37  | 8     |
-| CADRL(IL)     | 0.00  | 0.00  | 0     |
-| CADRL(RL)     | 0.00  | 0.00  | 0     |
 
 ## Framework Overview
 ### Environment

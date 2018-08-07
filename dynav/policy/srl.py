@@ -64,7 +64,7 @@ class ValueNetwork(nn.Module):
         """
         First transform the world coordinates to self-centric coordinates and then do forward computation
 
-        :param state: tensor of shape(batch_size, # of pads, length of a joint state)
+        :param state: tensor of shape (batch_size, # of peds, length of a joint state)
         :return:
         """
         size = state.shape
@@ -77,8 +77,8 @@ class ValueNetwork(nn.Module):
 class SRL(Policy):
     def __init__(self):
         super().__init__()
-        self.name = 'srl'
         self.trainable = True
+        self.training_simulation = 'multiple_agents'
         self.kinematics = None
         self.discrete = None
         self.epsilon = None

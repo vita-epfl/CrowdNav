@@ -124,8 +124,6 @@ class CrowdSim(gym.Env):
         assert phase in ['train', 'val', 'test']
         if test_case is not None:
             self.case_counter = test_case
-        single_agent_simulation = ['cadrl', 'orca', 'srl']
-        multiple_agent_simulation = ['srl', 'orca']
         self.timer = 0
 
         if self.config.get('peds', 'policy') == 'trajnet':
@@ -151,17 +149,17 @@ class CrowdSim(gym.Env):
             radius = 4
             self.navigator.set(0, -radius, 0, radius, 0, 0, np.pi / 2)
             if phase == 'train':
-                if self.navigator.policy.name in single_agent_simulation:
+                if self.navigator.policy.training_simulation == 'single_agent':
                     self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
-                elif self.navigator.policy.name in multiple_agent_simulation:
+                elif self.navigator.policy.training_simulation == 'multiple_agents':
                     self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 else:
                     raise NotImplemented
             elif phase == 'val':
                 np.random.seed(0 + self.case_counter)
-                if self.navigator.policy.name in single_agent_simulation:
+                if self.navigator.policy.training_simulation == 'single_agent':
                     self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
-                elif self.navigator.policy.name in multiple_agent_simulation:
+                elif self.navigator.policy.training_simulation == 'multiple_agents':
                     self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 else:
                     raise NotImplemented
