@@ -9,16 +9,15 @@ from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, state_dim, kinematics, fc_layers):
+    def __init__(self, state_dim, kinematics, mlp1_dims, mlp2_dims):
         super().__init__()
         self.state_dim = state_dim
         self.kinematics = kinematics
-        self.fc_layers = fc_layers
-        self.mlp1 = nn.Sequential(nn.Linear(state_dim, fc_layers[0]), nn.ReLU(),
-                                  nn.Linear(fc_layers[0], fc_layers[1]), nn.ReLU(),
-                                  nn.Linear(fc_layers[1], fc_layers[2]), nn.ReLU(),
-                                  nn.Linear(fc_layers[2], 100))
-        self.mlp2 = nn.Sequential(nn.Linear(100, 1))
+        self.mlp1 = nn.Sequential(nn.Linear(state_dim, mlp1_dims[0]), nn.ReLU(),
+                                  nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
+                                  nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
+                                  nn.Linear(mlp1_dims[2], mlp2_dims))
+        self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
 
     def rotate(self, state):
         """
@@ -78,7 +77,7 @@ class SRL(Policy):
     def __init__(self):
         super().__init__()
         self.trainable = True
-        self.training_simulation = 'multiple_agents'
+        self.multiagent_training = 'multiple_agents'
         self.kinematics = None
         self.discrete = None
         self.epsilon = None
@@ -88,14 +87,18 @@ class SRL(Policy):
         self.action_space = None
 
     def configure(self, config):
-        state_dim = config.getint('cadrl', 'state_dim')
-        fc_layers = [int(x) for x in config.get('cadrl', 'fc_layers').split(', ')]
-        self.kinematics = config.get('cadrl', 'kinematics')
-        self.model = ValueNetwork(state_dim, self.kinematics, fc_layers)
-        self.gamma = config.getfloat('cadrl', 'gamma')
-        self.sampling = config.get('cadrl', 'sampling')
-        self.action_space_size = config.getint('cadrl', 'action_space_size')
-        self.discrete = config.getboolean('cadrl', 'discrete')
+        state_dim = config.getint('value_network', 'state_dim')
+        self.gamma = config.getfloat('value_network', 'gamma')
+
+        self.kinematics = config.get('action_space', 'kinematics')
+        self.sampling = config.get('action_space', 'sampling')
+        self.action_space_size = config.getint('action_space', 'action_space_size')
+        self.discrete = config.getboolean('action_space', 'discrete')
+
+        mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
+        mlp2_dims = config.getint('srl', 'mlp2_dims')
+        self.model = ValueNetwork(state_dim, self.kinematics, mlp1_dims, mlp2_dims)
+        self.multiagent_training = config.getboolean('srl', 'multiagent_training')
 
         assert self.action_space_size in [50, 100]
         assert self.sampling in ['uniform', 'exponential']

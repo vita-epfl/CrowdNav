@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.functional import softmax
 import numpy as np
 import itertools
 from gym_crowd.envs.policy.policy import Policy
@@ -9,19 +10,22 @@ from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, state_dim, kinematics, fc_dims):
+    def __init__(self, state_dim, kinematics, mlp1_dims, mlp2_dims):
         super().__init__()
         self.state_dim = state_dim
         self.kinematics = kinematics
-        self.value_network = nn.Sequential(nn.Linear(state_dim, fc_dims[0]), nn.ReLU(),
-                                           nn.Linear(fc_dims[0], fc_dims[1]), nn.ReLU(),
-                                           nn.Linear(fc_dims[1], fc_dims[2]), nn.ReLU(),
-                                           nn.Linear(fc_dims[2], 1))
+        self.mlp1 = nn.Sequential(nn.Linear(state_dim, mlp1_dims[0]), nn.ReLU(),
+                                  nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
+                                  nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
+                                  nn.Linear(mlp1_dims[2], mlp2_dims))
+        self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
+        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 1))
 
     def rotate(self, state):
         """
-        Input state tensor is of size (batch_size, state_length)
 
+        :param state: tensor of size (batch_size, # of peds, length of joint state)
+        :return:
         """
         # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
         #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
@@ -58,13 +62,24 @@ class ValueNetwork(nn.Module):
         return new_state
 
     def forward(self, state):
-        # transform the world coordinates to self-centric coordinates
-        state = self.rotate(state)
-        value = self.value_network(state)
+        """
+        First transform the world coordinates to self-centric coordinates and then do forward computation
+
+        :param state: tensor of shape (batch_size, # of peds, length of a joint state)
+        :return:
+        """
+        size = state.shape
+        state = self.rotate(torch.reshape(state, (-1, size[2])))
+        mlp1_output = self.mlp1(state)
+        scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
+        weights = softmax(scores, dim=1).unsqueeze(2)
+        features = torch.reshape(mlp1_output, (size[0], size[1], -1))
+        weighted_feature = torch.sum(weights.expand_as(features) * features, dim=1)
+        value = self.mlp2(weighted_feature)
         return value
 
 
-class CADRL(Policy):
+class SARL(Policy):
     def __init__(self):
         super().__init__()
         self.trainable = True
@@ -86,9 +101,10 @@ class CADRL(Policy):
         self.action_space_size = config.getint('action_space', 'action_space_size')
         self.discrete = config.getboolean('action_space', 'discrete')
 
-        fc_dims = [int(x) for x in config.get('cadrl', 'fc_dims').split(', ')]
-        self.model = ValueNetwork(state_dim, self.kinematics, fc_dims)
-        self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
+        mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
+        mlp2_dims = config.getint('srl', 'mlp2_dims')
+        self.model = ValueNetwork(state_dim, self.kinematics, mlp1_dims, mlp2_dims)
+        self.multiagent_training = config.getboolean('srl', 'multiagent_training')
 
         assert self.action_space_size in [50, 100]
         assert self.sampling in ['uniform', 'exponential']
@@ -184,7 +200,7 @@ class CADRL(Policy):
         if self.phase == 'train' and probability < self.epsilon:
             max_action = action_space[np.random.choice(len(action_space))]
         else:
-            max_min_value = float('-inf')
+            max_value = float('-inf')
             max_action = None
             for action in action_space:
                 batch_next_states = []
@@ -193,13 +209,12 @@ class CADRL(Policy):
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     batch_next_states.append(next_dual_state)
-                batch_next_states = torch.cat(batch_next_states, dim=0)
-                outputs = self.model(batch_next_states)
-                min_output, min_index = torch.min(outputs, 0)
-                min_value = reward(state, action, self.kinematics, self.time_step) + \
-                    pow(self.gamma, state.self_state.v_pref) * min_output.data.item()
-                if min_value > max_min_value:
-                    max_min_value = min_value
+                batch_next_states = torch.cat(batch_next_states, dim=0).unsqueeze(0)
+                output = self.model(batch_next_states)
+                value = reward(state, action, self.kinematics, self.time_step) + \
+                    pow(self.gamma, state.self_state.v_pref) * output.data.item()
+                if value > max_value:
+                    max_value = value
                     max_action = action
 
         if self.phase == 'train':
@@ -212,7 +227,7 @@ class CADRL(Policy):
         Take the state passed from agent and transform it to tensor for batch training
 
         :param state:
-        :return: tensor of shape (len(state), )
+        :return: tensor of shape (# of peds, len(state))
         """
-        assert len(state.ped_states) == 1
-        return torch.Tensor(state.self_state + state.ped_states[0]).to(self.device)
+        return torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
+                          for ped_state in state.ped_states], dim=0)

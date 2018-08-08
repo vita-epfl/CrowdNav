@@ -54,7 +54,7 @@ class CrowdSim(gym.Env):
             self.test_size = len(self.scenes['test'])
         else:
             self.val_size = 100
-            self.test_size = 100
+            self.test_size = 500
         self.case_counter = 0
 
     def set_navigator(self, navigator):
@@ -149,20 +149,17 @@ class CrowdSim(gym.Env):
             radius = 4
             self.navigator.set(0, -radius, 0, radius, 0, 0, np.pi / 2)
             if phase == 'train':
-                if self.navigator.policy.training_simulation == 'single_agent':
+                np.random.seed(2000 + self.case_counter)
+                if not self.navigator.policy.multiagent_training:
                     self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
-                elif self.navigator.policy.training_simulation == 'multiple_agents':
-                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 else:
-                    raise NotImplemented
+                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
             elif phase == 'val':
                 np.random.seed(0 + self.case_counter)
-                if self.navigator.policy.training_simulation == 'single_agent':
+                if not self.navigator.policy.multiagent_training:
                     self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
-                elif self.navigator.policy.training_simulation == 'multiple_agents':
-                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 else:
-                    raise NotImplemented
+                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
                 self.case_counter = (self.case_counter + 1) % self.val_size
             else:
                 if self.case_counter >= 0:

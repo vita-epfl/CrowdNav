@@ -101,7 +101,7 @@ def main():
         il_policy = train_config.get('imitation_learning', 'il_policy')
         il_epochs = train_config.getint('imitation_learning', 'il_epochs')
         il_policy = policy_factory[il_policy]()
-        il_policy.training_simulation = policy.training_simulation
+        il_policy.multiagent_training = policy.multiagent_training
         navigator.set_policy(il_policy)
         explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
         trainer.optimize_batch(il_epochs)
@@ -122,9 +122,10 @@ def main():
 
         # test
         if episode % test_interval == 0:
-            explorer.run_k_episodes(env.val_size, 'val', episode=episode)
+            # explorer.run_k_episodes(env.val_size, 'val', episode=episode)
             explorer.run_k_episodes(env.test_size, 'test', episode=episode)
             explorer.update_stabilized_model(model)
+            return
 
         # sample k episodes into memory and optimize over the generated memory
         explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
