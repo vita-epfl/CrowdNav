@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.nn.functional import softmax
 import numpy as np
 import itertools
 from gym_crowd.envs.policy.policy import Policy
@@ -10,16 +9,14 @@ from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, kinematics, mlp1_dims, mlp2_dims):
+    def __init__(self, input_dim, kinematics, mlp_dims, lstm_hidden_dim):
         super().__init__()
         self.input_dim = input_dim
         self.kinematics = kinematics
-        self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[2], mlp2_dims))
-        self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
-        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 1))
+        self.mlp = nn.Sequential(nn.Linear(26, mlp_dims[0]), nn.ReLU(),
+                                 nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
+                                 nn.Linear(mlp_dims[1], 1))
+        self.lstm = nn.LSTM(9, lstm_hidden_dim, batch_first=True)
 
     def rotate(self, state):
         """
@@ -57,9 +54,10 @@ class ValueNetwork(nn.Module):
         da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
                                   reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
 
-        new_state = torch.cat([dg, v_pref, vx, vy, radius, theta, vx1, vy1, px1, py1, radius1, radius_sum,
-                               cos_theta, sin_theta, da], dim=1)
-        return new_state
+        self_state = torch.cat([dg, v_pref, vx, vy, radius, theta], dim=1)
+        ped_state = torch.cat([vx1, vy1, px1, py1, radius1, radius_sum, cos_theta, sin_theta, da], dim=1)
+
+        return self_state, ped_state
 
     def forward(self, state):
         """
@@ -69,17 +67,19 @@ class ValueNetwork(nn.Module):
         :return:
         """
         size = state.shape
-        state = self.rotate(torch.reshape(state, (-1, size[2])))
-        mlp1_output = self.mlp1(state)
-        scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
-        weights = softmax(scores, dim=1).unsqueeze(2)
-        features = torch.reshape(mlp1_output, (size[0], size[1], -1))
-        weighted_feature = torch.sum(weights.expand_as(features) * features, dim=1)
-        value = self.mlp2(weighted_feature)
+        self_state, ped_state = self.rotate(torch.reshape(state, (-1, size[2])))
+        self_state = torch.reshape(self_state, (size[0], size[1], -1))[:, 0, :]
+        ped_state = torch.reshape(ped_state, (size[0], size[1], -1))
+        h0 = torch.zeros(1, size[0], 20)
+        c0 = torch.zeros(1, size[0], 20)
+        output, (hn, cn) = self.lstm(ped_state, (h0, c0))
+        hn = hn.squeeze(0)
+        joint_state = torch.cat([self_state, hn], dim=1)
+        value = self.mlp(joint_state)
         return value
 
 
-class SARL(Policy):
+class CadrlLSTM(Policy):
     def __init__(self):
         super().__init__()
         self.trainable = True
@@ -100,11 +100,11 @@ class SARL(Policy):
         self.action_space_size = config.getint('action_space', 'action_space_size')
         self.discrete = config.getboolean('action_space', 'discrete')
 
-        input_dim = config.getint('srl', 'input_dim')
-        mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
-        mlp2_dims = config.getint('srl', 'mlp2_dims')
-        self.model = ValueNetwork(input_dim, self.kinematics, mlp1_dims, mlp2_dims)
-        self.multiagent_training = config.getboolean('srl', 'multiagent_training')
+        input_dim = config.getint('cadrl_lstm', 'input_dim')
+        mlp_dims = [int(x) for x in config.get('cadrl_lstm', 'mlp_dims').split(', ')]
+        lstm_hidden_dim = config.getint('cadrl_lstm', 'lstm_hidden_dim')
+        self.model = ValueNetwork(input_dim, self.kinematics, mlp_dims, lstm_hidden_dim)
+        self.multiagent_training = config.getboolean('cadrl_lstm', 'multiagent_training')
 
         assert self.action_space_size in [50, 100]
         assert self.sampling in ['uniform', 'exponential']
@@ -181,7 +181,7 @@ class SARL(Policy):
 
     def predict(self, state):
         """
-        Input state is the joint state of navigator concatenated by the observable state of other agents
+        Input state is the joint state of navigator concatenated with the observable state of other agents
 
         To predict the best action, agent samples actions and propagates one step to see how good the next state is
         thus the reward function is needed
@@ -204,6 +204,11 @@ class SARL(Policy):
             max_action = None
             for action in action_space:
                 batch_next_states = []
+                # sort ped order by decreasing distance to the navigator
+
+                def dist(ped):
+                    return np.linalg.norm(np.array(ped.position) - np.array(state.self_state.position))
+                state.ped_states = sorted(state.ped_states, key=dist, reverse=True)
                 for ped_state in state.ped_states:
                     next_self_state = self.propagate(state.self_state, action)
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
@@ -226,7 +231,7 @@ class SARL(Policy):
         Take the state passed from agent and transform it to tensor for batch training
 
         :param state:
-        :return: tensor of shape (# of peds, len(state))
+        :return: tensor of shape (len(state), )
         """
         return torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
                           for ped_state in state.ped_states], dim=0)

@@ -9,11 +9,11 @@ from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, state_dim, kinematics, mlp1_dims, mlp2_dims):
+    def __init__(self, input_dim, kinematics, mlp1_dims, mlp2_dims):
         super().__init__()
-        self.state_dim = state_dim
+        self.input_dim = input_dim
         self.kinematics = kinematics
-        self.mlp1 = nn.Sequential(nn.Linear(state_dim, mlp1_dims[0]), nn.ReLU(),
+        self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[2], mlp2_dims))
@@ -87,17 +87,17 @@ class SRL(Policy):
         self.action_space = None
 
     def configure(self, config):
-        state_dim = config.getint('value_network', 'state_dim')
-        self.gamma = config.getfloat('value_network', 'gamma')
+        self.gamma = config.getfloat('rl', 'gamma')
 
         self.kinematics = config.get('action_space', 'kinematics')
         self.sampling = config.get('action_space', 'sampling')
         self.action_space_size = config.getint('action_space', 'action_space_size')
         self.discrete = config.getboolean('action_space', 'discrete')
 
+        input_dim = config.getint('srl', 'input_dim')
         mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
         mlp2_dims = config.getint('srl', 'mlp2_dims')
-        self.model = ValueNetwork(state_dim, self.kinematics, mlp1_dims, mlp2_dims)
+        self.model = ValueNetwork(input_dim, self.kinematics, mlp1_dims, mlp2_dims)
         self.multiagent_training = config.getboolean('srl', 'multiagent_training')
 
         assert self.action_space_size in [50, 100]
@@ -204,9 +204,8 @@ class SRL(Policy):
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     batch_next_states.append(next_dual_state)
                 batch_next_states = torch.cat(batch_next_states, dim=0).unsqueeze(0)
-                output = self.model(batch_next_states)
                 value = reward(state, action, self.kinematics, self.time_step) + \
-                    pow(self.gamma, state.self_state.v_pref) * output.data.item()
+                    pow(self.gamma, state.self_state.v_pref) * self.model(batch_next_states).data.item()
                 if value > max_value:
                     max_value = value
                     max_action = action
@@ -218,7 +217,7 @@ class SRL(Policy):
 
     def transform(self, state):
         """
-        Take the state passed from agent and transform it to tensor for batch training
+        Take the state passed from agent and transform it to the input of value network
 
         :param state:
         :return: tensor of shape (# of peds, len(state))

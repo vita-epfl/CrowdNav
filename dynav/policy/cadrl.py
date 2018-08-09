@@ -9,14 +9,14 @@ from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, state_dim, kinematics, fc_dims):
+    def __init__(self, input_dim, kinematics, mlp_dims):
         super().__init__()
-        self.state_dim = state_dim
+        self.input_dim = input_dim
         self.kinematics = kinematics
-        self.value_network = nn.Sequential(nn.Linear(state_dim, fc_dims[0]), nn.ReLU(),
-                                           nn.Linear(fc_dims[0], fc_dims[1]), nn.ReLU(),
-                                           nn.Linear(fc_dims[1], fc_dims[2]), nn.ReLU(),
-                                           nn.Linear(fc_dims[2], 1))
+        self.value_network = nn.Sequential(nn.Linear(input_dim, mlp_dims[0]), nn.ReLU(),
+                                           nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
+                                           nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
+                                           nn.Linear(mlp_dims[2], 1))
 
     def rotate(self, state):
         """
@@ -78,16 +78,16 @@ class CADRL(Policy):
         self.action_space = None
 
     def configure(self, config):
-        state_dim = config.getint('value_network', 'state_dim')
-        self.gamma = config.getfloat('value_network', 'gamma')
+        self.gamma = config.getfloat('rl', 'gamma')
 
         self.kinematics = config.get('action_space', 'kinematics')
         self.sampling = config.get('action_space', 'sampling')
         self.action_space_size = config.getint('action_space', 'action_space_size')
         self.discrete = config.getboolean('action_space', 'discrete')
 
-        fc_dims = [int(x) for x in config.get('cadrl', 'fc_dims').split(', ')]
-        self.model = ValueNetwork(state_dim, self.kinematics, fc_dims)
+        input_dim = config.getint('cadrl', 'input_dim')
+        mlp_dims = [int(x) for x in config.get('cadrl', 'mlp_dims').split(', ')]
+        self.model = ValueNetwork(input_dim, self.kinematics, mlp_dims)
         self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
 
         assert self.action_space_size in [50, 100]
