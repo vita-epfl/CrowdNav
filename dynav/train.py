@@ -100,8 +100,10 @@ def main():
         il_episodes = train_config.getint('imitation_learning', 'il_episodes')
         il_policy = train_config.get('imitation_learning', 'il_policy')
         il_epochs = train_config.getint('imitation_learning', 'il_epochs')
+        safety_space = train_config.getfloat('imitation_learning', 'safety_space')
         il_policy = policy_factory[il_policy]()
         il_policy.multiagent_training = policy.multiagent_training
+        il_policy.safety_space = safety_space
         navigator.set_policy(il_policy)
         explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
         trainer.optimize_batch(il_epochs)

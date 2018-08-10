@@ -100,11 +100,11 @@ class SARL(Policy):
         self.action_space_size = config.getint('action_space', 'action_space_size')
         self.discrete = config.getboolean('action_space', 'discrete')
 
-        input_dim = config.getint('srl', 'input_dim')
-        mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
-        mlp2_dims = config.getint('srl', 'mlp2_dims')
+        input_dim = config.getint('sarl', 'input_dim')
+        mlp1_dims = [int(x) for x in config.get('sarl', 'mlp1_dims').split(', ')]
+        mlp2_dims = config.getint('sarl', 'mlp2_dims')
         self.model = ValueNetwork(input_dim, self.kinematics, mlp1_dims, mlp2_dims)
-        self.multiagent_training = config.getboolean('srl', 'multiagent_training')
+        self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
 
         assert self.action_space_size in [50, 100]
         assert self.sampling in ['uniform', 'exponential']

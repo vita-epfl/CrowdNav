@@ -56,6 +56,7 @@ class ORCA(Policy):
         super().__init__()
         self.trainable = False
         self.multiagent_training = None
+        self.safety_space = 0
         self.neighbor_dist = 10
         self.max_neighbors = 10
         self.time_horizon = 5
@@ -92,9 +93,11 @@ class ORCA(Policy):
         params = self.neighbor_dist, self.max_neighbors, self.time_horizon, self.time_horizon_obst
         if self.sim is None:
             self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
-            self.sim.addAgent(self_state.position, *params, self_state.radius*1.1, self_state.v_pref, self_state.velocity)
+            self.sim.addAgent(self_state.position, *params, self_state.radius*1.1 + self.safety_space,
+                              self_state.v_pref, self_state.velocity)
             for ped_state in state.ped_states:
-                self.sim.addAgent(ped_state.position, *params, ped_state.radius*1.1, self.max_speed, ped_state.velocity)
+                self.sim.addAgent(ped_state.position, *params, self_state.radius*1.1 + self.safety_space,
+                                  self.max_speed, ped_state.velocity)
         else:
             self.sim.setAgentPosition(0, self_state.position)
             self.sim.setAgentVelocity(0, self_state.velocity)
