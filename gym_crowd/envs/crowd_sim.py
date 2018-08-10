@@ -217,7 +217,7 @@ class CrowdSim(gym.Env):
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
             if closest_dist < ped.radius + self.navigator.radius:
                 collision = True
-                logging.debug("Collision: distance between navigator and p{} is {:.2f}".format(i, closest_dist))
+                # logging.debug("Collision: distance between navigator and p{} is {:.2f}".format(i, closest_dist))
                 break
             elif closest_dist < dmin:
                 dmin = closest_dist
@@ -231,7 +231,7 @@ class CrowdSim(gym.Env):
                 dist = (dx**2 + dy**2)**(1/2)                
                 if dist < self.peds[i].radius + self.peds[j].radius:
                     collision = True
-                    logging.debug("Collision: distance between p{} and p{} is {:.2f}".format(i, j, dist))
+                    # logging.debug("Collision: distance between p{} and p{} is {:.2f}".format(i, j, dist))
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
