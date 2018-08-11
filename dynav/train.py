@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--output_dir', type=str, default='output')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--gpu', default=False, action='store_true')
+    parser.add_argument('--debug', default=False, action='store_true')
     args = parser.parse_args()
 
     # configure paths
@@ -47,7 +48,8 @@ def main():
     # configure logging
     file_handler = logging.FileHandler(log_file, mode='w')
     stdout_handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(level=logging.INFO, handlers=[stdout_handler, file_handler],
+    level = logging.INFO if not args.debug else logging.DEBUG
+    logging.basicConfig(level=level, handlers=[stdout_handler, file_handler],
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
     logging.info('Using device: {}'.format(device))
@@ -124,9 +126,10 @@ def main():
 
         # test
         if episode % test_interval == 0:
-            explorer.run_k_episodes(env.val_size, 'val', episode=episode)
+            # explorer.run_k_episodes(env.val_size, 'val', episode=episode)
             explorer.run_k_episodes(env.test_size, 'test', episode=episode)
             explorer.update_stabilized_model(model)
+            return
 
         # sample k episodes into memory and optimize over the generated memory
         explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)

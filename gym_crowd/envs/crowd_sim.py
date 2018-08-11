@@ -29,8 +29,7 @@ class CrowdSim(gym.Env):
         self.timer = None
         self.states = None
         self.config = None
-        self.test_size = None
-        self.val_size = None
+        self.case_num = {}
         self.case_counter = None
         self.scenes = None
 
@@ -51,11 +50,10 @@ class CrowdSim(gym.Env):
                                                                    as_paths=True, sample={'syi.ndjson': 0.05}))})
             for phase in ['train', 'val', 'test']:
                 logging.info('Number of scenes in phase {}: {}'.format(phase.upper(), len(self.scenes[phase])))
-            self.test_size = len(self.scenes['test'])
+            self.case_num['test'] = len(self.scenes['test'])
         else:
-            self.val_size = 100
-            self.test_size = 500
-        self.case_counter = 0
+            self.case_num = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
+        self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
     def set_navigator(self, navigator):
         self.navigator = navigator
@@ -123,7 +121,7 @@ class CrowdSim(gym.Env):
             raise AttributeError('Navigator has to be set!')
         assert phase in ['train', 'val', 'test']
         if test_case is not None:
-            self.case_counter = test_case
+            self.case_counter[phase] = test_case
         self.timer = 0
 
         if self.config.get('peds', 'policy') == 'trajnet':
@@ -133,7 +131,7 @@ class CrowdSim(gym.Env):
                 pass
             else:
                 scene_index = test_case if test_case is not None else self.case_counter
-                self.case_counter = (self.case_counter + 1) % self.test_size
+                self.case_counter['test'] = (self.case_counter['test'] + 1) % self.case_num['test']
                 scene = self.scenes[phase][scene_index][1]
                 ped_num = len(scene)
                 if test_case is not None:
@@ -147,35 +145,18 @@ class CrowdSim(gym.Env):
         else:
             square_width = 10
             radius = 4
+            counter_offset = {'train': self.case_num['val'] + self.case_num['test'],
+                              'val': 0, 'test': self.case_num['val']}
             self.navigator.set(0, -radius, 0, radius, 0, 0, np.pi / 2)
-            if phase == 'train':
-                np.random.seed(2000 + self.case_counter)
+            np.random.seed(counter_offset[phase] + self.case_counter[phase])
+            if phase in ['train', 'val']:
                 if not self.navigator.policy.multiagent_training:
                     self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
                 else:
                     self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
-            elif phase == 'val':
-                np.random.seed(0 + self.case_counter)
-                if not self.navigator.policy.multiagent_training:
-                    self.generate_random_ped_position(ped_num=1, rule='circle_crossing', radius=radius)
-                else:
-                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
-                self.case_counter = (self.case_counter + 1) % self.val_size
             else:
-                if self.case_counter >= 0:
-                    np.random.seed(1000 + self.case_counter)
-                    self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
-                    self.case_counter = (self.case_counter + 1) % self.test_size
-                else:
-                    # for hand-crafted cases
-                    if self.case_counter == -1:
-                        self.peds = [Pedestrian(self.config, 'peds') for _ in range(6)]
-                        self.peds[0].set(-0.75, -3, 1, -3, 0, 0, 0)
-                        self.peds[1].set(-1.75, -2, 2, -2, 0, 0, 0)
-                        self.peds[2].set(-2.75, -1, 3, -1, 0, 0, 0)
-                        self.peds[3].set(-3.75, 0, 4, 0, 0, 0, 0)
-                        self.peds[4].set(-4.75, 1, 5, 1, 0, 0, 0)
-                        self.peds[5].set(-5.75, 2, 6, 2, 0, 0, 0)
+                self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
+            self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_num[phase]
 
         for agent in [self.navigator] + self.peds:
             agent.time_step = self.time_step

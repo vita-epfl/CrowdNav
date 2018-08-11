@@ -46,15 +46,6 @@ python test.py --env_config configs/orca_env.config --policy cadrl --weights dat
 python utils/plot.py data/output/output.log
 ```
 
-## Results
-### Evaluation on test(synthetic data) 
-| Policy        | Success rate  | Collision rate  | Time to reach goal(fps=4) |
-| ------------- |----   | ----- |----   |
-| ORCA          | 1.00  | 0.00  | 9.05  |
-| CADRL         | 0.80  | 0.20  | 8.27  |
-| SRL(1)        | 0.78  | 0.22  | 8.26  |
-| SRL(5)        | 0.00  | 0.00  | 0.00  |
-
 
 ## Framework Overview
 ### Environment

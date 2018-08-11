@@ -22,6 +22,7 @@ class Trainer(object):
         self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size, gamma=0.1)
 
     def optimize_batch(self, num_epochs):
+        average_epoch_loss = 0
         for epoch in range(num_epochs):
             epoch_loss = 0
             for data in self.data_loader:
@@ -38,3 +39,5 @@ class Trainer(object):
 
             average_epoch_loss = epoch_loss / len(self.memory)
             logging.debug('Average loss in epoch {}: {:.2E}'.format(epoch, average_epoch_loss))
+
+        return average_epoch_loss
