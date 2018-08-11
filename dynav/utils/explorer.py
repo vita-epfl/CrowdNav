@@ -73,17 +73,17 @@ class Explorer(object):
         if self.memory is None or self.gamma is None:
             raise ValueError('Memory or gamma value is not set!')
 
-        steps = len(states)
-        for i in range(steps-1):
+        steps = len(states) if imitation_learning else len(states) - 1
+        for i in range(steps):
             state = states[i]
-            next_state = states[i]
             reward = rewards[i]
 
             if imitation_learning:
                 # in imitation learning, the value of state is defined based on the time to reach the goal
                 state = self.target_policy.transform(state)
-                value = pow(self.gamma, (steps - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
+                value = pow(self.gamma, (len(states) - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
             else:
+                next_state = states[i + 1]
                 gamma_bar = pow(self.gamma, self.navigator.time_step * self.navigator.v_pref)
                 value = reward + gamma_bar * self.stabilized_model(next_state.unsqueeze(0)).data.item()
             value = torch.Tensor([value]).to(self.device)
