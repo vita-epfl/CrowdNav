@@ -126,8 +126,8 @@ def main():
 
         # test
         if episode % test_interval == 0:
-            # explorer.run_k_episodes(env.val_size, 'val', episode=episode)
-            explorer.run_k_episodes(env.test_size, 'test', episode=episode)
+            # explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
+            explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
             explorer.update_stabilized_model(model)
             return
 
@@ -140,8 +140,8 @@ def main():
             torch.save(model.state_dict(), rl_weight_file)
 
     # final test
-    explorer.run_k_episodes(env.val_size, 'val', episode=episode)
-    explorer.run_k_episodes(env.test_size, 'test', episode=episode)
+    explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
+    explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
 
 
 if __name__ == '__main__':

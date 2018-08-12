@@ -29,8 +29,9 @@ class CrowdSim(gym.Env):
         self.timer = None
         self.states = None
         self.config = None
-        self.case_num = {}
+        self.case_capacity = None
         self.case_counter = None
+        self.case_size = None
         self.scenes = None
 
     def configure(self, config):
@@ -50,9 +51,11 @@ class CrowdSim(gym.Env):
                                                                    as_paths=True, sample={'syi.ndjson': 0.05}))})
             for phase in ['train', 'val', 'test']:
                 logging.info('Number of scenes in phase {}: {}'.format(phase.upper(), len(self.scenes[phase])))
-            self.case_num['test'] = len(self.scenes['test'])
+            self.case_size['test'] = len(self.scenes['test'])
         else:
-            self.case_num = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
+            self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
+            self.case_size = {'train': self.case_capacity['train'], 'val': config.getint('env', 'val_size'),
+                              'test': config.getint('env', 'test_size')}
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
     def set_navigator(self, navigator):
@@ -131,7 +134,7 @@ class CrowdSim(gym.Env):
                 pass
             else:
                 scene_index = test_case if test_case is not None else self.case_counter
-                self.case_counter['test'] = (self.case_counter['test'] + 1) % self.case_num['test']
+                self.case_counter['test'] = (self.case_counter['test'] + 1) % self.case_capacity['test']
                 scene = self.scenes[phase][scene_index][1]
                 ped_num = len(scene)
                 if test_case is not None:
@@ -145,8 +148,8 @@ class CrowdSim(gym.Env):
         else:
             square_width = 10
             radius = 4
-            counter_offset = {'train': self.case_num['val'] + self.case_num['test'],
-                              'val': 0, 'test': self.case_num['val']}
+            counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
+                              'val': 0, 'test': self.case_capacity['val']}
             self.navigator.set(0, -radius, 0, radius, 0, 0, np.pi / 2)
             np.random.seed(counter_offset[phase] + self.case_counter[phase])
             if phase in ['train', 'val']:
@@ -156,7 +159,8 @@ class CrowdSim(gym.Env):
                     self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
             else:
                 self.generate_random_ped_position(ped_num=5, rule='square_crossing', square_width=square_width)
-            self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_num[phase]
+            # case_counter is always between 0 and case_size[phase]
+            self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
 
         for agent in [self.navigator] + self.peds:
             agent.time_step = self.time_step
