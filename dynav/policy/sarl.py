@@ -125,7 +125,7 @@ class SARL(Policy):
             if self.action_space is not None:
                 return self.action_space
             if self.discrete:
-                speed_grids, rotation_grids = (10, 10) if self.action_space_size == 100 else (8, 6)
+                speed_grids, rotation_grids = (10, 100) if self.action_space_size == 100 else (8, 6)
             else:
                 speed_grids, rotation_grids = (8, 6) if self.action_space_size == 100 else (5, 5)
 
