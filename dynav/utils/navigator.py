@@ -1,3 +1,4 @@
+import logging
 from gym_crowd.envs.utils.agent import Agent
 from gym_crowd.envs.utils.state import JointState
 
@@ -5,6 +6,7 @@ from gym_crowd.envs.utils.state import JointState
 class Navigator(Agent):
     def __init__(self, config, section):
         super().__init__(config, section)
+        logging.info('Navigator is {}'.format('visible' if self.visible else 'invisible'))
 
     def set_policy(self, policy):
         self.policy = policy
