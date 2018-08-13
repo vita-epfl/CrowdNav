@@ -19,6 +19,7 @@ class ValueNetwork(nn.Module):
                                   nn.Linear(mlp1_dims[2], mlp2_dims))
         self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
         self.attention = nn.Sequential(nn.Linear(mlp2_dims, 1))
+        self.attention_weights = None
 
     def forward(self, state):
         """
@@ -32,6 +33,8 @@ class ValueNetwork(nn.Module):
         mlp1_output = self.mlp1(state)
         scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
+        # for visualization purpose
+        self.attention_weights = np.squeeze(weights[0, :].data.numpy(), axis=1)
         features = torch.reshape(mlp1_output, (size[0], size[1], -1))
         weighted_feature = torch.sum(weights.expand_as(features) * features, dim=1)
         value = self.mlp2(weighted_feature)
@@ -108,3 +111,6 @@ class SARL(CADRL):
         """
         return torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
                           for ped_state in state.ped_states], dim=0)
+
+    def get_attention_weights(self):
+        return self.model.attention_weights

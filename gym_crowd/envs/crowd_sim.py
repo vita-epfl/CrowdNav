@@ -28,6 +28,7 @@ class CrowdSim(gym.Env):
         self.navigator = None
         self.timer = None
         self.states = None
+        self.attention_weights = None
         self.config = None
         self.case_capacity = None
         self.case_size = None
@@ -183,6 +184,8 @@ class CrowdSim(gym.Env):
             agent.policy.time_step = self.time_step
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
+        if hasattr(self.navigator.policy, 'get_attention_weights'):
+            self.attention_weights = [np.array([0.2] * len(self.peds))]
 
         # get current observation
         if self.navigator.sensor == 'coordinates':
@@ -260,13 +263,13 @@ class CrowdSim(gym.Env):
             done = False
             info = ''
 
-        # print(self.timer, self.navigator.get_position(), self.peds[0].get_position())
         # update all agents
         self.navigator.step(action)
         for i, ped_action in enumerate(ped_actions):
             self.peds[i].step(ped_action)
         self.timer += self.time_step
         self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+        self.attention_weights.append(self.navigator.policy.get_attention_weights())
 
         if self.navigator.sensor == 'coordinates':
             ob = [ped.get_observable_state() for ped in self.peds]
@@ -313,8 +316,8 @@ class CrowdSim(gym.Env):
             ax.set_ylim(-7, 7)
             ax.scatter([0], [4])
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
-            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
-                    for i in range(len(self.peds))]
+            peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True,
+                               color=str(self.attention_weights[0][i])) for i in range(len(self.peds))]
             text = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
             ax.add_artist(text)
             ax.add_artist(navigator)
@@ -326,6 +329,7 @@ class CrowdSim(gym.Env):
                 navigator.center = navigator_positions[frame_num]
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
+                    ped.set_color(str(self.attention_weights[frame_num][i]))
 
                 text.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
