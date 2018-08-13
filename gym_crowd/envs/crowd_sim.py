@@ -280,6 +280,7 @@ class CrowdSim(gym.Env):
         return ob, reward, done, info
 
     def render(self, mode='human', output_file=None):
+        navigator_color = 'red'
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-5, 5)
@@ -297,7 +298,7 @@ class CrowdSim(gym.Env):
             ax.set_xlim(-7, 7)
             ax.set_ylim(-7, 7)
             for k in range(len(self.states)):
-                navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color='red')
+                navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color=navigator_color)
                 peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                         for i in range(len(self.peds))]
                 ax.add_artist(navigator)
@@ -315,27 +316,39 @@ class CrowdSim(gym.Env):
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-7, 7)
             ax.set_ylim(-7, 7)
-            ax.scatter([0], [4])
-            navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color='red')
+            goal = plt.Circle((0, 4), 0.05, fill=True, color='b')
+            ax.add_artist(goal)
+            navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
             if self.attention_weights is not None:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True,
                                    color=str(self.attention_weights[0][i])) for i in range(len(self.peds))]
             else:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                         for i in range(len(self.peds))]
+            x_offset = 0.11
+            y_offset = 0.11
+            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='white')
+                               for i in range(len(self.peds))]
             text = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
+            if self.attention_weights is not None:
+                attention_texts = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
+                                            fontsize=12) for i in range(len(self.peds))]
+
             ax.add_artist(text)
             ax.add_artist(navigator)
-            for ped in peds:
+            for i, ped in enumerate(peds):
                 ax.add_artist(ped)
-            plt.legend([navigator], ['navigator'])
+                ax.add_artist(ped_annotations[i])
+            plt.legend([navigator, goal], ['navigator', 'goal'])
 
             def update(frame_num):
                 navigator.center = navigator_positions[frame_num]
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
+                    ped_annotations[i].set_position((ped.center[0]-x_offset, ped.center[1]-y_offset))
                     if self.attention_weights is not None:
                         ped.set_color(str(self.attention_weights[frame_num][i]))
+                        attention_texts[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
 
                 text.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
