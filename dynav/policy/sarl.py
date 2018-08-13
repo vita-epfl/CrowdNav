@@ -16,7 +16,7 @@ class ValueNetwork(nn.Module):
         self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[2], mlp2_dims), nn.ReLU())
+                                  nn.Linear(mlp1_dims[2], mlp2_dims))
         self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
         self.attention = nn.Sequential(nn.Linear(mlp2_dims, 1))
         self.attention_weights = None
@@ -34,7 +34,7 @@ class ValueNetwork(nn.Module):
         scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
         # for visualization purpose
-        self.attention_weights = np.squeeze(weights[0, :].data.cpu().numpy(), axis=1)
+        self.attention_weights = weights[0, :, 0].data.cpu().numpy()
         features = torch.reshape(mlp1_output, (size[0], size[1], -1))
         weighted_feature = torch.sum(weights.expand_as(features) * features, dim=1)
         value = self.mlp2(weighted_feature)

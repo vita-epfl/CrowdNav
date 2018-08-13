@@ -116,26 +116,26 @@ def main():
     # reinforcement learning
     navigator.set_policy(policy)
     episode = 0
-    # while episode < train_episodes:
-    #     # epsilon-greedy
-    #     if episode < epsilon_decay:
-    #         epsilon = epsilon_start + (epsilon_end - epsilon_start) / epsilon_decay * episode
-    #     else:
-    #         epsilon = epsilon_end
-    #     navigator.policy.set_epsilon(epsilon)
-    #
-    #     # test
-    #     if episode % test_interval == 0:
-    #         explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
-    #         explorer.update_stabilized_model(model)
-    #
-    #     # sample k episodes into memory and optimize over the generated memory
-    #     explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
-    #     trainer.optimize_batch(train_epochs)
-    #     episode += 1
-    #
-    #     if episode != 0 and episode % checkpoint_interval == 0:
-    #         torch.save(model.state_dict(), rl_weight_file)
+    while episode < train_episodes:
+        # epsilon-greedy
+        if episode < epsilon_decay:
+            epsilon = epsilon_start + (epsilon_end - epsilon_start) / epsilon_decay * episode
+        else:
+            epsilon = epsilon_end
+        navigator.policy.set_epsilon(epsilon)
+
+        # test
+        if episode % test_interval == 0:
+            explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
+            explorer.update_stabilized_model(model)
+
+        # sample k episodes into memory and optimize over the generated memory
+        explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
+        trainer.optimize_batch(train_epochs)
+        episode += 1
+
+        if episode != 0 and episode % checkpoint_interval == 0:
+            torch.save(model.state_dict(), rl_weight_file)
 
     # final test
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)

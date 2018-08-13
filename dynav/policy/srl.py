@@ -15,7 +15,7 @@ class ValueNetwork(nn.Module):
         self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[2], mlp2_dims), nn.ReLU())
+                                  nn.Linear(mlp1_dims[2], mlp2_dims))
         self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
 
     def forward(self, state):
