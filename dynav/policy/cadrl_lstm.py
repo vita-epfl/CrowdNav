@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import itertools
-from gym_crowd.envs.policy.policy import Policy
+import logging
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
-from gym_crowd.envs.utils.state import ObservableState, FullState
 from dynav.policy.utils import reward
+from dynav.policy.cadrl import CADRL
 
 
 class ValueNetwork(nn.Module):
@@ -79,105 +78,24 @@ class ValueNetwork(nn.Module):
         return value
 
 
-class CadrlLSTM(Policy):
+class CadrlLSTM(CADRL):
     def __init__(self):
         super().__init__()
-        self.trainable = True
-        self.multiagent_training = None
-        self.kinematics = None
-        self.discrete = None
-        self.epsilon = None
-        self.gamma = None
-        self.sampling = None
-        self.action_space_size = None
-        self.action_space = None
 
     def configure(self, config):
         self.gamma = config.getfloat('rl', 'gamma')
 
         self.kinematics = config.get('action_space', 'kinematics')
         self.sampling = config.get('action_space', 'sampling')
-        self.action_space_size = config.getint('action_space', 'action_space_size')
-        self.discrete = config.getboolean('action_space', 'discrete')
+        self.speed_samples = config.getint('action_space', 'speed_samples')
+        self.rotation_samples = config.getint('action_space', 'rotation_samples')
 
         input_dim = config.getint('cadrl_lstm', 'input_dim')
         mlp_dims = [int(x) for x in config.get('cadrl_lstm', 'mlp_dims').split(', ')]
         lstm_hidden_dim = config.getint('cadrl_lstm', 'lstm_hidden_dim')
         self.model = ValueNetwork(input_dim, self.kinematics, mlp_dims, lstm_hidden_dim)
         self.multiagent_training = config.getboolean('cadrl_lstm', 'multiagent_training')
-
-        assert self.action_space_size in [50, 100]
-        assert self.sampling in ['uniform', 'exponential']
-        assert self.kinematics in ['holonomic', 'unicycle']
-
-    def set_device(self, device):
-        self.device = device
-        self.model.to(device)
-
-    def set_epsilon(self, epsilon):
-        self.epsilon = epsilon
-
-    def build_action_space(self, v_pref):
-        """
-        Action space consists of 25 uniformly sampled actions in permitted range and 25 randomly sampled actions.
-        """
-        if self.kinematics == 'holonomic':
-            if self.action_space is not None:
-                return self.action_space
-            if self.discrete:
-                speed_grids, rotation_grids = (10, 10) if self.action_space_size == 100 else (8, 6)
-            else:
-                speed_grids, rotation_grids = (8, 6) if self.action_space_size == 100 else (5, 5)
-
-            action_space = [ActionXY(0, 0)]
-            if self.sampling == 'exponential':
-                speeds = [(np.exp((i + 1) / speed_grids) - 1) / (np.e - 1) * v_pref for i in range(speed_grids)]
-            else:
-                speeds = [(i + 1) / speed_grids * v_pref for i in range(speed_grids)]
-            rotations = [i / rotation_grids * 2 * np.pi for i in range(rotation_grids)]
-            for speed, rotation in itertools.product(speeds, rotations):
-                action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
-
-            if self.discrete:
-                # always recompute action space for continuous action space
-                for i in range(int(self.action_space_size / 2)):
-                    random_speed = np.random.random() * v_pref
-                    random_rotation = np.random.random() * 2 * np.pi
-                    action_space.append(ActionXY(random_speed * np.cos(random_rotation),
-                                                 random_speed * np.sin(random_rotation)))
-            else:
-                self.action_space = action_space
-        else:
-            raise NotImplemented
-
-        return action_space
-
-    def propagate(self, state, action):
-        if isinstance(state, ObservableState):
-            # propagate state of peds
-            next_px = state.px + action.vx * self.time_step
-            next_py = state.py + action.vy * self.time_step
-            next_state = ObservableState(next_px, next_py, action.vx, action.vy, state.radius)
-        elif isinstance(state, FullState):
-            # propagate state of current agent
-            # perform action without rotation
-            if self.kinematics == 'holonomic':
-                next_px = state.px + action.vx * self.time_step
-                next_py = state.py + action.vy * self.time_step
-                next_state = FullState(next_px, next_py, state.vx, state.vy, state.radius,
-                                       state.gx, state.gy, state.v_pref, state.theta)
-            else:
-                next_px = state.px + np.cos(action.r + state.theta) * action.v * self.time_step
-                next_py = state.py + np.sin(action.r + state.theta) * action.v * self.time_step
-                next_theta = state.theta + action.r
-                next_vx = action.v * np.cos(next_theta)
-                next_vy = action.v * np.sin(next_theta)
-                next_state = FullState(next_px, next_py, next_vx, next_vy, state.radius, state.gx, state.gy,
-                                       state.v_pref, next_theta)
-        else:
-            raise ValueError('Type error')
-
-        return next_state
+        logging.info('LSTM: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
     def predict(self, state):
         """
@@ -194,15 +112,15 @@ class CadrlLSTM(Policy):
 
         if self.reach_destination(state):
             return ActionXY(0, 0)
-        action_space = self.build_action_space(state.self_state.v_pref)
+        self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
-            max_action = action_space[np.random.choice(len(action_space))]
+            max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
             max_value = float('-inf')
             max_action = None
-            for action in action_space:
+            for action in self.action_space:
                 batch_next_states = []
                 # sort ped order by decreasing distance to the navigator
 

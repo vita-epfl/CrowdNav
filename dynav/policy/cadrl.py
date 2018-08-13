@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import itertools
+import logging
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
 from gym_crowd.envs.utils.state import ObservableState, FullState
@@ -18,7 +19,8 @@ class ValueNetwork(nn.Module):
                                            nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
                                            nn.Linear(mlp_dims[2], 1))
 
-    def rotate(self, state):
+    @staticmethod
+    def rotate(state, kinematics):
         """
         Input state tensor is of size (batch_size, state_length)
 
@@ -36,7 +38,7 @@ class ValueNetwork(nn.Module):
         vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
 
         radius = state[:, 4].reshape((batch, -1))
-        if self.kinematics == 'unicycle':
+        if kinematics == 'unicycle':
             theta = (state[:, 8] - rot).reshape((batch, -1))
         else:
             theta = (state[:, 8]).reshape((batch, -1))
@@ -59,7 +61,7 @@ class ValueNetwork(nn.Module):
 
     def forward(self, state):
         # transform the world coordinates to self-centric coordinates
-        state = self.rotate(state)
+        state = self.rotate(state, self.kinematics)
         value = self.value_network(state)
         return value
 
@@ -70,11 +72,11 @@ class CADRL(Policy):
         self.trainable = True
         self.multiagent_training = None
         self.kinematics = None
-        self.discrete = None
         self.epsilon = None
         self.gamma = None
         self.sampling = None
-        self.action_space_size = None
+        self.speed_samples = None
+        self.rotation_samples = None
         self.action_space = None
 
     def configure(self, config):
@@ -82,17 +84,14 @@ class CADRL(Policy):
 
         self.kinematics = config.get('action_space', 'kinematics')
         self.sampling = config.get('action_space', 'sampling')
-        self.action_space_size = config.getint('action_space', 'action_space_size')
-        self.discrete = config.getboolean('action_space', 'discrete')
+        self.speed_samples = config.getint('action_space', 'speed_samples')
+        self.rotation_samples = config.getint('action_space', 'rotation_samples')
 
         input_dim = config.getint('cadrl', 'input_dim')
         mlp_dims = [int(x) for x in config.get('cadrl', 'mlp_dims').split(', ')]
         self.model = ValueNetwork(input_dim, self.kinematics, mlp_dims)
         self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
-
-        assert self.action_space_size in [50, 100]
-        assert self.sampling in ['uniform', 'exponential']
-        assert self.kinematics in ['holonomic', 'unicycle']
+        logging.info('CADRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
     def set_device(self, device):
         self.device = device
@@ -105,36 +104,22 @@ class CADRL(Policy):
         """
         Action space consists of 25 uniformly sampled actions in permitted range and 25 randomly sampled actions.
         """
+        if self.action_space is not None:
+            return
         if self.kinematics == 'holonomic':
-            if self.action_space is not None:
-                return self.action_space
-            if self.discrete:
-                speed_grids, rotation_grids = (10, 10) if self.action_space_size == 100 else (8, 6)
-            else:
-                speed_grids, rotation_grids = (8, 6) if self.action_space_size == 100 else (5, 5)
-
             action_space = [ActionXY(0, 0)]
             if self.sampling == 'exponential':
-                speeds = [(np.exp((i + 1) / speed_grids) - 1) / (np.e - 1) * v_pref for i in range(speed_grids)]
+                speeds = [(np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref
+                          for i in range(self.speed_samples)]
             else:
-                speeds = [(i + 1) / speed_grids * v_pref for i in range(speed_grids)]
-            rotations = [i / rotation_grids * 2 * np.pi for i in range(rotation_grids)]
+                speeds = [(i + 1) / self.speed_samples * v_pref for i in range(self.speed_samples)]
+            rotations = [i / self.rotation_samples * 2 * np.pi for i in range(self.rotation_samples)]
             for speed, rotation in itertools.product(speeds, rotations):
                 action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
-
-            if self.discrete:
-                # always recompute action space for continuous action space
-                for i in range(int(self.action_space_size / 2)):
-                    random_speed = np.random.random() * v_pref
-                    random_rotation = np.random.random() * 2 * np.pi
-                    action_space.append(ActionXY(random_speed * np.cos(random_rotation),
-                                                 random_speed * np.sin(random_rotation)))
-            else:
-                self.action_space = action_space
         else:
             raise NotImplemented
 
-        return action_space
+        self.action_space = action_space
 
     def propagate(self, state, action):
         if isinstance(state, ObservableState):
@@ -178,15 +163,15 @@ class CADRL(Policy):
 
         if self.reach_destination(state):
             return ActionXY(0, 0)
-        action_space = self.build_action_space(state.self_state.v_pref)
+        self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
-            max_action = action_space[np.random.choice(len(action_space))]
+            max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
             max_min_value = float('-inf')
             max_action = None
-            for action in action_space:
+            for action in self.action_space:
                 batch_next_states = []
                 for ped_state in state.ped_states:
                     next_self_state = self.propagate(state.self_state, action)

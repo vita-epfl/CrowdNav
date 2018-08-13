@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import itertools
-from gym_crowd.envs.policy.policy import Policy
+import logging
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
-from gym_crowd.envs.utils.state import ObservableState, FullState
 from dynav.policy.utils import reward
+from dynav.policy.cadrl import CADRL, ValueNetwork as VN
 
 
 class ValueNetwork(nn.Module):
@@ -19,46 +18,6 @@ class ValueNetwork(nn.Module):
                                   nn.Linear(mlp1_dims[2], mlp2_dims))
         self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
 
-    def rotate(self, state):
-        """
-
-        :param state: tensor of size (batch_size, # of peds, length of joint state)
-        :return:
-        """
-        # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
-        #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
-        batch = state.shape[0]
-        dx = (state[:, 5] - state[:, 0]).reshape((batch, -1))
-        dy = (state[:, 6] - state[:, 1]).reshape((batch, -1))
-        rot = torch.atan2(state[:, 6] - state[:, 1], state[:, 5] - state[:, 0])
-
-        dg = torch.norm(torch.cat([dx, dy], dim=1), 2, dim=1, keepdim=True)
-        v_pref = state[:, 7].reshape((batch, -1))
-        vx = (state[:, 2] * torch.cos(rot) + state[:, 3] * torch.sin(rot)).reshape((batch, -1))
-        vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
-
-        radius = state[:, 4].reshape((batch, -1))
-        if self.kinematics == 'unicycle':
-            theta = (state[:, 8] - rot).reshape((batch, -1))
-        else:
-            theta = (state[:, 8]).reshape((batch, -1))
-        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
-        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
-        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
-        px1 = px1.reshape((batch, -1))
-        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
-        py1 = py1.reshape((batch, -1))
-        radius1 = state[:, 13].reshape((batch, -1))
-        radius_sum = radius + radius1
-        cos_theta = torch.cos(theta)
-        sin_theta = torch.sin(theta)
-        da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
-                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-
-        new_state = torch.cat([dg, v_pref, vx, vy, radius, theta, vx1, vy1, px1, py1, radius1, radius_sum,
-                               cos_theta, sin_theta, da], dim=1)
-        return new_state
-
     def forward(self, state):
         """
         First transform the world coordinates to self-centric coordinates and then do forward computation
@@ -67,111 +26,30 @@ class ValueNetwork(nn.Module):
         :return:
         """
         size = state.shape
-        state = self.rotate(torch.reshape(state, (-1, size[2])))
+        state = VN.rotate(torch.reshape(state, (-1, size[2])), self.kinematics)
         output = torch.reshape(self.mlp1(state), (size[0], size[1], -1))
         value = self.mlp2(torch.max(output, 1)[0])
         return value
 
 
-class SRL(Policy):
+class SRL(CADRL):
     def __init__(self):
         super().__init__()
-        self.trainable = True
-        self.multiagent_training = 'multiple_agents'
-        self.kinematics = None
-        self.discrete = None
-        self.epsilon = None
-        self.gamma = None
-        self.sampling = None
-        self.action_space_size = None
-        self.action_space = None
 
     def configure(self, config):
         self.gamma = config.getfloat('rl', 'gamma')
 
         self.kinematics = config.get('action_space', 'kinematics')
         self.sampling = config.get('action_space', 'sampling')
-        self.action_space_size = config.getint('action_space', 'action_space_size')
-        self.discrete = config.getboolean('action_space', 'discrete')
+        self.speed_samples = config.getint('action_space', 'speed_samples')
+        self.rotation_samples = config.getint('action_space', 'rotation_samples')
 
         input_dim = config.getint('srl', 'input_dim')
         mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
         mlp2_dims = config.getint('srl', 'mlp2_dims')
         self.model = ValueNetwork(input_dim, self.kinematics, mlp1_dims, mlp2_dims)
         self.multiagent_training = config.getboolean('srl', 'multiagent_training')
-
-        assert self.action_space_size in [50, 100]
-        assert self.sampling in ['uniform', 'exponential']
-        assert self.kinematics in ['holonomic', 'unicycle']
-
-    def set_device(self, device):
-        self.device = device
-        self.model.to(device)
-
-    def set_epsilon(self, epsilon):
-        self.epsilon = epsilon
-
-    def build_action_space(self, v_pref):
-        """
-        Action space consists of 25 uniformly sampled actions in permitted range and 25 randomly sampled actions.
-        """
-        if self.kinematics == 'holonomic':
-            if self.action_space is not None:
-                return self.action_space
-            if self.discrete:
-                speed_grids, rotation_grids = (10, 10) if self.action_space_size == 100 else (8, 6)
-            else:
-                speed_grids, rotation_grids = (8, 6) if self.action_space_size == 100 else (5, 5)
-
-            action_space = [ActionXY(0, 0)]
-            if self.sampling == 'exponential':
-                speeds = [(np.exp((i + 1) / speed_grids) - 1) / (np.e - 1) * v_pref for i in range(speed_grids)]
-            else:
-                speeds = [(i + 1) / speed_grids * v_pref for i in range(speed_grids)]
-            rotations = [i / rotation_grids * 2 * np.pi for i in range(rotation_grids)]
-            for speed, rotation in itertools.product(speeds, rotations):
-                action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
-
-            if self.discrete:
-                # always recompute action space for continuous action space
-                for i in range(int(self.action_space_size / 2)):
-                    random_speed = np.random.random() * v_pref
-                    random_rotation = np.random.random() * 2 * np.pi
-                    action_space.append(ActionXY(random_speed * np.cos(random_rotation),
-                                                 random_speed * np.sin(random_rotation)))
-            else:
-                self.action_space = action_space
-        else:
-            raise NotImplemented
-
-        return action_space
-
-    def propagate(self, state, action):
-        if isinstance(state, ObservableState):
-            # propagate state of peds
-            next_px = state.px + action.vx * self.time_step
-            next_py = state.py + action.vy * self.time_step
-            next_state = ObservableState(next_px, next_py, action.vx, action.vy, state.radius)
-        elif isinstance(state, FullState):
-            # propagate state of current agent
-            # perform action without rotation
-            if self.kinematics == 'holonomic':
-                next_px = state.px + action.vx * self.time_step
-                next_py = state.py + action.vy * self.time_step
-                next_state = FullState(next_px, next_py, state.vx, state.vy, state.radius,
-                                       state.gx, state.gy, state.v_pref, state.theta)
-            else:
-                next_px = state.px + np.cos(action.r + state.theta) * action.v * self.time_step
-                next_py = state.py + np.sin(action.r + state.theta) * action.v * self.time_step
-                next_theta = state.theta + action.r
-                next_vx = action.v * np.cos(next_theta)
-                next_vy = action.v * np.sin(next_theta)
-                next_state = FullState(next_px, next_py, next_vx, next_vy, state.radius, state.gx, state.gy,
-                                       state.v_pref, next_theta)
-        else:
-            raise ValueError('Type error')
-
-        return next_state
+        logging.info('SRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
     def predict(self, state):
         """
@@ -188,15 +66,15 @@ class SRL(Policy):
 
         if self.reach_destination(state):
             return ActionXY(0, 0)
-        action_space = self.build_action_space(state.self_state.v_pref)
+        self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
-            max_action = action_space[np.random.choice(len(action_space))]
+            max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
             max_value = float('-inf')
             max_action = None
-            for action in action_space:
+            for action in self.action_space:
                 batch_next_states = []
                 for ped_state in state.ped_states:
                     next_self_state = self.propagate(state.self_state, action)
