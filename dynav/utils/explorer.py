@@ -38,9 +38,6 @@ class Explorer(object):
                 actions.append(action)
                 rewards.append(reward)
 
-            if update_memory:
-                self.update_memory(states, actions, rewards, imitation_learning)
-
             if info == 'reach goal':
                 success += 1
                 times.append(self.env.timer)
@@ -52,6 +49,11 @@ class Explorer(object):
                 timeout_cases.append(i)
             else:
                 raise ValueError('Invalid info from environment')
+
+            if update_memory:
+                # only provide successful demonstrations in imitation learning
+                if not imitation_learning or (imitation_learning and info == 'reach goal'):
+                    self.update_memory(states, actions, rewards, imitation_learning)
 
         success_rate = success / k
         collision_rate = collision / k
