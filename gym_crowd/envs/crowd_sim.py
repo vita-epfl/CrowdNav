@@ -304,20 +304,21 @@ class CrowdSim(gym.Env):
                 ax.add_artist(navigator)
                 for ped in peds:
                     ax.add_artist(ped)      
-            text = plt.text(0, 6, 'Trajectories', fontsize=12)
-            ax.add_artist(text)
+            timer = plt.text(0, 6, 'Trajectories', fontsize=12)
+            ax.add_artist(timer)
             plt.legend([navigator], ['navigator'])
             plt.show()
         elif mode == 'video':
             navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
             ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
                              for i in range(len(self.states))]
+            x_offset = 0.11
+            y_offset = 0.11
 
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-7, 7)
             ax.set_ylim(-7, 7)
             goal = plt.Circle((0, 4), 0.05, fill=True, color='b')
-            ax.add_artist(goal)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
             if self.attention_weights is not None:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True,
@@ -325,17 +326,15 @@ class CrowdSim(gym.Env):
             else:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                         for i in range(len(self.peds))]
-            x_offset = 0.11
-            y_offset = 0.11
             ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='white')
                                for i in range(len(self.peds))]
-            text = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
+            timer = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
             if self.attention_weights is not None:
-                attention_texts = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
-                                            fontsize=12) for i in range(len(self.peds))]
-
-            ax.add_artist(text)
+                attention_scores = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
+                                             fontsize=12) for i in range(len(self.peds))]
             ax.add_artist(navigator)
+            ax.add_artist(goal)
+            ax.add_artist(timer)
             for i, ped in enumerate(peds):
                 ax.add_artist(ped)
                 ax.add_artist(ped_annotations[i])
@@ -348,9 +347,9 @@ class CrowdSim(gym.Env):
                     ped_annotations[i].set_position((ped.center[0]-x_offset, ped.center[1]-y_offset))
                     if self.attention_weights is not None:
                         ped.set_color(str(self.attention_weights[frame_num][i]))
-                        attention_texts[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
+                        attention_scores[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
 
-                text.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
+                timer.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step*1000)
             if output_file is not None:
