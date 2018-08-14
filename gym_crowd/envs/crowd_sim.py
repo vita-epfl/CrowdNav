@@ -304,7 +304,7 @@ class CrowdSim(gym.Env):
                 ax.add_artist(navigator)
                 for ped in peds:
                     ax.add_artist(ped)      
-            timer = plt.text(0, 6, 'Trajectories', fontsize=12)
+            timer = plt.text(-1, 6, 'Trajectories', fontsize=12)
             ax.add_artist(timer)
             plt.legend([navigator], ['navigator'])
             plt.show()

@@ -7,6 +7,7 @@ import gym
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
 from dynav.policy.policy_factory import policy_factory
+from gym_crowd.envs.policy.orca import ORCA
 
 
 def main():
@@ -51,6 +52,9 @@ def main():
 
     policy.set_phase(args.phase)
     policy.set_device(device)
+    # set safety space for ORCA in non-cooperative simulation
+    if not navigator.visible and isinstance(navigator.policy, ORCA):
+        navigator.policy.safety_space = 0.15
 
     if args.visualize:
         ob = env.reset(args.phase, args.test_case)
