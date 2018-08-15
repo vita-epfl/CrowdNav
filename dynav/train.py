@@ -111,6 +111,7 @@ def main():
         trainer.optimize_batch(il_epochs)
         torch.save(model.state_dict(), il_weight_file)
         logging.info('Finish imitation learning. Weights saved.')
+        logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
     explorer.update_stabilized_model(model)
 
     # reinforcement learning

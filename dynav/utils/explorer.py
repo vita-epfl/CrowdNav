@@ -19,7 +19,8 @@ class Explorer(object):
     # @profile
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None, print_failure=False):
         self.navigator.policy.set_phase(phase)
-        times = []
+        navigator_times = []
+        avg_ped_times = []
         success = 0
         collision = 0
         timeout = 0
@@ -40,7 +41,9 @@ class Explorer(object):
 
             if info == 'reach goal':
                 success += 1
-                times.append(self.env.timer)
+                navigator_times.append(self.env.global_time)
+                if self.navigator.visible:
+                    avg_ped_times.append(self.env.get_average_ped_time())
             elif info == 'collision':
                 collision += 1
                 collision_cases.append(i)
@@ -60,14 +63,20 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
-        if len(times) == 0:
-            average_time = 0
+        if len(navigator_times) == 0:
+            avg_nav_time = 0
         else:
-            average_time = sum(times) / len(times)
+            avg_nav_time = sum(navigator_times) / len(navigator_times)
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.2f}'.
-                     format(phase.upper(), extra_info, success_rate, collision_rate, average_time))
+                     format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time))
+        if self.navigator.visible:
+            if len(avg_ped_times) == 0:
+                avg_ped_time = 0
+            else:
+                avg_ped_time = sum(avg_ped_times) / len(avg_ped_times)
+            logging.info('Average time for peds to reach goal: {:.2f}'.format(avg_ped_time))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))

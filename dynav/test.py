@@ -71,7 +71,9 @@ def main():
         else:
             env.render('video', args.output_file)
 
-        logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.timer, info))
+        logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.global_time, info))
+        if navigator.visible:
+            logging.info('Average time for peds to reach goal: {:.2f}'.format(env.get_average_ped_time()))
     else:
         explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
 

@@ -9,6 +9,7 @@ from numpy.linalg import norm
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
+from gym_crowd.envs.utils.action import ActionXY
 
 
 class CrowdSim(gym.Env):
@@ -24,9 +25,10 @@ class CrowdSim(gym.Env):
         """
         self.time_limit = None
         self.time_step = None
-        self.peds = None
         self.navigator = None
-        self.timer = None
+        self.peds = None
+        self.global_time = None
+        self.ped_times = None
         self.states = None
         self.attention_weights = None
         self.config = None
@@ -38,7 +40,7 @@ class CrowdSim(gym.Env):
         self.test_sim = None
         self.square_width = None
         self.circle_radius = None
-        self.multiple_ped_num = None
+        self.ped_num = None
         # trajnet simulation
         self.scenes = None
 
@@ -68,7 +70,7 @@ class CrowdSim(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
-            self.multiple_ped_num = config.getint('sim', 'multiple_ped_num')
+            self.ped_num = config.getint('sim', 'ped_num')
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
     def set_navigator(self, navigator):
@@ -136,6 +138,14 @@ class CrowdSim(gym.Env):
                 ped.set(px, py, -px, -py, 0, 0, 0)
                 self.peds.append(ped)
 
+    def get_average_ped_time(self):
+        if not self.navigator.reached_destination():
+            raise ValueError('Episode is not done yet')
+        # run simulation until all agents are done
+        while not all(self.ped_times):
+            self.step(ActionXY(0, 0))
+        return sum(self.ped_times) / len(self.ped_times)
+
     def reset(self, phase='test', test_case=None):
         """
         Set px, py, gx, gy, vx, vy, theta for navigator and peds
@@ -146,7 +156,8 @@ class CrowdSim(gym.Env):
         assert phase in ['train', 'val', 'test']
         if test_case is not None:
             self.case_counter[phase] = test_case
-        self.timer = 0
+        self.global_time = 0
+        self.ped_times = [0] * self.ped_num
 
         if self.config.get('peds', 'policy') == 'trajnet':
             if phase == 'train':
@@ -172,10 +183,10 @@ class CrowdSim(gym.Env):
             self.navigator.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             np.random.seed(counter_offset[phase] + self.case_counter[phase])
             if phase in ['train', 'val']:
-                ped_num = self.multiple_ped_num if self.navigator.policy.multiagent_training else 1
+                ped_num = self.ped_num if self.navigator.policy.multiagent_training else 1
                 self.generate_random_ped_position(ped_num=ped_num, rule=self.train_val_sim)
             else:
-                self.generate_random_ped_position(ped_num=self.multiple_ped_num, rule=self.test_sim)
+                self.generate_random_ped_position(ped_num=self.ped_num, rule=self.test_sim)
             # case_counter is always between 0 and case_size[phase]
             self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
 
@@ -241,7 +252,7 @@ class CrowdSim(gym.Env):
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
         reaching_goal = norm(end_position - np.array(self.navigator.get_goal_position())) < self.navigator.radius
 
-        if self.timer >= self.time_limit-1:
+        if self.global_time >= self.time_limit-1:
             reward = 0
             done = True
             info = 'timeout'
@@ -251,7 +262,6 @@ class CrowdSim(gym.Env):
             info = 'collision'
         elif reaching_goal:
             reward = 1
-            # reward = 1 - (self.timer - 8) / 20
             done = True
             info = 'reach goal'
         elif dmin < 0.2:
@@ -267,7 +277,11 @@ class CrowdSim(gym.Env):
         self.navigator.step(action)
         for i, ped_action in enumerate(ped_actions):
             self.peds[i].step(ped_action)
-        self.timer += self.time_step
+        self.global_time += self.time_step
+        for i, ped in enumerate(self.peds):
+            # only record the first time the ped reaches the goal
+            if self.ped_times[i] == 0 and ped.reached_destination():
+                self.ped_times[i] = self.global_time
         self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
         if hasattr(self.navigator.policy, 'get_attention_weights'):
             self.attention_weights.append(self.navigator.policy.get_attention_weights())
@@ -304,8 +318,8 @@ class CrowdSim(gym.Env):
                 ax.add_artist(navigator)
                 for ped in peds:
                     ax.add_artist(ped)      
-            timer = plt.text(-1, 6, 'Trajectories', fontsize=12)
-            ax.add_artist(timer)
+            time = plt.text(-1, 6, 'Trajectories', fontsize=12)
+            ax.add_artist(time)
             plt.legend([navigator], ['navigator'])
             plt.show()
         elif mode == 'video':
@@ -328,13 +342,13 @@ class CrowdSim(gym.Env):
                         for i in range(len(self.peds))]
             ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='white')
                                for i in range(len(self.peds))]
-            timer = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
+            time = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
                                              fontsize=12) for i in range(len(self.peds))]
             ax.add_artist(navigator)
             ax.add_artist(goal)
-            ax.add_artist(timer)
+            ax.add_artist(time)
             for i, ped in enumerate(peds):
                 ax.add_artist(ped)
                 ax.add_artist(ped_annotations[i])
@@ -349,9 +363,19 @@ class CrowdSim(gym.Env):
                         ped.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
 
-                timer.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
+                time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
+            def on_click(event):
+                if anim.running:
+                    anim.event_source.stop()
+                else:
+                    anim.event_source.start()
+                anim.running ^= True
+
+            fig.canvas.mpl_connect('key_press_event', on_click)
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step*1000)
+            anim.running = True
+
             if output_file is not None:
                 ffmpeg_writer = animation.writers['ffmpeg']
                 writer = ffmpeg_writer(fps=1/self.time_step, metadata=dict(artist='Me'), bitrate=1800)

@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.linalg import norm
 from gym_crowd.envs.policy.policy_factory import policy_factory
 from gym_crowd.envs.utils.action import ActionXY, ActionRot
 from gym_crowd.envs.utils.state import ObservableState, FullState
@@ -93,4 +94,7 @@ class Agent(object):
             self.theta += action.r
             self.vx = action.v * np.cos(self.theta)
             self.vy = action.v * np.sin(self.theta)
+
+    def reached_destination(self):
+        return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
 
