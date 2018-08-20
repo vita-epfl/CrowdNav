@@ -11,7 +11,6 @@ from dynav.policy.cadrl import CADRL
 class ValueNetwork(nn.Module):
     def __init__(self, input_dim, mlp1_dims, mlp2_dims):
         super().__init__()
-        self.input_dim = input_dim
         self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),

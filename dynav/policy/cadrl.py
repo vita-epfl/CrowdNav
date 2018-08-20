@@ -12,7 +12,6 @@ from dynav.policy.utils import reward
 class ValueNetwork(nn.Module):
     def __init__(self, input_dim, mlp_dims):
         super().__init__()
-        self.input_dim = input_dim
         self.value_network = nn.Sequential(nn.Linear(input_dim, mlp_dims[0]), nn.ReLU(),
                                            nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
                                            nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
@@ -35,7 +34,7 @@ class CADRL(Policy):
         self.speed_samples = None
         self.rotation_samples = None
         self.action_space = None
-        self.joint_state_dim = 11
+        self.joint_state_dim = 13
 
     def configure(self, config):
         self.set_common_parameters(config)
@@ -196,8 +195,8 @@ class CADRL(Policy):
         else:
             # set theta to be zero since it's not used
             theta = torch.zeros_like(v_pref)
-        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1)) - vx
-        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1)) - vy
+        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
+        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
         px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
         px1 = px1.reshape((batch, -1))
         py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
@@ -206,5 +205,5 @@ class CADRL(Policy):
         radius_sum = radius + radius1
         da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
                                   reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-        new_state = torch.cat([dg, v_pref, theta, radius, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
+        new_state = torch.cat([dg, v_pref, theta, radius, vx, vy, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
         return new_state
