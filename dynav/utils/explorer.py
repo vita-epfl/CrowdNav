@@ -101,7 +101,7 @@ class Explorer(object):
                     value = reward
                 else:
                     next_state = states[i + 1]
-                    gamma_bar = pow(self.gamma, self.navigator.time_step * self.navigator.v_pref)
+                    gamma_bar = pow(self.gamma, self.navigator.v_pref)
                     value = reward + gamma_bar * self.stabilized_model(next_state.unsqueeze(0)).data.item()
             value = torch.Tensor([value]).to(self.device)
 

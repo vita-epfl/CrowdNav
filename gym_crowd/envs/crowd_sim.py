@@ -1,8 +1,6 @@
 import logging
 import os
 import gym
-import matplotlib.animation as animation
-import matplotlib.pyplot as plt
 import numpy as np
 import trajnettools
 from numpy.linalg import norm
@@ -298,6 +296,9 @@ class CrowdSim(gym.Env):
         return ob, reward, done, info
 
     def render(self, mode='human', output_file=None):
+        import matplotlib.animation as animation
+        import matplotlib.pyplot as plt
+
         navigator_color = 'yellow'
         goal_color = 'blue'
         heading_color = 'red'
