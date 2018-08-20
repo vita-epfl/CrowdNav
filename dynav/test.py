@@ -4,6 +4,7 @@ import argparse
 import configparser
 import numpy as np
 import gym
+import os
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
 from dynav.policy.policy_factory import policy_factory
@@ -13,16 +14,28 @@ from gym_crowd.envs.policy.orca import ORCA
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--env_config', type=str, default='configs/orca_env.config')
-    parser.add_argument('--policy', type=str, default='orca')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
-    parser.add_argument('--weights', type=str)
+    parser.add_argument('--policy', type=str, default='orca')
+    parser.add_argument('--model_dir', type=str, default=None)
+    parser.add_argument('--il', default=False, action='store_true')
     parser.add_argument('--gpu', default=False, action='store_true')
     parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
-    parser.add_argument('--output_file', type=str, default=None)
+    parser.add_argument('--video_file', type=str, default=None)
     parser.add_argument('--traj', default=False, action='store_true')
     args = parser.parse_args()
+
+    if args.model_dir is not None:
+        env_config_file = os.path.join(args.model_dir, os.path.basename(args.env_config))
+        policy_config_file = os.path.join(args.model_dir, os.path.basename(args.policy_config))
+        if args.il:
+            model_weights = os.path.join(args.model_dir, 'il_model.pth')
+        else:
+            model_weights = os.path.join(args.model_dir, 'rl_model.pth')
+    else:
+        env_config_file = args.env_config
+        policy_config_file = args.env_config
 
     # configure logging and device
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
@@ -33,16 +46,16 @@ def main():
     # configure policy
     policy = policy_factory[args.policy]()
     policy_config = configparser.RawConfigParser()
-    policy_config.read(args.policy_config)
+    policy_config.read(policy_config_file)
     policy.configure(policy_config)
     if policy.trainable:
-        if args.weights is None:
-            parser.error('Trainable policy must be specified with a saved weights')
-        policy.get_model().load_state_dict(torch.load(args.weights))
+        if args.model_dir is None:
+            parser.error('Trainable policy must be specified with a model weights directory')
+        policy.get_model().load_state_dict(torch.load(model_weights))
 
     # configure environment
     env_config = configparser.RawConfigParser()
-    env_config.read(args.env_config)
+    env_config.read(env_config_file)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
     navigator = Navigator(env_config, 'navigator')
@@ -56,6 +69,7 @@ def main():
     if not navigator.visible and isinstance(navigator.policy, ORCA):
         navigator.policy.safety_space = 0.15
 
+    navigator.print_info()
     if args.visualize:
         ob = env.reset(args.phase, args.test_case)
         done = False
@@ -67,9 +81,9 @@ def main():
             logging.debug('Speed: {:.2f}'.format(np.linalg.norm(current_pos - last_pos) / navigator.time_step))
             last_pos = current_pos
         if args.traj:
-            env.render('traj', args.output_file)
+            env.render('traj', args.video_file)
         else:
-            env.render('video', args.output_file)
+            env.render('video', args.video_file)
 
         logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.global_time, info))
         if navigator.visible:

@@ -114,7 +114,16 @@ class CADRL(Policy):
             for speed, rotation in itertools.product(speeds, rotations):
                 action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
         else:
-            raise NotImplemented
+            action_space = [ActionRot(0, 0)]
+            if self.sampling == 'exponential':
+                speeds = [(np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref
+                          for i in range(self.speed_samples)]
+            else:
+                speeds = [(i + 1) / self.speed_samples * v_pref for i in range(self.speed_samples)]
+            # rotations = [i / self.rotation_samples * np.pi / 3 - np.pi / 6 for i in range(self.rotation_samples + 1)]
+            rotations = [i / (self.rotation_samples - 1) * 2 * np.pi for i in range(self.rotation_samples)]
+            for speed, rotation in itertools.product(speeds, rotations):
+                action_space.append(ActionRot(speed, rotation))
 
         self.action_space = action_space
 
@@ -130,7 +139,7 @@ class CADRL(Policy):
             if self.kinematics == 'holonomic':
                 next_px = state.px + action.vx * self.time_step
                 next_py = state.py + action.vy * self.time_step
-                next_state = FullState(next_px, next_py, state.vx, state.vy, state.radius,
+                next_state = FullState(next_px, next_py, action.vx, action.vy, state.radius,
                                        state.gx, state.gy, state.v_pref, state.theta)
             else:
                 next_px = state.px + np.cos(action.r + state.theta) * action.v * self.time_step

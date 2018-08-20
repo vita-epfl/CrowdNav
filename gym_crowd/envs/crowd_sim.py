@@ -225,8 +225,12 @@ class CrowdSim(gym.Env):
         for i, ped in enumerate(self.peds):
             px = ped.px - self.navigator.px
             py = ped.py - self.navigator.py
-            vx = ped_actions[i].vx - action.vx
-            vy = ped_actions[i].vy - action.vy
+            if self.navigator.kinematics == 'holonomic':
+                vx = ped.vx - action.vx
+                vy = ped.vy - action.vy
+            else:
+                vx = ped.vx - action.v * np.cos(action.r + self.navigator.theta)
+                vy = ped.vy - action.v * np.sin(action.r + self.navigator.theta)
             ex = px + vx * self.time_step
             ey = py + vy * self.time_step
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
@@ -294,7 +298,10 @@ class CrowdSim(gym.Env):
         return ob, reward, done, info
 
     def render(self, mode='human', output_file=None):
-        navigator_color = 'red'
+        navigator_color = 'yellow'
+        goal_color = 'blue'
+        heading_color = 'red'
+
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-5, 5)
@@ -323,20 +330,20 @@ class CrowdSim(gym.Env):
             plt.legend([navigator], ['navigator'])
             plt.show()
         elif mode == 'video':
-            navigator_positions = [self.states[i][0].position for i in range(len(self.states))]
-            ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
-                             for i in range(len(self.states))]
+            navigator_positions = [state[0].position for state in self.states]
+            ped_positions = [[state[1][j].position for j in range(len(self.peds))] for state in self.states]
             x_offset = 0.11
             y_offset = 0.11
 
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-7, 7)
             ax.set_ylim(-7, 7)
-            goal = plt.Circle((0, 4), 0.05, fill=True, color='b')
+            goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
+            # visualize attention weights using the color saturation
             if self.attention_weights is not None:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True,
-                                   color=str(self.attention_weights[0][i])) for i in range(len(self.peds))]
+                                   color=(self.attention_weights[0][i], 0, 0)) for i in range(len(self.peds))]
             else:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
                         for i in range(len(self.peds))]
@@ -346,6 +353,12 @@ class CrowdSim(gym.Env):
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
                                              fontsize=12) for i in range(len(self.peds))]
+            if self.navigator.kinematics == 'unicycle':
+                radius = self.navigator.radius
+                heading_pos = [((state[0].px, state[0].px + radius * np.cos(state[0].theta)),
+                                (state[0].py, state[0].py + radius * np.sin(state[0].theta))) for state in self.states]
+                navigator_heading = plt.Line2D(*heading_pos[0], color=heading_color)
+                ax.add_artist(navigator_heading)
             ax.add_artist(navigator)
             ax.add_artist(goal)
             ax.add_artist(time)
@@ -359,6 +372,9 @@ class CrowdSim(gym.Env):
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
                     ped_annotations[i].set_position((ped.center[0]-x_offset, ped.center[1]-y_offset))
+                    if self.navigator.kinematics == 'unicycle':
+                        navigator_heading.set_xdata(heading_pos[frame_num][0])
+                        navigator_heading.set_ydata(heading_pos[frame_num][1])
                     if self.attention_weights is not None:
                         ped.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))

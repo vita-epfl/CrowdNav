@@ -19,31 +19,31 @@ def main():
     parser.add_argument('--policy', type=str, default='cadrl')
     parser.add_argument('--policy_config', type=str, default='configs/policy.config')
     parser.add_argument('--train_config', type=str, default='configs/train.config')
-    parser.add_argument('--output_dir', type=str, default='output')
+    parser.add_argument('--output_dir', type=str, default='data/output')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--gpu', default=False, action='store_true')
     parser.add_argument('--debug', default=False, action='store_true')
     args = parser.parse_args()
 
     # configure paths
-    output_dir = os.path.join('data', args.output_dir)
-    if os.path.exists(output_dir):
+    make_new_dir = True
+    if os.path.exists(args.output_dir):
         key = input('Output directory already exists! Overwrite the folder? (y/n)')
         if key == 'y':
-            shutil.rmtree(output_dir)
-            os.mkdir(output_dir)
-            shutil.copy(args.env_config, output_dir)
-            shutil.copy(args.policy_config, output_dir)
-            shutil.copy(args.train_config, output_dir)
-    else:
-        os.makedirs(output_dir)
-        shutil.copy(args.env_config, output_dir)
-        shutil.copy(args.policy_config, output_dir)
-        shutil.copy(args.train_config, output_dir)
-    log_file = os.path.join(output_dir, 'output.log')
-    shutil.copy(args.train_config, output_dir)
-    il_weight_file = os.path.join(output_dir, 'il_model.pth')
-    rl_weight_file = os.path.join(output_dir, 'rl_model.pth')
+            shutil.rmtree(args.output_dir)
+        else:
+            make_new_dir = False
+            args.env_config = os.path.join(args.output_dir, os.path.basename(args.env_config))
+            args.policy_config = os.path.join(args.output_dir, os.path.basename(args.policy_config))
+            args.train_config = os.path.join(args.output_dir, os.path.basename(args.train_config))
+    if make_new_dir:
+        os.makedirs(args.output_dir)
+        shutil.copy(args.env_config, args.output_dir)
+        shutil.copy(args.policy_config, args.output_dir)
+        shutil.copy(args.train_config, args.output_dir)
+    log_file = os.path.join(args.output_dir, 'output.log')
+    il_weight_file = os.path.join(args.output_dir, 'il_model.pth')
+    rl_weight_file = os.path.join(args.output_dir, 'rl_model.pth')
 
     # configure logging
     file_handler = logging.FileHandler(log_file, mode='w')
@@ -108,6 +108,7 @@ def main():
         il_policy.safety_space = safety_space
         navigator.set_policy(il_policy)
         explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
+        navigator.set_policy(policy)
         trainer.optimize_batch(il_epochs)
         torch.save(model.state_dict(), il_weight_file)
         logging.info('Finish imitation learning. Weights saved.')
@@ -115,7 +116,7 @@ def main():
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
-    navigator.set_policy(policy)
+    navigator.print_info()
     episode = 0
     while episode < train_episodes:
         # epsilon-greedy

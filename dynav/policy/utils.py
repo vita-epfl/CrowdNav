@@ -13,8 +13,6 @@ def reward(state, action, kinematics, time_step):
     :param time_step:
     :return:
     """
-    if kinematics == 'unicycle':
-        raise NotImplemented
     # compute minimum distance to other agents
     self_state = state.self_state
     dmin = float('inf')
@@ -25,8 +23,12 @@ def reward(state, action, kinematics, time_step):
         # two end point (px, py) and (ex, ey). Compute the closest distance from point to line segment.
         px = ped_state.px - self_state.px
         py = ped_state.py - self_state.py
-        vx = ped_state.vx - action.vx
-        vy = ped_state.vy - action.vy
+        if kinematics == 'holonomic':
+            vx = ped_state.vx - action.vx
+            vy = ped_state.vy - action.vy
+        else:
+            vx = ped_state.vx - action.v * np.cos(action.r + self_state.theta)
+            vy = ped_state.vy - action.v * np.sin(action.r + self_state.theta)
         ex = px + vx * time_step
         ey = py + vy * time_step
         closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)

@@ -3,10 +3,11 @@ from gym_crowd.envs.utils.action import ActionXY
 import numpy as np
 
 
-class LinearPolicy(Policy):
+class Linear(Policy):
     def __init__(self):
         super().__init__()
         self.trainable = False
+        self.kinematics = 'holonomic'
 
     def configure(self, config):
         assert True

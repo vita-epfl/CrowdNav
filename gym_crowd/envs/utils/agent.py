@@ -1,9 +1,10 @@
 import numpy as np
 from numpy.linalg import norm
+import abc
+import logging
 from gym_crowd.envs.policy.policy_factory import policy_factory
 from gym_crowd.envs.utils.action import ActionXY, ActionRot
 from gym_crowd.envs.utils.state import ObservableState, FullState
-import abc
 
 
 class Agent(object):
@@ -17,7 +18,7 @@ class Agent(object):
         self.radius = config.getfloat(section, 'radius')
         self.policy = policy_factory[config.get(section, 'policy')]()
         self.sensor = config.get(section, 'sensor')
-        self.kinematics = config.get(section, 'kinematics')
+        self.kinematics = self.policy.kinematics if self.policy is not None else None
         self.px = None
         self.py = None
         self.gx = None
@@ -25,10 +26,15 @@ class Agent(object):
         self.vx = None
         self.vy = None
         self.theta = None
-
         self.time_step = None
 
-        assert self.kinematics in ['holonomic', 'unicycle']
+    def print_info(self):
+        logging.info('Agent is {} and has {} kinematic constraint'.format('visible' if self.visible else 'invisible',
+                                                                          self.kinematics))
+
+    def set_policy(self, policy):
+        self.policy = policy
+        self.kinematics = policy.kinematics
 
     def set(self, px, py, gx, gy, vx, vy, theta):
         self.px = px
@@ -91,7 +97,7 @@ class Agent(object):
             self.vx = action.vx
             self.vy = action.vy
         else:
-            self.theta += action.r
+            self.theta = (self.theta + action.r) % (2 * np.pi)
             self.vx = action.v * np.cos(self.theta)
             self.vy = action.v * np.sin(self.theta)
 
