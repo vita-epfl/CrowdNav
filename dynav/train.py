@@ -108,7 +108,6 @@ def main():
         il_policy.safety_space = safety_space
         navigator.set_policy(il_policy)
         explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
-        navigator.set_policy(policy)
         trainer.optimize_batch(il_epochs)
         torch.save(model.state_dict(), il_weight_file)
         logging.info('Finish imitation learning. Weights saved.')
@@ -116,6 +115,7 @@ def main():
     explorer.update_stabilized_model(model)
 
     # reinforcement learning
+    navigator.set_policy(policy)
     navigator.print_info()
     episode = 0
     while episode < train_episodes:

@@ -5,14 +5,13 @@ import numpy as np
 import logging
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
 from dynav.policy.utils import reward
-from dynav.policy.cadrl import CADRL, ValueNetwork as VN
+from dynav.policy.cadrl import CADRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, kinematics, mlp1_dims, mlp2_dims):
+    def __init__(self, input_dim, mlp1_dims, mlp2_dims):
         super().__init__()
         self.input_dim = input_dim
-        self.kinematics = kinematics
         self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
@@ -25,11 +24,11 @@ class ValueNetwork(nn.Module):
         """
         First transform the world coordinates to self-centric coordinates and then do forward computation
 
-        :param state: tensor of shape (batch_size, # of peds, length of a joint state)
+        :param state: tensor of shape (batch_size, # of peds, length of a rotated state)
         :return:
         """
         size = state.shape
-        state = VN.rotate(torch.reshape(state, (-1, size[2])), self.kinematics)
+        state = torch.reshape(state, (-1, size[2]))
         mlp1_output = self.mlp1(state)
         scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
@@ -46,17 +45,10 @@ class SARL(CADRL):
         super().__init__()
 
     def configure(self, config):
-        self.gamma = config.getfloat('rl', 'gamma')
-
-        self.kinematics = config.get('action_space', 'kinematics')
-        self.sampling = config.get('action_space', 'sampling')
-        self.speed_samples = config.getint('action_space', 'speed_samples')
-        self.rotation_samples = config.getint('action_space', 'rotation_samples')
-
-        input_dim = config.getint('sarl', 'input_dim')
+        self.set_common_parameters(config)
         mlp1_dims = [int(x) for x in config.get('sarl', 'mlp1_dims').split(', ')]
         mlp2_dims = config.getint('sarl', 'mlp2_dims')
-        self.model = ValueNetwork(input_dim, self.kinematics, mlp1_dims, mlp2_dims)
+        self.model = ValueNetwork(self.joint_state_dim, mlp1_dims, mlp2_dims)
         self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
         logging.info('SARL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
@@ -74,7 +66,7 @@ class SARL(CADRL):
             raise AttributeError('Epsilon attribute has to be set in training phase')
 
         if self.reach_destination(state):
-            return ActionXY(0, 0)
+            return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
         self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
@@ -90,9 +82,11 @@ class SARL(CADRL):
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     batch_next_states.append(next_dual_state)
-                batch_next_states = torch.cat(batch_next_states, dim=0).unsqueeze(0)
-                value = reward(state, action, self.kinematics, self.time_step) + \
-                    pow(self.gamma, state.self_state.v_pref) * self.model(batch_next_states).data.item()
+                batch_next_states = torch.cat(batch_next_states, dim=0)
+                # VALUE UPDATE
+                next_state_value = self.model(self.rotate(batch_next_states).unsqueeze(0)).data.item()
+                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
+                value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * next_state_value
                 if value > max_value:
                     max_value = value
                     max_action = action
@@ -109,8 +103,10 @@ class SARL(CADRL):
         :param state:
         :return: tensor of shape (# of peds, len(state))
         """
-        return torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
+        state = torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
                           for ped_state in state.ped_states], dim=0)
+        state = self.rotate(state)
+        return state
 
     def get_attention_weights(self):
         return self.model.attention_weights

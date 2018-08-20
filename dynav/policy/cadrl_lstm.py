@@ -8,52 +8,12 @@ from dynav.policy.cadrl import CADRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, kinematics, mlp_dims, lstm_hidden_dim):
+    def __init__(self, input_dim, mlp_dims, lstm_input_dim, lstm_hidden_dim):
         super().__init__()
-        self.kinematics = kinematics
         self.mlp = nn.Sequential(nn.Linear(input_dim, mlp_dims[0]), nn.ReLU(),
                                  nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
                                  nn.Linear(mlp_dims[1], 1))
-        self.lstm = nn.LSTM(7, lstm_hidden_dim, batch_first=True)
-
-    def rotate(self, state):
-        """
-
-        :param state: tensor of size (batch_size, # of peds, length of joint state)
-        :return:
-        """
-        # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
-        #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
-        batch = state.shape[0]
-        dx = (state[:, 5] - state[:, 0]).reshape((batch, -1))
-        dy = (state[:, 6] - state[:, 1]).reshape((batch, -1))
-        rot = torch.atan2(state[:, 6] - state[:, 1], state[:, 5] - state[:, 0])
-
-        dg = torch.norm(torch.cat([dx, dy], dim=1), 2, dim=1, keepdim=True)
-        v_pref = state[:, 7].reshape((batch, -1))
-        vx = (state[:, 2] * torch.cos(rot) + state[:, 3] * torch.sin(rot)).reshape((batch, -1))
-        vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
-
-        radius = state[:, 4].reshape((batch, -1))
-        if self.kinematics == 'unicycle':
-            theta = (state[:, 8] - rot).reshape((batch, -1))
-        else:
-            theta = (state[:, 8]).reshape((batch, -1))
-        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1)) - vx
-        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1)) - vy
-        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
-        px1 = px1.reshape((batch, -1))
-        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
-        py1 = py1.reshape((batch, -1))
-        radius1 = state[:, 13].reshape((batch, -1))
-        radius_sum = radius + radius1
-        da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
-                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-
-        self_state = torch.cat([dg, v_pref, theta, radius], dim=1)
-        ped_state = torch.cat([px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
-
-        return self_state, ped_state
+        self.lstm = nn.LSTM(lstm_input_dim, lstm_hidden_dim, batch_first=True)
 
     def forward(self, state):
         """
@@ -63,9 +23,8 @@ class ValueNetwork(nn.Module):
         :return:
         """
         size = state.shape
-        self_state, ped_state = self.rotate(torch.reshape(state, (-1, size[2])))
-        self_state = torch.reshape(self_state, (size[0], size[1], -1))[:, 0, :]
-        ped_state = torch.reshape(ped_state, (size[0], size[1], -1))
+        self_state = state[:, 0, :4]
+        ped_state = state[:, :, 4:]
         h0 = torch.zeros(1, size[0], 20)
         c0 = torch.zeros(1, size[0], 20)
         output, (hn, cn) = self.lstm(ped_state, (h0, c0))
@@ -80,17 +39,12 @@ class CadrlLSTM(CADRL):
         super().__init__()
 
     def configure(self, config):
-        self.gamma = config.getfloat('rl', 'gamma')
-
-        self.kinematics = config.get('action_space', 'kinematics')
-        self.sampling = config.get('action_space', 'sampling')
-        self.speed_samples = config.getint('action_space', 'speed_samples')
-        self.rotation_samples = config.getint('action_space', 'rotation_samples')
-
-        input_dim = config.getint('cadrl_lstm', 'input_dim')
+        self.set_common_parameters(config)
+        self.joint_state_dim = 24
         mlp_dims = [int(x) for x in config.get('cadrl_lstm', 'mlp_dims').split(', ')]
         lstm_hidden_dim = config.getint('cadrl_lstm', 'lstm_hidden_dim')
-        self.model = ValueNetwork(input_dim, self.kinematics, mlp_dims, lstm_hidden_dim)
+        lstm_input_dim = 7
+        self.model = ValueNetwork(self.joint_state_dim, mlp_dims, lstm_input_dim, lstm_hidden_dim)
         self.multiagent_training = config.getboolean('cadrl_lstm', 'multiagent_training')
         logging.info('LSTM: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
@@ -108,7 +62,7 @@ class CadrlLSTM(CADRL):
             raise AttributeError('Epsilon attribute has to be set in training phase')
 
         if self.reach_destination(state):
-            return ActionXY(0, 0)
+            return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
         self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
@@ -129,9 +83,11 @@ class CadrlLSTM(CADRL):
                     next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     batch_next_states.append(next_dual_state)
-                batch_next_states = torch.cat(batch_next_states, dim=0).unsqueeze(0)
-                value = reward(state, action, self.kinematics, self.time_step) + \
-                    pow(self.gamma, state.self_state.v_pref) * self.model(batch_next_states).data.item()
+                batch_next_states = torch.cat(batch_next_states, dim=0)
+                # VALUE UPDATE
+                next_state_value = self.model(self.rotate(batch_next_states).unsqueeze(0)).data.item()
+                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
+                value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * next_state_value
                 if value > max_value:
                     max_value = value
                     max_action = action
@@ -148,5 +104,7 @@ class CadrlLSTM(CADRL):
         :param state:
         :return: tensor of shape (len(state), )
         """
-        return torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
+        state = torch.cat([torch.Tensor([state.self_state + ped_state]).to(self.device)
                           for ped_state in state.ped_states], dim=0)
+        state = self.rotate(state)
+        return state

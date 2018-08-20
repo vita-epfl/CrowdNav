@@ -10,55 +10,15 @@ from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, kinematics, mlp_dims):
+    def __init__(self, input_dim, mlp_dims):
         super().__init__()
         self.input_dim = input_dim
-        self.kinematics = kinematics
         self.value_network = nn.Sequential(nn.Linear(input_dim, mlp_dims[0]), nn.ReLU(),
                                            nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
                                            nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
                                            nn.Linear(mlp_dims[2], 1))
 
-    @staticmethod
-    def rotate(state, kinematics):
-        """
-        Input state tensor is of size (batch_size, state_length)
-
-        """
-        # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
-        #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
-        batch = state.shape[0]
-        dx = (state[:, 5] - state[:, 0]).reshape((batch, -1))
-        dy = (state[:, 6] - state[:, 1]).reshape((batch, -1))
-        rot = torch.atan2(state[:, 6] - state[:, 1], state[:, 5] - state[:, 0])
-
-        dg = torch.norm(torch.cat([dx, dy], dim=1), 2, dim=1, keepdim=True)
-        v_pref = state[:, 7].reshape((batch, -1))
-        vx = (state[:, 2] * torch.cos(rot) + state[:, 3] * torch.sin(rot)).reshape((batch, -1))
-        vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
-
-        radius = state[:, 4].reshape((batch, -1))
-        if kinematics == 'unicycle':
-            theta = (state[:, 8] - rot).reshape((batch, -1))
-        else:
-            theta = (state[:, 8]).reshape((batch, -1))
-        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1)) - vx
-        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1)) - vy
-        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
-        px1 = px1.reshape((batch, -1))
-        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
-        py1 = py1.reshape((batch, -1))
-        radius1 = state[:, 13].reshape((batch, -1))
-        radius_sum = radius + radius1
-        da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
-                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-
-        new_state = torch.cat([dg, v_pref, theta, radius, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
-        return new_state
-
     def forward(self, state):
-        # transform the world coordinates to self-centric coordinates
-        state = self.rotate(state, self.kinematics)
         value = self.value_network(state)
         return value
 
@@ -75,20 +35,21 @@ class CADRL(Policy):
         self.speed_samples = None
         self.rotation_samples = None
         self.action_space = None
+        self.joint_state_dim = 11
 
     def configure(self, config):
-        self.gamma = config.getfloat('rl', 'gamma')
+        self.set_common_parameters(config)
+        mlp_dims = [int(x) for x in config.get('cadrl', 'mlp_dims').split(', ')]
+        self.model = ValueNetwork(self.joint_state_dim, mlp_dims)
+        self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
+        logging.info('CADRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
+    def set_common_parameters(self, config):
+        self.gamma = config.getfloat('rl', 'gamma')
         self.kinematics = config.get('action_space', 'kinematics')
         self.sampling = config.get('action_space', 'sampling')
         self.speed_samples = config.getint('action_space', 'speed_samples')
         self.rotation_samples = config.getint('action_space', 'rotation_samples')
-
-        input_dim = config.getint('cadrl', 'input_dim')
-        mlp_dims = [int(x) for x in config.get('cadrl', 'mlp_dims').split(', ')]
-        self.model = ValueNetwork(input_dim, self.kinematics, mlp_dims)
-        self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
-        logging.info('CADRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
     def set_device(self, device):
         self.device = device
@@ -168,7 +129,7 @@ class CADRL(Policy):
             raise AttributeError('Epsilon attribute has to be set in training phase')
 
         if self.reach_destination(state):
-            return ActionXY(0, 0)
+            return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
         self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
@@ -185,10 +146,11 @@ class CADRL(Policy):
                     next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
                     batch_next_states.append(next_dual_state)
                 batch_next_states = torch.cat(batch_next_states, dim=0)
-                outputs = self.model(batch_next_states)
+                # VALUE UPDATE
+                outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)
-                min_value = reward(state, action, self.kinematics, self.time_step) + \
-                    pow(self.gamma, state.self_state.v_pref) * min_output.data.item()
+                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
+                min_value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * min_output.data.item()
                 if min_value > max_min_value:
                     max_min_value = min_value
                     max_action = action
@@ -206,4 +168,43 @@ class CADRL(Policy):
         :return: tensor of shape (len(state), )
         """
         assert len(state.ped_states) == 1
-        return torch.Tensor(state.self_state + state.ped_states[0]).to(self.device)
+        state = torch.Tensor(state.self_state + state.ped_states[0]).to(self.device)
+        state = self.rotate(state.unsqueeze(0)).squeeze(dim=0)
+        return state
+
+    def rotate(self, state):
+        """
+        Transform the coordinate to agent-centric.
+        Input state tensor is of size (batch_size, state_length)
+
+        """
+        # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
+        #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
+        batch = state.shape[0]
+        dx = (state[:, 5] - state[:, 0]).reshape((batch, -1))
+        dy = (state[:, 6] - state[:, 1]).reshape((batch, -1))
+        rot = torch.atan2(state[:, 6] - state[:, 1], state[:, 5] - state[:, 0])
+
+        dg = torch.norm(torch.cat([dx, dy], dim=1), 2, dim=1, keepdim=True)
+        v_pref = state[:, 7].reshape((batch, -1))
+        vx = (state[:, 2] * torch.cos(rot) + state[:, 3] * torch.sin(rot)).reshape((batch, -1))
+        vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
+
+        radius = state[:, 4].reshape((batch, -1))
+        if self.kinematics == 'unicycle':
+            theta = (state[:, 8] - rot).reshape((batch, -1))
+        else:
+            # set theta to be zero since it's not used
+            theta = torch.zeros_like(v_pref)
+        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1)) - vx
+        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1)) - vy
+        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
+        px1 = px1.reshape((batch, -1))
+        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
+        py1 = py1.reshape((batch, -1))
+        radius1 = state[:, 13].reshape((batch, -1))
+        radius_sum = radius + radius1
+        da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
+                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
+        new_state = torch.cat([dg, v_pref, theta, radius, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
+        return new_state

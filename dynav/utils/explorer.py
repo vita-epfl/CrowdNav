@@ -90,6 +90,7 @@ class Explorer(object):
             state = states[i]
             reward = rewards[i]
 
+            # VALUE UPDATE
             if imitation_learning:
                 # in imitation learning, the value of state is defined based on the time to reach the goal
                 state = self.target_policy.transform(state)
