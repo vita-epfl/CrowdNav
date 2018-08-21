@@ -137,14 +137,12 @@ class CADRL(Policy):
         else:
             max_min_value = float('-inf')
             max_action = None
+            next_ped_states = [self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
+                               for ped_state in state.ped_states]
             for action in self.action_space:
-                batch_next_states = []
-                for ped_state in state.ped_states:
-                    next_self_state = self.propagate(state.self_state, action)
-                    next_ped_state = self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
-                    next_dual_state = torch.Tensor([next_self_state + next_ped_state]).to(self.device)
-                    batch_next_states.append(next_dual_state)
-                batch_next_states = torch.cat(batch_next_states, dim=0)
+                next_self_state = self.propagate(state.self_state, action)
+                batch_next_states = torch.cat([torch.Tensor([next_self_state + next_ped_state]).to(self.device)
+                                              for next_ped_state in next_ped_states], dim=0)
                 # VALUE UPDATE
                 outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)

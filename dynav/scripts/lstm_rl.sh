@@ -13,4 +13,4 @@ module load gcc
 source ~/.bashrc
 pyenv shell py3
 
-python train.py --policy cadrl_lstm --output_dir data/cadrl_lstm
+python train.py --policy lstm_rl --output_dir data/lstm_rl
