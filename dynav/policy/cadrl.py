@@ -146,7 +146,7 @@ class CADRL(Policy):
                 # VALUE UPDATE
                 outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)
-                gamma_bar = pow(self.gamma, state.self_state.v_pref)
+                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
                 min_value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * min_output.data.item()
                 if min_value > max_min_value:
                     max_min_value = min_value

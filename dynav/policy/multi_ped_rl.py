@@ -39,7 +39,7 @@ class MultiPedRL(CADRL):
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
                 # VALUE UPDATE
                 next_state_value = self.model(rotated_batch_input).data.item()
-                gamma_bar = pow(self.gamma, state.self_state.v_pref)
+                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
                 value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * next_state_value
                 if value > max_value:
                     max_value = value
