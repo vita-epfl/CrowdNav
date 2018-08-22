@@ -8,6 +8,7 @@ class Linear(Policy):
         super().__init__()
         self.trainable = False
         self.kinematics = 'holonomic'
+        self.multiagent_training = True
 
     def configure(self, config):
         assert True

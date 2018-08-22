@@ -5,6 +5,7 @@ import configparser
 import numpy as np
 import gym
 import os
+import matplotlib.pyplot as plt
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
 from dynav.policy.policy_factory import policy_factory
@@ -24,6 +25,7 @@ def main():
     parser.add_argument('--test_case', type=int, default=None)
     parser.add_argument('--video_file', type=str, default=None)
     parser.add_argument('--traj', default=False, action='store_true')
+    parser.add_argument('--hist', default=False, action='store_true')
     args = parser.parse_args()
 
     if args.model_dir is not None:
@@ -89,7 +91,15 @@ def main():
         if navigator.visible:
             logging.info('Average time for peds to reach goal: {:.2f}'.format(env.get_average_ped_time()))
     else:
-        explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
+        nav_times, ped_times = explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
+        if args.hist:
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.hist(nav_times)
+            ax1.set_title('Navigator time histogram')
+            if navigator.visible:
+                ax2.hist(ped_times)
+                ax2.set_title('Pedestrian time histogram')
+            plt.show()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import logging
 import torch
 import copy
+import matplotlib.pyplot as plt
 
 
 class Explorer(object):
@@ -17,10 +18,11 @@ class Explorer(object):
         self.stabilized_model = copy.deepcopy(stabilized_model)
 
     # @profile
-    def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None, print_failure=False):
+    def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None,
+                       print_failure=False):
         self.navigator.policy.set_phase(phase)
         navigator_times = []
-        avg_ped_times = []
+        ped_times = []
         success = 0
         collision = 0
         timeout = 0
@@ -43,7 +45,7 @@ class Explorer(object):
                 success += 1
                 navigator_times.append(self.env.global_time)
                 if self.navigator.visible:
-                    avg_ped_times.append(self.env.get_average_ped_time())
+                    ped_times += self.env.get_average_ped_time()
             elif info == 'collision':
                 collision += 1
                 collision_cases.append(i)
@@ -63,24 +65,20 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
-        if len(navigator_times) == 0:
-            avg_nav_time = 0
-        else:
-            avg_nav_time = sum(navigator_times) / len(navigator_times)
+        avg_nav_time = sum(navigator_times) / len(navigator_times) if len(navigator_times) != 0 else 0
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.2f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time))
         if self.navigator.visible:
-            if len(avg_ped_times) == 0:
-                avg_ped_time = 0
-            else:
-                avg_ped_time = sum(avg_ped_times) / len(avg_ped_times)
+            avg_ped_time = sum(ped_times) / len(ped_times) if len(ped_times) != 0 else 0
             logging.info('Average time for peds to reach goal: {:.2f}'.format(avg_ped_time))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
+
+        return navigator_times, ped_times
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:

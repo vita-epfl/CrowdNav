@@ -137,12 +137,31 @@ class CrowdSim(gym.Env):
                 self.peds.append(ped)
 
     def get_average_ped_time(self):
+        """
+        TODO: should the navigator keep moving?
+        Run the whole simulation to the end and compute the average time for ped to reach goal.
+        Once the navigator reaches goal, make it invisible, cuz otherwise peds may get stuck due to the non-cooperative
+        behavior of the navigator (it doesn't move any more)
+        The time to reach goal for peds is defined as when they reach the goal at the first time. But they may keep
+        moving later.
+
+        :return:
+        """
         if not self.navigator.reached_destination():
             raise ValueError('Episode is not done yet')
-        # run simulation until all agents are done
+        self.navigator.visible = False
+        counter = 0
         while not all(self.ped_times):
+            counter += 1
+            if counter > 10000:
+                print(self.ped_times)
+                for ped in self.peds:
+                    print(ped.px, ped.py)
+                self.render('video')
+                raise ValueError('Simulation cannot terminate')
             self.step(ActionXY(0, 0))
-        return sum(self.ped_times) / len(self.ped_times)
+        self.navigator.visible = True
+        return self.ped_times
 
     def reset(self, phase='test', test_case=None):
         """

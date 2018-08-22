@@ -9,17 +9,17 @@ from dynav.policy.sarl import SARL, ValueNetwork
 class OmSarl(SARL):
     def __init__(self):
         super().__init__()
-        self.grid_num = None
-        self.grid_size = None
+        self.cell_num = None
+        self.cell_size = None
 
     def configure(self, config):
         self.set_common_parameters(config)
-        self.grid_num = config.getint('om_sarl', 'grid_num')
-        self.grid_size = config.getfloat('om_sarl', 'grid_size')
+        self.cell_num = config.getint('om_sarl', 'cell_num')
+        self.cell_size = config.getfloat('om_sarl', 'cell_size')
 
         mlp1_dims = [int(x) for x in config.get('om_sarl', 'mlp1_dims').split(', ')]
         mlp2_dims = config.getint('om_sarl', 'mlp2_dims')
-        self.model = ValueNetwork(self.joint_state_dim + self.grid_num ** 2, mlp1_dims, mlp2_dims)
+        self.model = ValueNetwork(self.joint_state_dim + self.cell_num ** 2, mlp1_dims, mlp2_dims)
         self.multiagent_training = config.getboolean('om_sarl', 'multiagent_training')
         logging.info('OM-SARL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
@@ -88,7 +88,7 @@ class OmSarl(SARL):
 
         :param ped_states:
         :param self_state:
-        :return: tensor of shape (# ped - 1, self.grid_num ** 2)
+        :return: tensor of shape (# ped - 1, self.cell_num ** 2)
         """
         occupancy_maps = []
         for ped in ped_states:
@@ -111,14 +111,14 @@ class OmSarl(SARL):
             # other_peds[:, 2] = np.cos(rotation) * speed
             # other_peds[:, 3] = np.sin(rotation) * speed
 
-            other_x_index = np.floor(other_px / self.grid_size + self.grid_num / 2)
-            other_y_index = np.floor(other_py / self.grid_size + self.grid_num / 2)
+            other_x_index = np.floor(other_px / self.cell_size + self.cell_num / 2)
+            other_y_index = np.floor(other_py / self.cell_size + self.cell_num / 2)
             other_x_index[other_x_index < 0] = float('-inf')
-            other_x_index[other_x_index >= self.grid_num] = float('-inf')
+            other_x_index[other_x_index >= self.cell_num] = float('-inf')
             other_y_index[other_y_index < 0] = float('-inf')
-            other_y_index[other_y_index >= self.grid_num] = float('-inf')
+            other_y_index[other_y_index >= self.cell_num] = float('-inf')
             grid_indices = 4 * other_y_index + other_x_index
-            occupancy_map = np.isin(range(self.grid_num ** 2), grid_indices)
+            occupancy_map = np.isin(range(self.cell_num ** 2), grid_indices)
             occupancy_maps.append([occupancy_map.astype(int)])
 
         return torch.from_numpy(np.concatenate(occupancy_maps, axis=0)).float()
