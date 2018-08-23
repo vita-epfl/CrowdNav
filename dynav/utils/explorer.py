@@ -49,7 +49,7 @@ class Explorer(object):
             if info == 'reach goal':
                 success += 1
                 navigator_times.append(self.env.global_time)
-                if self.navigator.visible:
+                if self.navigator.visible and phase in ['val', 'test']:
                     ped_times += self.env.get_average_ped_time()
                     last_ped_time.append(max(ped_times))
             elif info == 'collision':
@@ -76,7 +76,7 @@ class Explorer(object):
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.2f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time))
-        if self.navigator.visible:
+        if self.navigator.visible and phase in ['val', 'test']:
             avg_ped_time = sum(ped_times) / len(ped_times) if len(ped_times) != 0 else 0
             logging.info('Average time for peds to reach goal: {:.2f}'.format(avg_ped_time))
             logging.info('Average time for last ped to reach goal: {:.2f}'.
