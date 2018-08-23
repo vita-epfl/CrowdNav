@@ -23,9 +23,11 @@ class Explorer(object):
         self.navigator.policy.set_phase(phase)
         navigator_times = []
         ped_times = []
+        last_ped_time = []
         success = 0
         collision = 0
         timeout = 0
+        too_close = 0
         collision_cases = []
         timeout_cases = []
         for i in range(k):
@@ -41,11 +43,15 @@ class Explorer(object):
                 actions.append(action)
                 rewards.append(reward)
 
+                if info == 'too close':
+                    too_close += 1
+
             if info == 'reach goal':
                 success += 1
                 navigator_times.append(self.env.global_time)
                 if self.navigator.visible:
                     ped_times += self.env.get_average_ped_time()
+                    last_ped_time.append(max(ped_times))
             elif info == 'collision':
                 collision += 1
                 collision_cases.append(i)
@@ -53,7 +59,7 @@ class Explorer(object):
                 timeout += 1
                 timeout_cases.append(i)
             else:
-                raise ValueError('Invalid info from environment')
+                raise ValueError('Invalid end signal from environment')
 
             if update_memory:
                 if (imitation_learning and info == 'reach goal') or \
@@ -73,6 +79,10 @@ class Explorer(object):
         if self.navigator.visible:
             avg_ped_time = sum(ped_times) / len(ped_times) if len(ped_times) != 0 else 0
             logging.info('Average time for peds to reach goal: {:.2f}'.format(avg_ped_time))
+            logging.info('Average time for last ped to reach goal: {:.2f}'.
+                         format(sum(last_ped_time) / len(last_ped_time)))
+            logging.info('Average times of navigator getting too close to peds per second: {:.2f}'.
+                         format(too_close/sum(navigator_times)))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))

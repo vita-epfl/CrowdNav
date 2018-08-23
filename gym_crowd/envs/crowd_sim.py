@@ -250,8 +250,9 @@ class CrowdSim(gym.Env):
                 vy = ped.vy - action.v * np.sin(action.r + self.navigator.theta)
             ex = px + vx * self.time_step
             ey = py + vy * self.time_step
-            closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
-            if closest_dist < ped.radius + self.navigator.radius:
+            # closest distance between boundaries of two agents
+            closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0) - ped.radius - self.navigator.radius
+            if closest_dist < 0:
                 collision = True
                 # logging.debug("Collision: distance between navigator and p{} is {:.2f}".format(i, closest_dist))
                 break

@@ -24,15 +24,12 @@ below should be run inside the dynav/ folder.
 ```
 python train.py --policy cadrl
 ```
-2. Test policies in VAL or TEST test cases. rl_model.pth is reinforcement learning trained model and il_model.pth
-is imitation learning trained model.
+2. Test policies in VAL or TEST test cases. Specify il flag for test imitation learning trained model.
 ```
 python test.py --policy orca --phase val
 python test.py --policy orca --phase test
-python test.py --policy cadrl --weights data/output/il_model.pth --phase val
-python test.py --policy cadrl --weights data/output/il_model.pth --phase test
-python test.py --policy cadrl --weights data/output/rl_model.pth --phase val
-python test.py --policy cadrl --weights data/output/rl_model.pth --phase test
+python test.py --policy cadrl --model_dir data/output --phase val
+python test.py --policy cadrl --model_dir data/output --phase test
 ```
 3. Run policy for one episode and visualize the result.
 ```
