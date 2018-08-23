@@ -153,12 +153,13 @@ class CrowdSim(gym.Env):
         counter = 0
         while not all(self.ped_times):
             counter += 1
-            if counter > 10000:
-                print(self.ped_times)
-                for ped in self.peds:
-                    print(ped.px, ped.py)
-                self.render('video')
-                raise ValueError('Simulation cannot terminate')
+            if counter > 1000:
+                logging.warning('Test case cannot terminate!')
+                # print(self.ped_times)
+                # for ped in self.peds:
+                #     print(ped.px, ped.py)
+                # self.render('video')
+                # raise ValueError('Simulation cannot terminate')
             self.step(ActionXY(0, 0))
         self.navigator.visible = True
         return self.ped_times
