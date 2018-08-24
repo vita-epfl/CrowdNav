@@ -1,7 +1,6 @@
 import logging
 import torch
 import copy
-import matplotlib.pyplot as plt
 
 
 class Explorer(object):
@@ -50,8 +49,9 @@ class Explorer(object):
                 success += 1
                 navigator_times.append(self.env.global_time)
                 if self.navigator.visible and phase in ['val', 'test']:
-                    ped_times += self.env.get_average_ped_time()
-                    last_ped_time.append(max(ped_times))
+                    times = self.env.get_ped_times()
+                    ped_times += times
+                    last_ped_time.append(max(times))
             elif info == 'collision':
                 collision += 1
                 collision_cases.append(i)
@@ -77,12 +77,10 @@ class Explorer(object):
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.2f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time))
         if self.navigator.visible and phase in ['val', 'test']:
-            avg_ped_time = sum(ped_times) / len(ped_times) if len(ped_times) != 0 else 0
-            logging.info('Average time for peds to reach goal: {:.2f}'.format(avg_ped_time))
-            logging.info('Average time for last ped to reach goal: {:.2f}'.
-                         format(sum(last_ped_time) / len(last_ped_time)))
+            logging.info('Average time for peds to reach goal: {:.2f}'.format(average(ped_times)))
+            logging.info('Average time for last ped to reach goal: {:.2f}'.format(average(last_ped_time)))
             logging.info('Average times of navigator getting too close to peds per second: {:.2f}'.
-                         format(too_close/sum(navigator_times)))
+                         format(too_close/sum(navigator_times) if len(navigator_times) != 0 else 0))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
@@ -114,3 +112,10 @@ class Explorer(object):
             value = torch.Tensor([value]).to(self.device)
 
             self.memory.push((state, value))
+
+
+def average(li):
+    if len(li) == 0:
+        return 0
+    else:
+        return sum(li) / len(li)

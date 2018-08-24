@@ -8,6 +8,7 @@ import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
 from gym_crowd.envs.utils.action import ActionXY
+import rvo2
 
 
 class CrowdSim(gym.Env):
@@ -136,9 +137,9 @@ class CrowdSim(gym.Env):
                 ped.set(px, py, -px, -py, 0, 0, 0)
                 self.peds.append(ped)
 
-    def get_average_ped_time(self):
+    def get_ped_times(self):
         """
-        TODO: should the navigator keep moving?
+        TODO: make agents obstacle once they reach the goal
         Run the whole simulation to the end and compute the average time for ped to reach goal.
         Once the navigator reaches goal, make it invisible, cuz otherwise peds may get stuck due to the non-cooperative
         behavior of the navigator (it doesn't move any more)
@@ -154,11 +155,15 @@ class CrowdSim(gym.Env):
         while not all(self.ped_times):
             counter += 1
             if counter > 1000:
-                logging.warning('Test case cannot terminate!')
-                # print(self.ped_times)
-                # for ped in self.peds:
-                #     print(ped.px, ped.py)
-                # self.render('video')
+                # TODO: check why some simulation cases cannot terminate
+                logging.warning('Simulation cannot terminate. {} peds cannot reach goal'.
+                                format(sum([ped_time == 0 for ped_time in self.ped_times])))
+                print(self.case_counter['test'] - 1)
+                for i, ped_time in enumerate(self.ped_times):
+                    if ped_time == 0:
+                        print(i, self.peds[i].px, self.peds[i].py, self.peds[i].gx, self.peds[i].gy)
+                self.render('video')
+                break
                 # raise ValueError('Simulation cannot terminate')
             self.step(ActionXY(0, 0))
         self.navigator.visible = True
@@ -255,7 +260,7 @@ class CrowdSim(gym.Env):
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0) - ped.radius - self.navigator.radius
             if closest_dist < 0:
                 collision = True
-                # logging.debug("Collision: distance between navigator and p{} is {:.2f}".format(i, closest_dist))
+                # logging.debug("Collision: distance between navigator and p{} is {:.2E}".format(i, closest_dist))
                 break
             elif closest_dist < dmin:
                 dmin = closest_dist
@@ -266,10 +271,10 @@ class CrowdSim(gym.Env):
             for j in range(i+1, ped_num):
                 dx = self.peds[i].px - self.peds[j].px
                 dy = self.peds[i].py - self.peds[j].py
-                dist = (dx**2 + dy**2)**(1/2)                
-                if dist < self.peds[i].radius + self.peds[j].radius:
+                dist = (dx**2 + dy**2)**(1/2) - self.peds[i].radius - self.peds[j].radius
+                if dist < 0:
                     collision = True
-                    # logging.debug("Collision: distance between p{} and p{} is {:.2f}".format(i, j, dist))
+                    # logging.debug("Collision: distance between p{} and p{} is {:.2E}".format(i, j, dist))
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
@@ -320,7 +325,7 @@ class CrowdSim(gym.Env):
         import matplotlib.animation as animation
         import matplotlib.pyplot as plt
 
-        navigator_color = 'yellow'
+        navigator_color = 'red'
         goal_color = 'blue'
         heading_color = 'red'
 

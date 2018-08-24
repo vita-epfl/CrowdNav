@@ -31,8 +31,8 @@ def reward(state, action, kinematics, time_step):
             vy = ped_state.vy - action.v * np.sin(action.r + self_state.theta)
         ex = px + vx * time_step
         ey = py + vy * time_step
-        closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0)
-        if closest_dist < ped_state.radius + self_state.radius:
+        closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0) - ped_state.radius - self_state.radius
+        if closest_dist < 0:
             collision = True
             break
         elif closest_dist < dmin:

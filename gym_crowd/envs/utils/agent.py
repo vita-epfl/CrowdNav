@@ -54,11 +54,19 @@ class Agent(object):
     def get_position(self):
         return self.px, self.py
 
+    def set_position(self, position):
+        self.px = position[0]
+        self.py = position[1]
+
     def get_goal_position(self):
         return self.gx, self.gy
 
     def get_velocity(self):
         return self.vx, self.vy
+
+    def set_velocity(self, velocity):
+        self.vx = velocity[0]
+        self.vy = velocity[1]
 
     @abc.abstractmethod
     def act(self, ob):

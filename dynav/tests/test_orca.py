@@ -12,40 +12,42 @@ def avg(li):
         return sum(li) / len(li)
 
 
-neighborDist = 10
+neighborDist = 15
 maxNeighbors = 10
-timeHorizon = 5
-timeHorizonObst = 5
-radius = 0.3
-v_pref = 1
+timeHorizon = 10
+timeHorizonObst = 10
+radius = 1.5
+v_pref = 2
 
-circle_radius = 4
-ped_num = 10
+M_PI = 3.14159265358979323846
+circle_radius = 200
+ped_num = 100
 time_step = 0.25
 max_time = 1000
 positions = []
 
 all_collisions = []
 all_times = []
-for test_case in range(5):
+for test_case in range(1):
     np.random.seed(test_case)
     sim = rvo2.PyRVOSimulator(time_step, neighborDist, maxNeighbors, timeHorizon, timeHorizonObst, radius, v_pref)
     for i in range(ped_num):
-        while True:
-            angle = np.random.random() * np.pi * 2
-            # add some noise to simulate all the possible cases navigator could meet with pedestrian
-            px_noise = (np.random.random() - 0.5) * v_pref
-            py_noise = (np.random.random() - 0.5) * v_pref
-            px = circle_radius * np.cos(angle) + px_noise
-            py = circle_radius * np.sin(angle) + py_noise
-            collide = False
-            for pos in positions:
-                if norm((px - pos[0], py - pos[1])) < radius * 2:
-                    collide = True
-                    break
-            if not collide:
-                break
-        positions.append(np.array((px, py)))
+        # while True:
+        #     angle = np.random.random() * np.pi * 2
+        #     # add some noise to simulate all the possible cases navigator could meet with pedestrian
+        #     px_noise = (np.random.random() - 0.5) * v_pref
+        #     py_noise = (np.random.random() - 0.5) * v_pref
+        #     px = circle_radius * np.cos(angle) + px_noise
+        #     py = circle_radius * np.sin(angle) + py_noise
+        #     collide = False
+        #     for pos in positions:
+        #         if norm((px - pos[0], py - pos[1])) < radius * 2:
+        #             collide = True
+        #             break
+        #     if not collide:
+        #         break
+        # positions.append(np.array((px, py)))
+        positions.append(200 * np.array((np.cos(i * 2 * M_PI / ped_num), np.sin(i * 2 * M_PI / ped_num))))
 
     for pos in positions:
         sim.addAgent(tuple(pos.tolist()))
@@ -62,8 +64,13 @@ for test_case in range(5):
             if norm(vel_pref) > 1:
                 vel_pref /= norm(vel_pref)
             sim.setAgentPrefVelocity(i, tuple(vel_pref))
-        sim.doStep()
+        pos = sim.doStep()
+        # for i in range(ped_num):
+        #     print('python: ', sim.getAgentPosition(i))
+        # if global_time > 114.75:
+        #     exit()
         global_time += time_step
+        print('Global time: {}\n'.format(global_time))
         if global_time > max_time:
             print('Overtime in case {}'.format(test_case))
             break
@@ -78,9 +85,12 @@ for test_case in range(5):
                     dist = norm(pos_i - pos_j) - 2 * radius
                     if dist < min_dist:
                         min_dist = dist
-                    if i != j and dist < -1e-2:
+                    if i != j and dist < -1e-4:
+                        print('{}th pos: {}'.format(i, pos_i))
+                        print('{}th pos: {}'.format(j, pos_j))
                         print('Collision with distance {:.2E}'.format(dist))
                         collisions += 1
+                        exit()
 
         reached_goal = [norm(sim.getAgentPosition(i) - (-positions[i])) < radius
                         for i in range(ped_num)]
@@ -90,7 +100,7 @@ for test_case in range(5):
     all_collisions.append(collisions)
     all_times.append(global_time)
 
-print('Total collision numbers: {} in {} seconds'.format(avg(all_collisions), avg(all_times)))
+print('Average collision numbers: {} in {} seconds'.format(avg(all_collisions), avg(all_times)))
 
 fig, ax = plt.subplots(figsize=(7, 7))
 ax.set_xlim(-circle_radius-2, circle_radius+2)
@@ -115,7 +125,7 @@ def on_click(event):
 
 
 fig.canvas.mpl_connect('key_press_event', on_click)
-anim = animation.FuncAnimation(fig, update, frames=len(states), interval=time_step*250)
+anim = animation.FuncAnimation(fig, update, frames=len(states), interval=time_step*25)
 anim.running = True
 
 plt.show()

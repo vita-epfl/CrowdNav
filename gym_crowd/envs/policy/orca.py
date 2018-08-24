@@ -1,6 +1,5 @@
 import numpy as np
 import rvo2
-
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionXY
 
@@ -94,10 +93,10 @@ class ORCA(Policy):
         params = self.neighbor_dist, self.max_neighbors, self.time_horizon, self.time_horizon_obst
         if self.sim is None:
             self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
-            self.sim.addAgent(self_state.position, *params, self_state.radius * 1.1 + self.safety_space,
+            self.sim.addAgent(self_state.position, *params, self_state.radius + 0.01 + self.safety_space,
                               self_state.v_pref, self_state.velocity)
             for ped_state in state.ped_states:
-                self.sim.addAgent(ped_state.position, *params, self_state.radius * 1.1 + self.safety_space,
+                self.sim.addAgent(ped_state.position, *params, ped_state.radius + 0.01 + self.safety_space,
                                   self.max_speed, ped_state.velocity)
         else:
             self.sim.setAgentPosition(0, self_state.position)
@@ -107,12 +106,9 @@ class ORCA(Policy):
                 self.sim.setAgentVelocity(i + 1, ped_state.velocity)
 
         # Set the preferred velocity to be a vector of unit magnitude (speed) in the direction of the goal.
-        goal_direction = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
-        norm = np.linalg.norm(goal_direction)
-        if norm > 1:
-            pref_vel = goal_direction / norm if norm != 0 else np.array((0., 0.))
-        else:
-            pref_vel = goal_direction
+        velocity = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
+        speed = np.linalg.norm(velocity)
+        pref_vel = velocity / speed if speed > 1 else velocity
 
         # Perturb a little to avoid deadlocks due to perfect symmetry.
         # perturb_angle = np.random.random() * 2 * np.pi
