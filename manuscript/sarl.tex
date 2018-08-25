@@ -1,0 +1,108 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%2345678901234567890123456789012345678901234567890123456789012345678901234567890
+%        1         2         3         4         5         6         7         8
+
+\documentclass[letterpaper, 10 pt, conference]{ieeeconf}  % Comment this line out if you need a4paper
+
+%\documentclass[a4paper, 10pt, conference]{ieeeconf}      % Use this line for a4 paper
+
+\IEEEoverridecommandlockouts                              % This command is only needed if 
+                                                          % you want to use the \thanks command
+
+\overrideIEEEmargins                                      % Needed to meet printer requirements.
+
+% See the \addtolength command later in the file to balance the column lengths
+% on the last page of the document
+
+% The following packages can be found on http:\\www.ctan.org
+\usepackage{graphics} % for pdf, bitmapped graphics files
+\usepackage{epsfig} % for postscript graphics files
+\usepackage{mathptmx} % assumes new font selection scheme installed
+\usepackage{times} % assumes new font selection scheme installed
+\usepackage{amsmath} % assumes amsmath package installed
+\usepackage{amssymb}  % assumes amsmath package installed
+% \usepackage{comment}
+% \usepackage{algorithm,algpseudocode}
+% \usepackage{resizegather}
+% \usepackage{flexisym}
+\usepackage{dblfloatfix}    % To enable figures at the bottom of pag
+\usepackage{subcaption}
+
+
+\title{\Large \bf
+Social Navigation}
+
+\author{% <-this % stops a space
+\thanks{*This work was supported by [？]}% <-this % stops a space
+% \thanks{$^{1}$L is with Robotics group, Segway Inc., 
+%         DS Tech A503, # Postcode, Beijing, China
+%         {\tt\small albert.author@papercept.net}}%
+% \thanks{$^{2}$X with the Department of Electrical Engineering, Tsinghua University, 
+%         Address, # Postcode, China
+% {\tt\small b.d.researcher@ieee.org}}%
+% \thanks{$^{*}$Equal contribution}       
+\thanks{Visual Intelligence for Transportation Laboratory, Ecole Polytechnique Federale de Lausanne (EPFL)
+, CH-1015 Lausanne,
+        {\tt\small \{ \}@epfl.ch}}%
+}
+
+\begin{document}
+
+\bstctlcite{IEEEexample:BSTcontrol}
+
+\maketitle
+\thispagestyle{empty}
+\pagestyle{empty}
+
+\pdfminorversion=4  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+This electronic document is a template. The various components of your paper [title, text, heads, etc.] are already defined on the style sheet, as illustrated by the portions given in this document.
+
+\end{abstract}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{INTRODUCTION} \label{sec:intro}
+
+\vspace{10cm}
+
+\section{BACKGROUND} \label{sec:background} 
+
+RL, 
+
+Social interaction, 
+
+\section{APPROACH} \label{sec:approach} 
+
+Formulation, 
+
+\section{RESULTS} \label{sec:results} 
+
+Experiments, 
+
+\section{CONCLUSION} \label{sec:conclusion} 
+
+In this paper, 
+
+% \subsection{System Structure}
+
+\addtolength{\textheight}{-10cm}   % This command serves to balance the column lengths
+                                  % on the last page of the document manually. It shortens
+                                  % the textheight of the last page by a suitable amount.
+                                  % This command does not take effect until the next page
+                                  % so it should come on the page before the last. Make
+                                  % sure that you do not shorten the textheight too much.
+
+\section*{ACKNOWLEDGMENT}
+
+We would like to thank ... 
+
+\bibliographystyle{IEEEtran}
+% \bibliography{Planning}
+
+% \begin{thebibliography}{99}
+
+% \end{thebibliography}
+
+\end{document}

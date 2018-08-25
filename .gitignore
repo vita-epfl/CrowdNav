@@ -5,3 +5,6 @@ __pycache__
 data/
 .cache/
 *.mp4
+manuscript/sarl.aux
+manuscript/sarl.pdf
+manuscript/sarl.synctex.gz
