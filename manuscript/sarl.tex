@@ -3,7 +3,6 @@
 %        1         2         3         4         5         6         7         8
 
 \documentclass[letterpaper, 10 pt, conference]{ieeeconf}  % Comment this line out if you need a4paper
-
 %\documentclass[a4paper, 10pt, conference]{ieeeconf}      % Use this line for a4 paper
 
 \IEEEoverridecommandlockouts                              % This command is only needed if 
@@ -28,17 +27,15 @@
 \usepackage{dblfloatfix}    % To enable figures at the bottom of pag
 \usepackage{subcaption}
 
+% TODO: french letter in name
+% \usepackage{inputenc} 
 
 \title{\Large \bf
 Social Navigation}
 
 \author{% <-this % stops a space
-\thanks{*This work was supported by [？]}% <-this % stops a space
-% \thanks{$^{1}$L is with Robotics group, Segway Inc., 
-%         DS Tech A503, # Postcode, Beijing, China
-%         {\tt\small albert.author@papercept.net}}%
-% \thanks{$^{2}$X with the Department of Electrical Engineering, Tsinghua University, 
-%         Address, # Postcode, China
+\thanks{This work was supported by [？]}% <-this % stops a space
+% \thanks{$^{1}$L is with, 
 % {\tt\small b.d.researcher@ieee.org}}%
 % \thanks{$^{*}$Equal contribution}       
 \thanks{Visual Intelligence for Transportation Laboratory, Ecole Polytechnique Federale de Lausanne (EPFL)
@@ -65,13 +62,43 @@ This electronic document is a template. The various components of your paper [ti
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION} \label{sec:intro}
 
+* Here's a fascinating question
+
+Autonomous navigation through a crowd of pedestrians / agents in a socially compliant manner. 
+
+\vspace{2cm}
+
+* Here's what people have tried to do (in brief: not a full related work section, but a high level assesment):
+
+- Reaction
+
+- Prediction and then planning
+
+- Planning model that incorporates social interaction 
+
+\vspace{2cm}
+
+* Here's the key challenge preventing further progress: 
+
+Models that effectively encodes the social interactions for rl. 
+
+\vspace{2cm}
+
+* Voila: here's our awesome solution (additionally) and here's how it works.
+
+Pair-wise interaction feature, soft attention, social pooling, local/global occupancy map.
+
+Capable of accurately estimating the value of the crowd scenarios with respect to social navigation, and effectively learning a socially-compliant navigation policy. 
+
 \vspace{10cm}
 
 \section{BACKGROUND} \label{sec:background} 
 
 RL, 
+\vspace{2cm}
 
 Social interaction, 
+\vspace{2cm}
 
 \cite{bruin_integrating_2018}
 
