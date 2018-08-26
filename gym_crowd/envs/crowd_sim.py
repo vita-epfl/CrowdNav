@@ -33,6 +33,7 @@ class CrowdSim(gym.Env):
         self.case_capacity = None
         self.case_size = None
         self.case_counter = None
+        self.randomize_attributes = None
         # orca simulation
         self.train_val_sim = None
         self.test_sim = None
@@ -46,6 +47,7 @@ class CrowdSim(gym.Env):
         self.config = config
         self.time_limit = config.getint('env', 'time_limit')
         self.time_step = config.getfloat('env', 'time_step')
+        self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
         if self.config.get('peds', 'policy') == 'trajnet':
             # load trajnet data
             trajnet_dir = os.path.join(os.path.dirname(gym_crowd.__file__), 'envs/data/trajnet')
@@ -71,6 +73,14 @@ class CrowdSim(gym.Env):
             self.ped_num = config.getint('sim', 'ped_num')
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
+        logging.info('Pedestrian number: {}'.format(self.ped_num))
+        if self.randomize_attributes:
+            logging.info("Randomize pedestrian's radius and preferred speed")
+        else:
+            logging.info("Not randomize pedestrian's radius and preferred speed")
+        logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
+        logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
+
     def set_navigator(self, navigator):
         self.navigator = navigator
 
@@ -90,6 +100,8 @@ class CrowdSim(gym.Env):
             self.peds = []
             for i in range(ped_num):
                 ped = Pedestrian(self.config, 'peds')
+                if self.randomize_attributes:
+                    ped.sample_random_attributes()
                 if np.random.random() > 0.5:
                     sign = -1
                 else:
@@ -120,6 +132,8 @@ class CrowdSim(gym.Env):
             self.peds = []
             for i in range(ped_num):
                 ped = Pedestrian(self.config, 'peds')
+                if self.randomize_attributes:
+                    ped.sample_random_attributes()
                 while True:
                     angle = np.random.random() * np.pi * 2
                     # add some noise to simulate all the possible cases navigator could meet with pedestrian

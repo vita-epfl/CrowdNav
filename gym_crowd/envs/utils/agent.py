@@ -36,7 +36,15 @@ class Agent(object):
         self.policy = policy
         self.kinematics = policy.kinematics
 
-    def set(self, px, py, gx, gy, vx, vy, theta):
+    def sample_random_attributes(self):
+        """
+        Sample agent radius and v_pref attribute from certain distribution
+        :return:
+        """
+        self.v_pref = np.random.uniform(0.5, 1.5)
+        self.radius = np.random.uniform(0.3, 0.5)
+
+    def set(self, px, py, gx, gy, vx, vy, theta, radius=None, v_pref=None):
         self.px = px
         self.py = py
         self.gx = gx
@@ -44,6 +52,10 @@ class Agent(object):
         self.vx = vx
         self.vy = vy
         self.theta = theta
+        if radius is not None:
+            self.radius = radius
+        if v_pref is not None:
+            self.v_pref = v_pref
 
     def get_observable_state(self):
         return ObservableState(self.px, self.py, self.vx, self.vy, self.radius)
