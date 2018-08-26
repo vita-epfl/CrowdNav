@@ -79,6 +79,8 @@ class Explorer(object):
         if self.navigator.visible and phase in ['val', 'test']:
             logging.info('Average time for peds to reach goal: {:.2f}'.format(average(ped_times)))
             logging.info('Average time for last ped to reach goal: {:.2f}'.format(average(last_ped_time)))
+
+        if phase in ['test']:
             logging.info('Average times of navigator getting too close to peds per second: {:.2f}'.
                          format(too_close/sum(navigator_times) if len(navigator_times) != 0 else 0))
 
