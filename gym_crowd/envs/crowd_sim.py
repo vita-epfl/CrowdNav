@@ -4,6 +4,7 @@ import gym
 import numpy as np
 import trajnettools
 from numpy.linalg import norm
+import rvo2
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
@@ -155,31 +156,46 @@ class CrowdSim(gym.Env):
 
     def get_ped_times(self):
         """
-        TODO: make agents obstacle once they reach the goal
         Run the whole simulation to the end and compute the average time for ped to reach goal.
-        Once an agent reaches the goal, it stops moving and becomes an obstacle.
+        Once an agent reaches the goal, it stops moving and becomes an obstacle
+        (doesn't need to take half responsibility to avoid collision).
 
         :return:
         """
+        # centralized orca simulator for all peds
         if not self.navigator.reached_destination():
             raise ValueError('Episode is not done yet')
-        self.navigator.visible = False
-        counter = 0
+        params = (10, 10, 5, 5)
+        sim = rvo2.PyRVOSimulator(self.time_step, *params, 0.3, 1)
+        sim.addAgent(self.navigator.get_position(), *params, self.navigator.radius, self.navigator.v_pref,
+                     self.navigator.get_velocity())
+        for ped in self.peds:
+            sim.addAgent(ped.get_position(), *params, ped.radius, ped.v_pref, ped.get_velocity())
+
+        max_time = 1000
         while not all(self.ped_times):
-            counter += 1
-            if counter > 1000:
-                # TODO: check why some simulation cases cannot terminate
-                logging.warning('Simulation cannot terminate. {} peds cannot reach goal'.
-                                format(sum([ped_time == 0 for ped_time in self.ped_times])))
-                print(self.case_counter['test'] - 1)
-                for i, ped_time in enumerate(self.ped_times):
-                    if ped_time == 0:
-                        print(i, self.peds[i].px, self.peds[i].py, self.peds[i].gx, self.peds[i].gy)
+            for i, agent in enumerate([self.navigator] + self.peds):
+                vel_pref = np.array(agent.get_goal_position()) - np.array(agent.get_position())
+                if norm(vel_pref) > 1:
+                    vel_pref /= norm(vel_pref)
+                sim.setAgentPrefVelocity(i, tuple(vel_pref))
+            sim.doStep()
+            self.global_time += self.time_step
+            if self.global_time > max_time:
+                logging.warning('Simulation cannot terminate!')
                 self.render('video')
                 break
-                # raise ValueError('Simulation cannot terminate')
-            self.step(ActionXY(0, 0))
-        self.navigator.visible = True
+            for i, ped in enumerate(self.peds):
+                if self.ped_times[i] == 0 and ped.reached_destination():
+                    self.ped_times[i] = self.global_time
+
+            # for visualization
+            self.navigator.set_position(sim.getAgentPosition(0))
+            for i, ped in enumerate(self.peds):
+                ped.set_position(sim.getAgentPosition(i + 1))
+            self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+
+        del sim
         return self.ped_times
 
     def reset(self, phase='test', test_case=None):
@@ -290,7 +306,7 @@ class CrowdSim(gym.Env):
                 dist = (dx**2 + dy**2)**(1/2) - self.peds[i].radius - self.peds[j].radius
                 if dist < 0:
                     collision = True
-                    logging.warning('Collision happens between pedestrians')
+                    logging.warning('Collision happens between pedestrians in step()')
                     # logging.debug("Collision: distance between p{} and p{} is {:.2E}".format(i, j, dist))
 
         # check if reaching the goal
