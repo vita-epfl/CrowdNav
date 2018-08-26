@@ -1,16 +1,4 @@
-@IEEEtranBSTCTL{IEEEexample:BSTcontrol,
-	CTLuse_url = "no",
-	CTLuse_article_number = "yes",
-	CTLuse_paper = "yes",
-	CTLuse_forced_etal = "yes",
-	CTLmax_names_forced_etal = "4",
-	CTLnames_show_etal = "1",
-	CTLuse_alt_spacing = "yes",
-	CTLalt_stretch_factor = "4",
-	CTLdash_repeated_names = "yes",
-	CTLname_latex_cmd = ""
-}
-	
+
 @article{bruin_integrating_2018,
 	title = {Integrating {State} {Representation} {Learning} {Into} {Deep} {Reinforcement} {Learning}},
 	volume = {3},
@@ -22,7 +10,7 @@
 	author = {Bruin, T. de and Kober, J. and Tuyls, K. and Babuška, R.},
 	month = jul,
 	year = {2018},
-	keywords = {autonomous racing tests, Deep learning in robotics and automation, deep reinforcement learning techniques, desirability, learning (artificial intelligence), Learning (artificial intelligence), learning and adaptive systems, learning control policies, Machine learning, Robot sensing systems, robotics, sensor fusion, sensory observations, Shape, state representation learning integration, Task analysis, TORCS simulator, Training},
+	keywords = {Learning (artificial intelligence), Training, learning (artificial intelligence), Machine learning, Robot sensing systems, Shape, sensor fusion, robotics, learning control policies, autonomous racing tests, Deep learning in robotics and automation, deep reinforcement learning techniques, desirability, learning and adaptive systems, sensory observations, state representation learning integration, Task analysis, TORCS simulator},
 	pages = {1394--1401},
 	file = {Bruin 等。 - 2018 - Integrating State Representation Learning Into Dee.pdf:C\:\\Users\\yueji\\Zotero\\storage\\EQH7F3N7\\Bruin 等。 - 2018 - Integrating State Representation Learning Into Dee.pdf:application/pdf;IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\BEUGJPAB\\8276247.html:text/html}
 }
@@ -38,6 +26,266 @@
 	month = feb,
 	year = {2018},
 	note = {arXiv: 1802.04181},
-	keywords = {Computer Science - Artificial Intelligence, Computer Science - Machine Learning, Statistics - Machine Learning},
+	keywords = {Computer Science - Artificial Intelligence, Statistics - Machine Learning, Computer Science - Machine Learning},
 	file = {arXiv\:1802.04181 PDF:C\:\\Users\\yueji\\Zotero\\storage\\DH8P229J\\Lesort 等。 - 2018 - State Representation Learning for Control An Over.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\E3HYKRP3\\1802.html:text/html}
+}
+
+@article{chen_socially_2017,
+	title = {Socially {Aware} {Motion} {Planning} with {Deep} {Reinforcement} {Learning}},
+	url = {http://arxiv.org/abs/1703.08862},
+	abstract = {For robotic vehicles to navigate safely and efficiently in pedestrian-rich environments, it is important to model subtle human behaviors and navigation rules (e.g., passing on the right). However, while instinctive to humans, socially compliant navigation is still difficult to quantify due to the stochasticity in people's behaviors. Existing works are mostly focused on using feature-matching techniques to describe and imitate human paths, but often do not generalize well since the feature values can vary from person to person, and even run to run. This work notes that while it is challenging to directly specify the details of what to do (precise mechanisms of human navigation), it is straightforward to specify what not to do (violations of social norms). Specifically, using deep reinforcement learning, this work develops a time-efficient navigation policy that respects common social norms. The proposed method is shown to enable fully autonomous navigation of a robotic vehicle moving at human walking speed in an environment with many pedestrians.},
+	urldate = {2018-08-25},
+	journal = {arXiv:1703.08862 [cs]},
+	author = {Chen, Yu Fan and Everett, Michael and Liu, Miao and How, Jonathan P.},
+	month = mar,
+	year = {2017},
+	note = {arXiv: 1703.08862},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Robotics, Computer Science - Human-Computer Interaction},
+	file = {arXiv\:1703.08862 PDF:C\:\\Users\\yueji\\Zotero\\storage\\A5ZMQ86M\\Chen et al. - 2017 - Socially Aware Motion Planning with Deep Reinforce.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\RQ526GRP\\1703.html:text/html}
+}
+
+@article{everett_motion_2018,
+	title = {Motion {Planning} {Among} {Dynamic}, {Decision}-{Making} {Agents} with {Deep} {Reinforcement} {Learning}},
+	url = {http://arxiv.org/abs/1805.01956},
+	abstract = {Robots that navigate among pedestrians use collision avoidance algorithms to enable safe and efficient operation. Recent works present deep reinforcement learning as a framework to model the complex interactions and cooperation. However, they are implemented using key assumptions about other agents' behavior that deviate from reality as the number of agents in the environment increases. This work extends our previous approach to develop an algorithm that learns collision avoidance among a variety of types of dynamic agents without assuming they follow any particular behavior rules. This work also introduces a strategy using LSTM that enables the algorithm to use observations of an arbitrary number of other agents, instead of previous methods that have a fixed observation size. The proposed algorithm outperforms our previous approach in simulation as the number of agents increases, and the algorithm is demonstrated on a fully autonomous robotic vehicle traveling at human walking speed, without the use of a 3D Lidar.},
+	urldate = {2018-08-25},
+	journal = {arXiv:1805.01956 [cs]},
+	author = {Everett, Michael and Chen, Yu Fan and How, Jonathan P.},
+	month = may,
+	year = {2018},
+	note = {arXiv: 1805.01956},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Robotics, Computer Science - Machine Learning},
+	file = {arXiv\:1805.01956 PDF:C\:\\Users\\yueji\\Zotero\\storage\\CINXJJSP\\Everett et al. - 2018 - Motion Planning Among Dynamic, Decision-Making Age.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\7QIASQTP\\1805.html:text/html}
+}
+
+@article{chen_decentralized_2016,
+	title = {Decentralized {Non}-communicating {Multiagent} {Collision} {Avoidance} with {Deep} {Reinforcement} {Learning}},
+	url = {http://arxiv.org/abs/1609.07845},
+	abstract = {Finding feasible, collision-free paths for multiagent systems can be challenging, particularly in non-communicating scenarios where each agent's intent (e.g. goal) is unobservable to the others. In particular, finding time efficient paths often requires anticipating interaction with neighboring agents, the process of which can be computationally prohibitive. This work presents a decentralized multiagent collision avoidance algorithm based on a novel application of deep reinforcement learning, which effectively offloads the online computation (for predicting interaction patterns) to an offline learning procedure. Specifically, the proposed approach develops a value network that encodes the estimated time to the goal given an agent's joint configuration (positions and velocities) with its neighbors. Use of the value network not only admits efficient (i.e., real-time implementable) queries for finding a collision-free velocity vector, but also considers the uncertainty in the other agents' motion. Simulation results show more than 26 percent improvement in paths quality (i.e., time to reach the goal) when compared with optimal reciprocal collision avoidance (ORCA), a state-of-the-art collision avoidance strategy.},
+	urldate = {2018-08-25},
+	journal = {arXiv:1609.07845 [cs]},
+	author = {Chen, Yu Fan and Liu, Miao and Everett, Michael and How, Jonathan P.},
+	month = sep,
+	year = {2016},
+	note = {arXiv: 1609.07845},
+	keywords = {Computer Science - Multiagent Systems},
+	file = {arXiv\:1609.07845 PDF:C\:\\Users\\yueji\\Zotero\\storage\\I6ZZRNCR\\Chen et al. - 2016 - Decentralized Non-communicating Multiagent Collisi.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\2G4D6G24\\1609.html:text/html}
+}
+
+@inproceedings{alahi_social_2016,
+	title = {Social {LSTM}: {Human} {Trajectory} {Prediction} in {Crowded} {Spaces}},
+	shorttitle = {Social {LSTM}},
+	urldate = {2018-08-25},
+	author = {Alahi, Alexandre and Goel, Kratarth and Ramanathan, Vignesh and Robicquet, Alexandre and Fei-Fei, Li and Savarese, Silvio},
+	year = {2016},
+	pages = {961--971}
+}
+
+@article{gupta_social_2018,
+	title = {Social {GAN}: {Socially} {Acceptable} {Trajectories} with {Generative} {Adversarial} {Networks}},
+	shorttitle = {Social {GAN}},
+	url = {http://arxiv.org/abs/1803.10892},
+	abstract = {Understanding human motion behavior is critical for autonomous moving platforms (like self-driving cars and social robots) if they are to navigate human-centric environments. This is challenging because human motion is inherently multimodal: given a history of human motion paths, there are many socially plausible ways that people could move in the future. We tackle this problem by combining tools from sequence prediction and generative adversarial networks: a recurrent sequence-to-sequence model observes motion histories and predicts future behavior, using a novel pooling mechanism to aggregate information across people. We predict socially plausible futures by training adversarially against a recurrent discriminator, and encourage diverse predictions with a novel variety loss. Through experiments on several datasets we demonstrate that our approach outperforms prior work in terms of accuracy, variety, collision avoidance, and computational complexity.},
+	urldate = {2018-08-25},
+	journal = {arXiv:1803.10892 [cs]},
+	author = {Gupta, Agrim and Johnson, Justin and Fei-Fei, Li and Savarese, Silvio and Alahi, Alexandre},
+	month = mar,
+	year = {2018},
+	note = {arXiv: 1803.10892},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+	file = {arXiv\:1803.10892 PDF:C\:\\Users\\yueji\\Zotero\\storage\\GBQTK7EA\\Gupta 等。 - 2018 - Social GAN Socially Acceptable Trajectories with .pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\CJ9VFKI9\\1803.html:text/html}
+}
+
+@article{vemula_social_2017,
+	title = {Social {Attention}: {Modeling} {Attention} in {Human} {Crowds}},
+	shorttitle = {Social {Attention}},
+	url = {http://arxiv.org/abs/1710.04689},
+	abstract = {Robots that navigate through human crowds need to be able to plan safe, efficient, and human predictable trajectories. This is a particularly challenging problem as it requires the robot to predict future human trajectories within a crowd where everyone implicitly cooperates with each other to avoid collisions. Previous approaches to human trajectory prediction have modeled the interactions between humans as a function of proximity. However, that is not necessarily true as some people in our immediate vicinity moving in the same direction might not be as important as other people that are further away, but that might collide with us in the future. In this work, we propose Social Attention, a novel trajectory prediction model that captures the relative importance of each person when navigating in the crowd, irrespective of their proximity. We demonstrate the performance of our method against a state-of-the-art approach on two publicly available crowd datasets and analyze the trained attention model to gain a better understanding of which surrounding agents humans attend to, when navigating in a crowd.},
+	journal = {arXiv:1710.04689 [cs]},
+	author = {Vemula, Anirudh and Muelling, Katharina and Oh, Jean},
+	month = oct,
+	year = {2017},
+	note = {arXiv: 1710.04689},
+	keywords = {Computer Science - Learning, Computer Science - Robotics},
+	file = {arXiv\:1710.04689 PDF:C\:\\Users\\yueji\\Zotero\\storage\\BELV92Y3\\Vemula 等. - 2017 - Social Attention Modeling Attention in Human Crow.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\G682I8KP\\1710.html:text/html}
+}
+
+@article{tai_socially_2017,
+	title = {Socially {Compliant} {Navigation} through {Raw} {Depth} {Inputs} with {Generative} {Adversarial} {Imitation} {Learning}},
+	url = {http://arxiv.org/abs/1710.02543},
+	abstract = {We present an approach for mobile robots to learn to navigate in dynamic environments with pedestrians via raw depth inputs, in a socially compliant manner. To achieve this, we adopt a generative adversarial imitation learning (GAIL) strategy, which improves upon a pre-trained behavior cloning policy. Our approach overcomes the disadvantages of previous methods, as they heavily depend on the full knowledge of the location and velocity information of nearby pedestrians, which not only requires specific sensors, but also the extraction of such state information from raw sensory input could consume much computation time. In this paper, our proposed GAIL-based model performs directly on raw depth inputs and plans in real-time. Experiments show that our GAIL-based approach greatly improves the safety and efficiency of the behavior of mobile robots from pure behavior cloning. The real-world deployment also shows that our method is capable of guiding autonomous vehicles to navigate in a socially compliant manner directly through raw depth inputs. In addition, we release a simulation plugin for modeling pedestrian behaviors based on the social force model.},
+	urldate = {2018-08-26},
+	journal = {arXiv:1710.02543 [cs]},
+	author = {Tai, Lei and Zhang, Jingwei and Liu, Ming and Burgard, Wolfram},
+	month = oct,
+	year = {2017},
+	note = {arXiv: 1710.02543},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Machine Learning, Computer Science - Robotics},
+	file = {arXiv\:1710.02543 PDF:C\:\\Users\\yueji\\Zotero\\storage\\UVL8VEDM\\Tai 等。 - 2017 - Socially Compliant Navigation through Raw Depth In.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\JAFJDLRC\\1710.html:text/html}
+}
+
+@incollection{roy_feature-based_2013,
+	title = {Feature-{Based} {Prediction} of {Trajectories} for {Socially} {Compliant} {Navigation}},
+	url = {https://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=6577979},
+	abstract = {Mobile robots that operate in a shared environment with humans need the ability to predict the movements of people to better plan their navigation actions. In this paper, we present a novel approach to predict the movements of pedestrians. Our method reasons about entire trajectories that arise from interactions between people in navigation tasks. It applies a maximum entropy learning method based on features that capture relevant aspects of the trajectories to determine the probability distribution that underlies human navigation behavior. Hence, our approach can be used by mobile robots to predict forthcoming interactions with pedestrians and thus react in a socially compliant way. In extensive experiments, we evaluate the capability and accuracy of our approach and demonstrate that our algorithm outperforms the popular social forces method, a state-of-the-art approach. Furthermore, we show how our algorithm can be used for autonomous robot navigation using a real robot.},
+	urldate = {2018-08-26},
+	booktitle = {Robotics: {Science} and {Systems} {VIII}},
+	publisher = {MITP},
+	author = {Roy, Nicholas and Newman, Paul and Srinivasa, Siddhartha},
+	year = {2013},
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\N5FYW94G\\articleDetails.html:text/html}
+}
+
+@inproceedings{pfeiffer_predicting_2016,
+	title = {Predicting actions to act predictably: {Cooperative} partial motion planning with maximum entropy models},
+	shorttitle = {Predicting actions to act predictably},
+	doi = {10.1109/IROS.2016.7759329},
+	abstract = {This paper reports on a data-driven motion planning approach for interaction-aware, socially-compliant robot navigation among human agents. Autonomous mobile robots navigating in workspaces shared with human agents require motion planning techniques providing seamless integration and smooth navigation in such. Smooth integration in mixed scenarios calls for two abilities of the robot: predicting actions of others and acting predictably for them. The former requirement requests trainable models of agent behaviors in order to accurately forecast their actions in the future, taking into account their reaction on the robot's decisions. A human-like navigation style of the robot facilitates other agents-most likely not aware of the underlying planning technique applied-to predict the robot motion vice versa, resulting in smoother joint navigation. The approach presented in this paper is based on a feature-based maximum entropy model and is able to guide a robot in an unstructured, real-world environment. The model is trained to predict joint behavior of heterogeneous groups of agents from onboard data of a mobile platform. We evaluate the benefit of interaction-aware motion planning in a realistic public setting with a total distance traveled of over 4 km. Interestingly the motion models learned from human-human interaction did not hold for robot-human interaction, due to the high attention and interest of pedestrians in testing basic braking functionality of the robot.},
+	booktitle = {2016 {IEEE}/{RSJ} {International} {Conference} on {Intelligent} {Robots} and {Systems} ({IROS})},
+	author = {Pfeiffer, M. and Schwesinger, U. and Sommer, H. and Galceran, E. and Siegwart, R.},
+	month = oct,
+	year = {2016},
+	keywords = {actions prediction, agent behaviors, autonomous mobile robots, Computational modeling, cooperative partial motion planning, data-driven motion planning, Entropy, feature-based maximum entropy model, human agents, human-human interaction, human-robot interaction, interaction-aware motion planning, interaction-aware socially-compliant robot navigation, maximum entropy methods, mobile platform, mobile robots, motion control, multi-robot systems, Navigation, path planning, pedestrians, Planning, Predictive models, robot motion, robot-human interaction, Robots, Trajectory},
+	pages = {2096--2101},
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\F6PR6U8P\\7759329.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\NV6S7RQH\\Pfeiffer 等。 - 2016 - Predicting actions to act predictably Cooperative.pdf:application/pdf}
+}
+
+@article{kretzschmar_socially_2016,
+	title = {Socially compliant mobile robot navigation via inverse reinforcement learning},
+	volume = {35},
+	issn = {0278-3649},
+	url = {https://doi.org/10.1177/0278364915619772},
+	doi = {10.1177/0278364915619772},
+	abstract = {Mobile robots are increasingly populating our human environments. To interact with humans in a socially compliant way, these robots need to understand and comply with mutually accepted rules. In this paper, we present a novel approach to model the cooperative navigation behavior of humans. We model their behavior in terms of a mixture distribution that captures both the discrete navigation decisions, such as going left or going right, as well as the natural variance of human trajectories. Our approach learns the model parameters of this distribution that match, in expectation, the observed behavior in terms of user-defined features. To compute the feature expectations over the resulting high-dimensional continuous distributions, we use Hamiltonian Markov chain Monte Carlo sampling. Furthermore, we rely on a Voronoi graph of the environment to efficiently explore the space of trajectories from the robot’s current position to its target position. Using the proposed model, our method is able to imitate the behavior of pedestrians or, alternatively, to replicate a specific behavior that was taught by tele-operation in the target environment of the robot. We implemented our approach on a real mobile robot and demonstrated that it is able to successfully navigate in an office environment in the presence of humans. An extensive set of experiments suggests that our technique outperforms state-of-the-art methods to model the behavior of pedestrians, which also makes it applicable to fields such as behavioral science or computer graphics.},
+	language = {en},
+	number = {11},
+	urldate = {2018-08-26},
+	journal = {The International Journal of Robotics Research},
+	author = {Kretzschmar, Henrik and Spies, Markus and Sprunk, Christoph and Burgard, Wolfram},
+	month = sep,
+	year = {2016},
+	pages = {1289--1307},
+	file = {SAGE PDF Full Text:C\:\\Users\\yueji\\Zotero\\storage\\3QRNYMU5\\Kretzschmar 等。 - 2016 - Socially compliant mobile robot navigation via inv.pdf:application/pdf}
+}
+
+@inproceedings{trautman_robot_2013,
+	title = {Robot navigation in dense human crowds: the case for cooperation},
+	shorttitle = {Robot navigation in dense human crowds},
+	doi = {10.1109/ICRA.2013.6630866},
+	abstract = {We consider mobile robot navigation in dense human crowds. In particular, we explore two questions. Can we design a navigation algorithm that encourages humans to cooperate with a robot? Would such cooperation improve navigation performance? We address the first question by developing a probabilistic predictive model of cooperative collision avoidance and goal-oriented behavior by extending the interacting Gaussian processes approach to include multiple goals and stochastic movement duration. We answer the second question with an extensive quantitative study of robot navigation in dense human crowds (488 runs completed), specifically testing how cooperation models effect navigation performance. We find that the “multiple goal” interacting Gaussian processes algorithm performs comparably with human teleoperators in crowd densities near 1 person/m2, while a state of the art noncooperative planner exhibits unsafe behavior more than 3 times as often as this multiple goal extension, and more than twice as often as the basic interacting Gaussian processes. Furthermore, a reactive planner based on the widely used “dynamic window” approach fails for crowd densities above 0.55 people/m2. Based on these experimental results, and previous theoretical observations, we conclude that a cooperation model is important for safe and efficient robot navigation in dense human crowds.},
+	booktitle = {2013 {IEEE} {International} {Conference} on {Robotics} and {Automation}},
+	author = {Trautman, P. and Ma, J. and Murray, R. M. and Krause, A.},
+	month = may,
+	year = {2013},
+	keywords = {collision avoidance, cooperation model testing, cooperative collision avoidance, cooperative systems, dense human crowds, dynamic window approach, Gaussian processes, goal-oriented behavior, human teleoperators, human-robot interaction, Kernel, mobile robot navigation, mobile robots, multiple goal interacting Gaussian process algorithm, Navigation, navigation algorithm design, navigation performance improvement, probabilistic predictive model development, probability, reactive planner, Robot sensing systems, state of the art noncooperative planner, stochastic movement duration, stochastic processes, telerobotics, Tracking, Trajectory, unsafe behavior},
+	pages = {2153--2160},
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\2BMYKEQQ\\6630866.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\AW8GHMV5\\Trautman 等。 - 2013 - Robot navigation in dense human crowds the case f.pdf:application/pdf}
+}
+
+@article{wang_probabilistic_2013,
+	title = {Probabilistic movement modeling for intention inference in human–robot interaction},
+	volume = {32},
+	issn = {0278-3649},
+	url = {https://doi.org/10.1177/0278364913478447},
+	doi = {10.1177/0278364913478447},
+	abstract = {Intention inference can be an essential step toward efficient human–robot interaction. For this purpose, we propose the Intention-Driven Dynamics Model (IDDM) to probabilistically model the generative process of movements that are directed by the intention. The IDDM allows the intention to be inferred from observed movements using Bayes’ theorem. The IDDM simultaneously finds a latent state representation of noisy and high-dimensional observations, and models the intention-driven dynamics in the latent states. As most robotics applications are subject to real-time constraints, we develop an efficient online algorithm that allows for real-time intention inference. Two human–robot interaction scenarios, i.e. target prediction for robot table tennis and action recognition for interactive humanoid robots, are used to evaluate the performance of our inference algorithm. In both intention inference tasks, the proposed algorithm achieves substantial improvements over support vector machines and Gaussian processes.},
+	language = {en},
+	number = {7},
+	urldate = {2018-08-26},
+	journal = {The International Journal of Robotics Research},
+	author = {Wang, Zhikun and Mülling, Katharina and Deisenroth, Marc Peter and Ben Amor, Heni and Vogt, David and Schölkopf, Bernhard and Peters, Jan},
+	month = jun,
+	year = {2013},
+	pages = {841--858},
+	file = {SAGE PDF Full Text:C\:\\Users\\yueji\\Zotero\\storage\\XGQTULX6\\Wang 等。 - 2013 - Probabilistic movement modeling for intention infe.pdf:application/pdf}
+}
+
+@article{trautman_robot_2015,
+	title = {Robot navigation in dense human crowds: {Statistical} models and experimental studies of human–robot cooperation},
+	volume = {34},
+	issn = {0278-3649},
+	shorttitle = {Robot navigation in dense human crowds},
+	url = {https://doi.org/10.1177/0278364914557874},
+	doi = {10.1177/0278364914557874},
+	abstract = {We consider the problem of navigating a mobile robot through dense human crowds. We begin by exploring a fundamental impediment to classical motion planning algorithms called the “freezing robot problem”: once the environment surpasses a certain level of dynamic complexity, the planner decides that all forward paths are unsafe, and the robot freezes in place (or performs unnecessary maneuvers) to avoid collisions. We argue that this problem can be avoided if the robot anticipates human cooperation, and accordingly we develop interacting Gaussian processes, a prediction density that captures cooperative collision avoidance, and a “multiple goal” extension that models the goal-driven nature of human decision making. We validate this model with an empirical study of robot navigation in dense human crowds (488 runs), specifically testing how cooperation models effect navigation performance. The multiple goal interacting Gaussian processes algorithm performs comparably with human teleoperators in crowd densities nearing 0.8 humans/m2, while a state-of-the-art non-cooperative planner exhibits unsafe behavior more than three times as often as the multiple goal extension, and twice as often as the basic interacting Gaussian process approach. Furthermore, a reactive planner based on the widely used dynamic window approach proves insufficient for crowd densities above 0.55 people/m2. We also show that our non-cooperative planner or our reactive planner capture the salient characteristics of nearly any dynamic navigation algorithm. Based on these experimental results and theoretical observations, we conclude that a cooperation model is critical for safe and efficient robot navigation in dense human crowds.},
+	language = {en},
+	number = {3},
+	urldate = {2018-08-26},
+	journal = {The International Journal of Robotics Research},
+	author = {Trautman, Pete and Ma, Jeremy and Murray, Richard M. and Krause, Andreas},
+	month = mar,
+	year = {2015},
+	pages = {335--356},
+	file = {SAGE PDF Full Text:C\:\\Users\\yueji\\Zotero\\storage\\344GI25S\\Trautman 等。 - 2015 - Robot navigation in dense human crowds Statistica.pdf:application/pdf}
+}
+
+@inproceedings{karasev_intent-aware_2016,
+	title = {Intent-aware long-term prediction of pedestrian motion},
+	doi = {10.1109/ICRA.2016.7487409},
+	abstract = {We present a method to predict long-term motion of pedestrians, modeling their behavior as jump-Markov processes with their goal a hidden variable. Assuming approximately rational behavior, and incorporating environmental constraints and biases, including time-varying ones imposed by traffic lights, we model intent as a policy in a Markov decision process framework. We infer pedestrian state using a Rao-Blackwellized filter, and intent by planning according to a stochastic policy, reflecting individual preferences in aiming at the same goal.},
+	booktitle = {2016 {IEEE} {International} {Conference} on {Robotics} and {Automation} ({ICRA})},
+	author = {Karasev, V. and Ayvaci, A. and Heisele, B. and Soatto, S.},
+	month = may,
+	year = {2016},
+	keywords = {Collision avoidance, Context, filtering theory, image motion analysis, intent-aware long-term prediction, jump-Markov process, Markov decision process framework, Markov processes, optimal control, pedestrian motion prediction, pedestrian state, pedestrians, Predictive models, Rao-Blackwellized filter, road traffic control, Semantics, stochastic policy, Trajectory},
+	pages = {2543--2549},
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\38DG2IID\\7487409.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\H434WQXQ\\Karasev 等。 - 2016 - Intent-aware long-term prediction of pedestrian mo.pdf:application/pdf}
+}
+
+@article{long_towards_2017,
+	title = {Towards {Optimally} {Decentralized} {Multi}-{Robot} {Collision} {Avoidance} via {Deep} {Reinforcement} {Learning}},
+	url = {http://arxiv.org/abs/1709.10082},
+	abstract = {Developing a safe and efficient collision avoidance policy for multiple robots is challenging in the decentralized scenarios where each robot generate its paths without observing other robots' states and intents. While other distributed multi-robot collision avoidance systems exist, they often require extracting agent-level features to plan a local collision-free action, which can be computationally prohibitive and not robust. More importantly, in practice the performance of these methods are much lower than their centralized counterparts. We present a decentralized sensor-level collision avoidance policy for multi-robot systems, which directly maps raw sensor measurements to an agent's steering commands in terms of movement velocity. As a first step toward reducing the performance gap between decentralized and centralized methods, we present a multi-scenario multi-stage training framework to find an optimal policy which is trained over a large number of robots on rich, complex environments simultaneously using a policy gradient based reinforcement learning algorithm. We validate the learned sensor-level collision avoidance policy in a variety of simulated scenarios with thorough performance evaluations and show that the final learned policy is able to find time efficient, collision-free paths for a large-scale robot system. We also demonstrate that the learned policy can be well generalized to new scenarios that do not appear in the entire training period, including navigating a heterogeneous group of robots and a large-scale scenario with 100 robots. Videos are available at https://sites.google.com/view/drlmaca},
+	urldate = {2018-08-26},
+	journal = {arXiv:1709.10082 [cs]},
+	author = {Long, Pinxin and Fan, Tingxiang and Liao, Xinyi and Liu, Wenxi and Zhang, Hao and Pan, Jia},
+	month = sep,
+	year = {2017},
+	note = {arXiv: 1709.10082},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Machine Learning, Computer Science - Multiagent Systems, Computer Science - Robotics},
+	file = {arXiv\:1709.10082 PDF:C\:\\Users\\yueji\\Zotero\\storage\\UREARX5F\\Long 等。 - 2017 - Towards Optimally Decentralized Multi-Robot Collis.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\49TCJ64P\\1709.html:text/html}
+}
+
+@article{vemula_modeling_2017,
+	title = {Modeling {Cooperative} {Navigation} in {Dense} {Human} {Crowds}},
+	url = {http://arxiv.org/abs/1705.06201},
+	abstract = {For robots to be a part of our daily life, they need to be able to navigate among crowds not only safely but also in a socially compliant fashion. This is a challenging problem because humans tend to navigate by implicitly cooperating with one another to avoid collisions, while heading toward their respective destinations. Previous approaches have used hand-crafted functions based on proximity to model human-human and human-robot interactions. However, these approaches can only model simple interactions and fail to generalize for complex crowded settings. In this paper, we develop an approach that models the joint distribution over future trajectories of all interacting agents in the crowd, through a local interaction model that we train using real human trajectory data. The interaction model infers the velocity of each agent based on the spatial orientation of other agents in his vicinity. During prediction, our approach infers the goal of the agent from its past trajectory and uses the learned model to predict its future trajectory. We demonstrate the performance of our method against a state-of-the-art approach on a public dataset and show that our model outperforms when predicting future trajectories for longer horizons.},
+	urldate = {2018-08-26},
+	journal = {arXiv:1705.06201 [cs]},
+	author = {Vemula, Anirudh and Muelling, Katharina and Oh, Jean},
+	month = may,
+	year = {2017},
+	note = {arXiv: 1705.06201},
+	keywords = {Computer Science - Robotics},
+	file = {arXiv\:1705.06201 PDF:C\:\\Users\\yueji\\Zotero\\storage\\C43KILHB\\Vemula 等。 - 2017 - Modeling Cooperative Navigation in Dense Human Cro.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\VE9N85ME\\1705.html:text/html}
+}
+
+@article{qi_intent-aware_2018,
+	title = {Intent-aware {Multi}-agent {Reinforcement} {Learning}},
+	url = {http://arxiv.org/abs/1803.02018},
+	abstract = {This paper proposes an intent-aware multi-agent planning framework as well as a learning algorithm. Under this framework, an agent plans in the goal space to maximize the expected utility. The planning process takes the belief of other agents' intents into consideration. Instead of formulating the learning problem as a partially observable Markov decision process (POMDP), we propose a simple but effective linear function approximation of the utility function. It is based on the observation that for humans, other people's intents will pose an influence on our utility for a goal. The proposed framework has several major advantages: i) it is computationally feasible and guaranteed to converge. ii) It can easily integrate existing intent prediction and low-level planning algorithms. iii) It does not suffer from sparse feedbacks in the action space. We experiment our algorithm in a real-world problem that is non-episodic, and the number of agents and goals can vary over time. Our algorithm is trained in a scene in which aerial robots and humans interact, and tested in a novel scene with a different environment. Experimental results show that our algorithm achieves the best performance and human-like behaviors emerge during the dynamic process.},
+	urldate = {2018-08-26},
+	journal = {arXiv:1803.02018 [cs]},
+	author = {Qi, Siyuan and Zhu, Song-Chun},
+	month = mar,
+	year = {2018},
+	note = {arXiv: 1803.02018},
+	keywords = {Computer Science - Artificial Intelligence},
+	file = {arXiv\:1803.02018 PDF:C\:\\Users\\yueji\\Zotero\\storage\\NNIEWYA2\\Qi 和 Zhu - 2018 - Intent-aware Multi-agent Reinforcement Learning.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\FMZX4QVJ\\1803.html:text/html}
+}
+
+@article{helbing_social_1995,
+	title = {Social force model for pedestrian dynamics},
+	volume = {51},
+	url = {https://link.aps.org/doi/10.1103/PhysRevE.51.4282},
+	doi = {10.1103/PhysRevE.51.4282},
+	abstract = {It is suggested that the motion of pedestrians can be described as if they would be subject to ‘‘social forces.’’ These ‘‘forces’’ are not directly exerted by the pedestrians’ personal environment, but they are a measure for the internal motivations of the individuals to perform certain actions (movements). The corresponding force concept is discussed in more detail and can also be applied to the description of other behaviors. In the presented model of pedestrian behavior several force terms are essential: first, a term describing the acceleration towards the desired velocity of motion; second, terms reflecting that a pedestrian keeps a certain distance from other pedestrians and borders; and third, a term modeling attractive effects. The resulting equations of motion of nonlinearly coupled Langevin equations. Computer simulations of crowds of interacting pedestrians show that the social force model is capable of describing the self-organization of several observed collective effects of pedestrian behavior very realistically., This article appears in the following collection:},
+	number = {5},
+	urldate = {2018-08-26},
+	journal = {Physical Review E},
+	author = {Helbing, Dirk and Molnár, Péter},
+	month = may,
+	year = {1995},
+	pages = {4282--4286},
+	file = {APS Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\EF8GDLJ9\\PhysRevE.51.html:text/html}
 }
