@@ -8,7 +8,6 @@ import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
 from gym_crowd.envs.utils.action import ActionXY
-import rvo2
 
 
 class CrowdSim(gym.Env):
@@ -85,6 +84,8 @@ class CrowdSim(gym.Env):
         :param rule:
         :return:
         """
+        # initial min separation distance to avoid danger penalty at beginning
+        min_separation_dist = 0.2
         if rule == 'square_crossing':
             self.peds = []
             for i in range(ped_num):
@@ -98,7 +99,7 @@ class CrowdSim(gym.Env):
                     py = (np.random.random() - 0.5) * self.square_width
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius:
+                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + min_separation_dist:
                             collide = True
                             break
                     if not collide:
@@ -108,7 +109,7 @@ class CrowdSim(gym.Env):
                     gy = (np.random.random() - 0.5) * self.square_width
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius:
+                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + min_separation_dist:
                             collide = True
                             break
                     if not collide:
@@ -128,8 +129,9 @@ class CrowdSim(gym.Env):
                     py = self.circle_radius * np.sin(angle) + py_noise
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius or \
-                                norm((px - agent.gx, py - agent.gy)) < ped.radius + agent.radius:
+                        min_dist = ped.radius + agent.radius + min_separation_dist
+                        if norm((px - agent.px, py - agent.py)) < min_dist or \
+                                norm((px - agent.gx, py - agent.gy)) < min_dist:
                             collide = True
                             break
                     if not collide:
@@ -141,10 +143,7 @@ class CrowdSim(gym.Env):
         """
         TODO: make agents obstacle once they reach the goal
         Run the whole simulation to the end and compute the average time for ped to reach goal.
-        Once the navigator reaches goal, make it invisible, cuz otherwise peds may get stuck due to the non-cooperative
-        behavior of the navigator (it doesn't move any more)
-        The time to reach goal for peds is defined as when they reach the goal at the first time. But they may keep
-        moving later.
+        Once an agent reaches the goal, it stops moving and becomes an obstacle.
 
         :return:
         """
@@ -229,7 +228,10 @@ class CrowdSim(gym.Env):
 
         return ob
 
-    def step(self, action):
+    def onestep_lookahead(self, action):
+        return self.step(action, update=False)
+
+    def step(self, action, update=True):
         """
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
 
@@ -274,13 +276,14 @@ class CrowdSim(gym.Env):
                 dist = (dx**2 + dy**2)**(1/2) - self.peds[i].radius - self.peds[j].radius
                 if dist < 0:
                     collision = True
+                    logging.warning('Collision happens between pedestrians')
                     # logging.debug("Collision: distance between p{} and p{} is {:.2E}".format(i, j, dist))
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
         reaching_goal = norm(end_position - np.array(self.navigator.get_goal_position())) < self.navigator.radius
 
-        if self.global_time >= self.time_limit-1:
+        if self.global_time >= self.time_limit - 1:
             reward = 0
             done = True
             info = 'timeout'
@@ -292,8 +295,10 @@ class CrowdSim(gym.Env):
             reward = 1
             done = True
             info = 'reach goal'
-        elif dmin < 0.2:
-            reward = -0.1 + dmin / 2
+        elif self.navigator.visible and dmin < 0.2:
+            # only penalize agent for getting too close if it's visible
+            # adjust the reward based on FPS
+            reward = -0.1 * self.time_step + dmin / 2
             done = False
             info = 'too close'
         else:
@@ -301,23 +306,28 @@ class CrowdSim(gym.Env):
             done = False
             info = ''
 
-        # update all agents
-        self.navigator.step(action)
-        for i, ped_action in enumerate(ped_actions):
-            self.peds[i].step(ped_action)
-        self.global_time += self.time_step
-        for i, ped in enumerate(self.peds):
-            # only record the first time the ped reaches the goal
-            if self.ped_times[i] == 0 and ped.reached_destination():
-                self.ped_times[i] = self.global_time
-        self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
-        if hasattr(self.navigator.policy, 'get_attention_weights'):
-            self.attention_weights.append(self.navigator.policy.get_attention_weights())
-
-        if self.navigator.sensor == 'coordinates':
-            ob = [ped.get_observable_state() for ped in self.peds]
-        elif self.navigator.sensor == 'RGB':
-            raise NotImplemented
+        if update:
+            # update all agents
+            self.navigator.step(action)
+            for i, ped_action in enumerate(ped_actions):
+                self.peds[i].step(ped_action)
+            self.global_time += self.time_step
+            for i, ped in enumerate(self.peds):
+                # only record the first time the ped reaches the goal
+                if self.ped_times[i] == 0 and ped.reached_destination():
+                    self.ped_times[i] = self.global_time
+            self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+            if hasattr(self.navigator.policy, 'get_attention_weights'):
+                self.attention_weights.append(self.navigator.policy.get_attention_weights())
+            if self.navigator.sensor == 'coordinates':
+                ob = [ped.get_observable_state() for ped in self.peds]
+            elif self.navigator.sensor == 'RGB':
+                raise NotImplemented
+        else:
+            if self.navigator.sensor == 'coordinates':
+                ob = [ped.get_next_observable_state(action) for ped, action in zip(self.peds, ped_actions)]
+            elif self.navigator.sensor == 'RGB':
+                raise NotImplemented
 
         return ob, reward, done, info
 

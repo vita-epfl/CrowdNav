@@ -6,7 +6,6 @@ import logging
 from gym_crowd.envs.policy.policy import Policy
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
 from gym_crowd.envs.utils.state import ObservableState, FullState
-from dynav.policy.utils import reward
 
 
 class ValueNetwork(nn.Module):
@@ -137,17 +136,15 @@ class CADRL(Policy):
         else:
             max_min_value = float('-inf')
             max_action = None
-            next_ped_states = [self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
-                               for ped_state in state.ped_states]
             for action in self.action_space:
                 next_self_state = self.propagate(state.self_state, action)
+                ob, reward, done, info = self.env.onestep_lookahead(action)
                 batch_next_states = torch.cat([torch.Tensor([next_self_state + next_ped_state]).to(self.device)
-                                              for next_ped_state in next_ped_states], dim=0)
+                                              for next_ped_state in ob], dim=0)
                 # VALUE UPDATE
                 outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)
-                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
-                min_value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * min_output.data.item()
+                min_value = reward + pow(self.gamma, self.time_step * state.self_state.v_pref) * min_output.data.item()
                 if min_value > max_min_value:
                     max_min_value = min_value
                     max_action = action

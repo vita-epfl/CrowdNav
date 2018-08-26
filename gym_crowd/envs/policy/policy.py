@@ -13,6 +13,8 @@ class Policy(object):
         self.device = None
         self.last_state = None
         self.time_step = None
+        # if agent is assumed to know the dynamics of real world
+        self.env = None
 
     @abc.abstractmethod
     def configure(self, config):
@@ -23,6 +25,9 @@ class Policy(object):
 
     def set_device(self, device):
         self.device = device
+
+    def set_env(self, env):
+        self.env = env
 
     def get_model(self):
         return self.model

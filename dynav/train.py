@@ -81,10 +81,11 @@ def main():
         parser.error('Train config has to be specified for a trainable network')
     train_config = configparser.RawConfigParser()
     train_config.read(args.train_config)
-    train_epochs = train_config.getint('train', 'train_epochs')
+    train_batches = train_config.getint('train', 'train_batches')
     train_episodes = train_config.getint('train', 'train_episodes')
     sample_episodes = train_config.getint('train', 'sample_episodes')
-    test_interval = train_config.getint('train', 'test_interval')
+    target_update_interval = train_config.getint('train', 'target_update_interval')
+    evaluation_interval = train_config.getint('train', 'evaluation_interval')
     capacity = train_config.getint('train', 'capacity')
     epsilon_start = train_config.getfloat('train', 'epsilon_start')
     epsilon_end = train_config.getfloat('train', 'epsilon_end')
@@ -111,13 +112,14 @@ def main():
         il_policy.safety_space = safety_space
         navigator.set_policy(il_policy)
         explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
-        trainer.optimize_batch(il_epochs)
+        trainer.optimize_epoch(il_epochs)
         torch.save(model.state_dict(), il_weight_file)
         logging.info('Finish imitation learning. Weights saved.')
         logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
-    explorer.update_stabilized_model(model)
+    explorer.update_target_model(model)
 
     # reinforcement learning
+    policy.set_env(env)
     navigator.set_policy(policy)
     navigator.print_info()
     episode = 0
@@ -129,15 +131,17 @@ def main():
             epsilon = epsilon_end
         navigator.policy.set_epsilon(epsilon)
 
-        # test
-        if episode % test_interval == 0:
+        # evaluate the model
+        if episode % evaluation_interval == 0:
             explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
-            explorer.update_stabilized_model(model)
 
         # sample k episodes into memory and optimize over the generated memory
         explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
-        trainer.optimize_batch(train_epochs)
+        trainer.optimize_batch(train_batches)
         episode += 1
+
+        if episode % target_update_interval == 0:
+            explorer.update_target_model(model)
 
         if episode != 0 and episode % checkpoint_interval == 0:
             torch.save(model.state_dict(), rl_weight_file)

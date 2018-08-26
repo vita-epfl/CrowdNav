@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from gym_crowd.envs.utils.action import ActionRot, ActionXY
-from dynav.policy.utils import reward
 from dynav.policy.cadrl import CADRL
 
 
@@ -30,17 +29,15 @@ class MultiPedRL(CADRL):
         else:
             max_value = float('-inf')
             max_action = None
-            next_ped_states = [self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
-                               for ped_state in state.ped_states]
             for action in self.action_space:
                 next_self_state = self.propagate(state.self_state, action)
+                ob, reward, done, info = self.env.onestep_lookahead(action)
                 batch_next_states = torch.cat([torch.Tensor([next_self_state + next_ped_state]).to(self.device)
-                                              for next_ped_state in next_ped_states], dim=0)
+                                              for next_ped_state in ob], dim=0)
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
                 # VALUE UPDATE
                 next_state_value = self.model(rotated_batch_input).data.item()
-                gamma_bar = pow(self.gamma, self.time_step * state.self_state.v_pref)
-                value = reward(state, action, self.kinematics, self.time_step) + gamma_bar * next_state_value
+                value = reward + pow(self.gamma, self.time_step * state.self_state.v_pref) * next_state_value
                 if value > max_value:
                     max_value = value
                     max_action = action

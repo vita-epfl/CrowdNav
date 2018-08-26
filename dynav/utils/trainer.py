@@ -21,7 +21,7 @@ class Trainer(object):
         self.optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
         self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size, gamma=0.1)
 
-    def optimize_batch(self, num_epochs):
+    def optimize_epoch(self, num_epochs):
         average_epoch_loss = 0
         for epoch in range(num_epochs):
             epoch_loss = 0
@@ -41,3 +41,22 @@ class Trainer(object):
             logging.debug('Average loss in epoch {}: {:.2E}'.format(epoch, average_epoch_loss))
 
         return average_epoch_loss
+
+    def optimize_batch(self, num_batches):
+        losses = 0
+        for batch in range(num_batches):
+            inputs, values = next(iter(self.data_loader))
+            inputs = Variable(inputs)
+            values = Variable(values)
+
+            self.optimizer.zero_grad()
+            outputs = self.model(inputs)
+            loss = self.criterion(outputs, values)
+            loss.backward()
+            self.optimizer.step()
+            losses += loss.data.item()
+
+        average_loss = losses / num_batches
+        logging.debug('Average loss : {:.2E}'.format(average_loss))
+
+        return average_loss

@@ -11,10 +11,10 @@ class Explorer(object):
         self.memory = memory
         self.gamma = gamma
         self.target_policy = target_policy
-        self.stabilized_model = None
+        self.target_model = None
 
-    def update_stabilized_model(self, stabilized_model):
-        self.stabilized_model = copy.deepcopy(stabilized_model)
+    def update_target_model(self, target_model):
+        self.target_model = copy.deepcopy(target_model)
 
     # @profile
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None,
@@ -27,6 +27,7 @@ class Explorer(object):
         collision = 0
         timeout = 0
         too_close = 0
+        cumulative_reward = 0
         collision_cases = []
         timeout_cases = []
         for i in range(k):
@@ -68,19 +69,19 @@ class Explorer(object):
                     # only add positive(success) or negative(collision) experience in reinforcement learning
                     self.update_memory(states, actions, rewards, imitation_learning)
 
+            cumulative_reward += sum(rewards)
+
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
         avg_nav_time = sum(navigator_times) / len(navigator_times) if len(navigator_times) != 0 else 0
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
-        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, average time to reach goal: {:.2f}'.
-                     format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time))
+        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {}'.
+                     format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time, cumulative_reward/k))
         if self.navigator.visible and phase in ['val', 'test']:
             logging.info('Average time for peds to reach goal: {:.2f}'.format(average(ped_times)))
             logging.info('Average time for last ped to reach goal: {:.2f}'.format(average(last_ped_time)))
-
-        if phase in ['test']:
             logging.info('Average times of navigator getting too close to peds per second: {:.2f}'.
                          format(too_close/sum(navigator_times) if len(navigator_times) != 0 else 0))
 
@@ -110,7 +111,7 @@ class Explorer(object):
                 else:
                     next_state = states[i + 1]
                     gamma_bar = pow(self.gamma, self.navigator.time_step * self.navigator.v_pref)
-                    value = reward + gamma_bar * self.stabilized_model(next_state.unsqueeze(0)).data.item()
+                    value = reward + gamma_bar * self.target_model(next_state.unsqueeze(0)).data.item()
             value = torch.Tensor([value]).to(self.device)
 
             self.memory.push((state, value))

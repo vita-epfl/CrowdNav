@@ -29,8 +29,8 @@ class Agent(object):
         self.time_step = None
 
     def print_info(self):
-        logging.info('Agent is {} and has {} kinematic constraint'.format('visible' if self.visible else 'invisible',
-                                                                          self.kinematics))
+        logging.info('Agent is {} and has {} kinematic constraint'.format(
+            'visible' if self.visible else 'invisible', self.kinematics))
 
     def set_policy(self, policy):
         self.policy = policy
@@ -47,6 +47,18 @@ class Agent(object):
 
     def get_observable_state(self):
         return ObservableState(self.px, self.py, self.vx, self.vy, self.radius)
+
+    def get_next_observable_state(self, action):
+        self.check_validity(action)
+        pos = self.compute_position(action, self.time_step)
+        next_px, next_py = pos
+        if self.kinematics == 'holonomic':
+            next_vx = action.vx
+            next_vy = action.vy
+        else:
+            next_vx = action.v * np.cos(self.theta)
+            next_vy = action.v * np.sin(self.theta)
+        return ObservableState(next_px, next_py, next_vx, next_vy, self.radius)
 
     def get_full_state(self):
         return FullState(self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta)

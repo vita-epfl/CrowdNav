@@ -71,6 +71,7 @@ def main():
     if not navigator.visible and isinstance(navigator.policy, ORCA):
         navigator.policy.safety_space = 0.15
 
+    policy.set_env(env)
     navigator.print_info()
     if args.visualize:
         ob = env.reset(args.phase, args.test_case)
