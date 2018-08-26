@@ -81,6 +81,7 @@ def main():
         parser.error('Train config has to be specified for a trainable network')
     train_config = configparser.RawConfigParser()
     train_config.read(args.train_config)
+    rl_learning_rate = train_config.getfloat('train', 'rl_learning_rate')
     train_batches = train_config.getint('train', 'train_batches')
     train_episodes = train_config.getint('train', 'train_episodes')
     sample_episodes = train_config.getint('train', 'sample_episodes')
@@ -95,7 +96,8 @@ def main():
     # configure trainer and explorer
     memory = ReplayMemory(capacity)
     model = policy.get_model()
-    trainer = Trainer(train_config, model, memory, device)
+    batch_size = train_config.getint('trainer', 'batch_size')
+    trainer = Trainer(model, memory, device, batch_size)
     explorer = Explorer(env, navigator, device, memory, policy.gamma, target_policy=policy)
 
     # imitation learning
@@ -106,6 +108,8 @@ def main():
         il_episodes = train_config.getint('imitation_learning', 'il_episodes')
         il_policy = train_config.get('imitation_learning', 'il_policy')
         il_epochs = train_config.getint('imitation_learning', 'il_epochs')
+        il_learning_rate = train_config.getfloat('imitation_learning', 'il_learning_rate')
+        trainer.set_learning_rate(il_learning_rate)
         safety_space = train_config.getfloat('imitation_learning', 'safety_space')
         il_policy = policy_factory[il_policy]()
         il_policy.multiagent_training = policy.multiagent_training
@@ -122,6 +126,7 @@ def main():
     policy.set_env(env)
     navigator.set_policy(policy)
     navigator.print_info()
+    trainer.set_learning_rate(rl_learning_rate)
     episode = 0
     while episode < train_episodes:
         # epsilon-greedy

@@ -6,22 +6,23 @@ import logging
 
 
 class Trainer(object):
-    def __init__(self, config, model, memory, device):
+    def __init__(self, model, memory, device, batch_size):
         """
         Train the trainable model of a policy
         """
-        batch_size = config.getint('trainer', 'batch_size')
-        learning_rate = config.getfloat('trainer', 'learning_rate')
-        step_size = config.getint('trainer', 'step_size')
         self.model = model
         self.device = device
         self.criterion = nn.MSELoss().to(device)
         self.memory = memory
         self.data_loader = DataLoader(memory, batch_size, shuffle=True)
-        self.optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
-        self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=step_size, gamma=0.1)
+        self.optimizer = None
+
+    def set_learning_rate(self, learning_rate):
+        self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=0.9)
 
     def optimize_epoch(self, num_epochs):
+        if self.optimizer is None:
+            raise ValueError('Learning rate is not set!')
         average_epoch_loss = 0
         for epoch in range(num_epochs):
             epoch_loss = 0
@@ -43,6 +44,8 @@ class Trainer(object):
         return average_epoch_loss
 
     def optimize_batch(self, num_batches):
+        if self.optimizer is None:
+            raise ValueError('Learning rate is not set!')
         losses = 0
         for batch in range(num_batches):
             inputs, values = next(iter(self.data_loader))
