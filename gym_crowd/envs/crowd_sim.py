@@ -315,7 +315,7 @@ class CrowdSim(gym.Env):
         if self.global_time >= self.time_limit - 1:
             reward = 0
             done = True
-            info = ReachGoal()
+            info = Timeout()
         elif collision:
             reward = -0.25
             done = True
