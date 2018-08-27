@@ -1,6 +1,7 @@
 import logging
 import torch
 import copy
+from gym_crowd.envs.utils.info import *
 
 
 class Explorer(object):
@@ -27,6 +28,7 @@ class Explorer(object):
         collision = 0
         timeout = 0
         too_close = 0
+        min_dist = []
         cumulative_reward = 0
         collision_cases = []
         timeout_cases = []
@@ -43,21 +45,22 @@ class Explorer(object):
                 actions.append(action)
                 rewards.append(reward)
 
-                if info == 'too close':
+                if isinstance(info, Danger):
                     too_close += 1
+                    min_dist.append(info.min_dist)
 
-            if info == 'reach goal':
+            if isinstance(info, ReachGoal):
                 success += 1
                 navigator_times.append(self.env.global_time)
                 if self.navigator.visible and phase in ['val', 'test']:
                     times = self.env.get_ped_times()
                     ped_times += times
                     last_ped_time.append(max(times))
-            elif info == 'collision':
+            elif isinstance(info, Collision):
                 collision += 1
                 collision_cases.append(i)
                 navigator_times.append(self.env.time_limit)
-            elif info == 'timeout':
+            elif isinstance(info, Timeout):
                 timeout += 1
                 timeout_cases.append(i)
                 navigator_times.append(self.env.time_limit)
@@ -65,8 +68,8 @@ class Explorer(object):
                 raise ValueError('Invalid end signal from environment')
 
             if update_memory:
-                if (imitation_learning and info == 'reach goal') or \
-                   (not imitation_learning and info in ['reach goal', 'collision']):
+                if (imitation_learning and isinstance(info, ReachGoal)) or \
+                   (not imitation_learning and (isinstance(info, ReachGoal) or isinstance(info, Collision))):
                     # only provide successful demonstrations in imitation learning
                     # only add positive(success) or negative(collision) experience in reinforcement learning
                     self.update_memory(states, actions, rewards, imitation_learning)
@@ -79,13 +82,13 @@ class Explorer(object):
         avg_nav_time = sum(navigator_times) / len(navigator_times)
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
-        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {}'.
+        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time, cumulative_reward/k))
         if self.navigator.visible and phase in ['val', 'test']:
             logging.info('Average time for peds to reach goal: {:.2f}'.format(average(ped_times)))
             logging.info('Average time for last ped to reach goal: {:.2f}'.format(average(last_ped_time)))
-            logging.info('Average times of navigator getting too close to peds per second: {:.2f}'.
-                         format(too_close/sum(navigator_times) if len(navigator_times) != 0 else 0))
+            logging.info('Frequency of being in danger: {:.2f} and average min separate distance in danger: {:.2f}'.
+                         format(too_close/sum(navigator_times)*self.navigator.time_step, average(min_dist)))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
@@ -103,12 +106,10 @@ class Explorer(object):
 
             # VALUE UPDATE
             if imitation_learning:
-                # in imitation learning, the value of state is defined based on the time to reach the goal
-                state = self.target_policy.transform(state)
-                # value = pow(self.gamma, (len(states) - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
                 # define the value of states in IL as cumulative discounted rewards, which is the same in RL
-                value = sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) if t >= i else 0
-                             for t, reward in enumerate(rewards)])
+                state = self.target_policy.transform(state)
+                value = sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
+                             if t >= i else 0 for t, reward in enumerate(rewards)])
             else:
                 if i == len(states) - 1:
                     # terminal state

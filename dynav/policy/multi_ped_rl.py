@@ -41,6 +41,8 @@ class MultiPedRL(CADRL):
                 if value > max_value:
                     max_value = value
                     max_action = action
+            if max_action is None:
+                raise ValueError('Value network is not well trained. ')
 
         if self.phase == 'train':
             self.last_state = self.transform(state)

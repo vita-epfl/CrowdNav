@@ -8,6 +8,7 @@ import rvo2
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
+from gym_crowd.envs.utils.info import *
 
 
 class CrowdSim(gym.Env):
@@ -304,9 +305,8 @@ class CrowdSim(gym.Env):
                 dy = self.peds[i].py - self.peds[j].py
                 dist = (dx**2 + dy**2)**(1/2) - self.peds[i].radius - self.peds[j].radius
                 if dist < 0:
-                    collision = True
+                    # detect collision but don't take peds' collision into account
                     logging.warning('Collision happens between pedestrians in step()')
-                    # logging.debug("Collision: distance between p{} and p{} is {:.2E}".format(i, j, dist))
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
@@ -315,25 +315,25 @@ class CrowdSim(gym.Env):
         if self.global_time >= self.time_limit - 1:
             reward = 0
             done = True
-            info = 'timeout'
+            info = ReachGoal()
         elif collision:
             reward = -0.25
             done = True
-            info = 'collision'
+            info = Collision()
         elif reaching_goal:
             reward = 1
             done = True
-            info = 'reach goal'
+            info = ReachGoal()
         elif self.navigator.visible and dmin < 0.2:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
             reward = (-0.1 + dmin / 2) * self.time_step
             done = False
-            info = 'too close'
+            info = Danger(dmin)
         else:
             reward = 0
             done = False
-            info = ''
+            info = Nothing()
 
         if update:
             # update all agents
