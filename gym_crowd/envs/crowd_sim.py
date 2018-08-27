@@ -8,7 +8,6 @@ import rvo2
 import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
-from gym_crowd.envs.utils.action import ActionXY
 
 
 class CrowdSim(gym.Env):
@@ -328,7 +327,7 @@ class CrowdSim(gym.Env):
         elif self.navigator.visible and dmin < 0.2:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
-            reward = -0.1 * self.time_step + dmin / 2
+            reward = (-0.1 + dmin / 2) * self.time_step
             done = False
             info = 'too close'
         else:

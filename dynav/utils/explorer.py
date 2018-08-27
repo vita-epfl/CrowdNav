@@ -56,9 +56,11 @@ class Explorer(object):
             elif info == 'collision':
                 collision += 1
                 collision_cases.append(i)
+                navigator_times.append(self.env.time_limit)
             elif info == 'timeout':
                 timeout += 1
                 timeout_cases.append(i)
+                navigator_times.append(self.env.time_limit)
             else:
                 raise ValueError('Invalid end signal from environment')
 
@@ -74,7 +76,7 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
-        avg_nav_time = sum(navigator_times) / len(navigator_times) if len(navigator_times) != 0 else 0
+        avg_nav_time = sum(navigator_times) / len(navigator_times)
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {}'.
@@ -103,7 +105,10 @@ class Explorer(object):
             if imitation_learning:
                 # in imitation learning, the value of state is defined based on the time to reach the goal
                 state = self.target_policy.transform(state)
-                value = pow(self.gamma, (len(states) - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
+                # value = pow(self.gamma, (len(states) - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
+                # define the value of states in IL as cumulative discounted rewards, which is the same in RL
+                value = sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) if t >= i else 0
+                             for t, reward in enumerate(rewards)])
             else:
                 if i == len(states) - 1:
                     # terminal state
