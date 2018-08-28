@@ -26,6 +26,7 @@
 % \usepackage{flexisym}
 \usepackage{dblfloatfix}    % To enable figures at the bottom of pag
 \usepackage{subcaption}
+\usepackage{mathtools}
 
 % TODO: french letter in name
 % \usepackage{inputenc} 
@@ -79,7 +80,7 @@ Earlier works split the prediction and planning into two separate steps, attempt
 
 As an alternative, the reinforcement learning method has been used to train a policy that implicitly encodes the interactions and cooperations among agents. While great progress has been made in recent works \cite{chen_decentralized_2016,chen_socially_2017,long_towards_2017,everett_motion_2018}, existing models are limited in two aspects. i) The impact of a group of moving agents on the navigator is usually treated by a simplified model, such as, a maximum or LSTM operation, which discards some detailed information that might be important for modeling the crowd impact. ii) They are focused on the one-way interaction from the crowd to the navigator but omit the interactions within the crowd that can affect the state of each neighboring agent. These limitations may degrade the capacity of cooperative planning-based reasoning in complex and crowded scenes. 
 
-In this work, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in complex scenes. Inspired by \cite{alahi_social_2016,gupta_social_2018,vemula_social_2017}, we first extract the features of the pairwise social interaction between the navigator and each neighbor and subsequently use the soft attention to learn the importance of these interactions. In addition, we encode the impact of intra-interaction on each agent by a local occupancy map. Based on a social state concatenating these interactions, a navigator is trained to navigate through a crowd and learn a value network, which is used to evaluate the scenarios consisting of various group interactions and provide a cooperative navigation policy. An extensive set of experiments shows that the robot controlled by our model can effectively learn to navigate through a crowd in a socially-compliant manner, outperforming the state-of-the-art methods. 
+In this work, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in complex scenes. Inspired by \cite{alahi_social_2016,gupta_social_2018,vemula_social_2017}, we first extract the features of the pairwise social interaction between the navigator and each neighbor and subsequently use the soft attention to learn the importance of these interactions. In addition, we encode the impact of intra-interaction on each agent by a local occupancy map. Based on a social state concatenating these interactions, a navigator is trained to navigate through a crowd and learn a value network, which is used to evaluate the scenarios consisting of various group interactions and provide a cooperative navigation policy. An extensive set of experiments shows that our approach can effectively learn to soically compliant policy in crowded spaces, outperforming the state-of-the-art methods. 
 
 \section{BACKGROUND} \label{sec:background} 
 
@@ -92,6 +93,43 @@ Social interaction,
 \vspace{2cm}
 
 \subsection{Problem Formulation}
+
+Consider a navigation task where the robot moves to an intended goal through a crowd of pedestrians $\{1,2,\dots,n\}$, which can be formulated as a decision making problem through a sequence of observations, action, and reward triplets\cite{chen_decentralized_2016,chen_socially_2017,everett_motion_2018}. Let $\bold{s}_t $ and $\tilde{\bold{s}}_t = [\tilde{\bold{s}}_t^1, \tilde{\bold{s}}_t^2, \dots, \tilde{\bold{s}}_t^n]$ denote the state of the robot and the pedestrians at time $t$ respectively. The full state of the robot is defined as $ \bold{s} = [\bold{p}, \bold{v}, r, \theta, \bold{p_g}, v_{pref}]$ and the observable state of a pedestrian is defined as $ \tilde{\bold{s}}_i = [\bold{p}, \bold{v}, r]$, where $\bold{p}=[p_x,p_y]$ and $\bold{v}=[v_x,v_y]$ are the vectors of location and velocity in the $2D$ plane, $r$ is the radius. We assume that the robot is aware of its heading angle $\theta$, goal position $\bold{p_g}$ and preferred speed $v_{pref}$ and the robot velocity can be achieved by the action command $\bold{u}_t$ immediately, $\bold{v}_t = \bold{u}_t$. 
+
+The desired navigation policy, $\pi : (\bold{s}_t, \tilde{\bold{s}}_t) \mapsto \bold{u}_t$, is to maximize the objective function without violating the constraints:
+\begin{subequations} \label{eq:optimization}
+\begin{align}
+& \underset{\pi(\bold{s}, \tilde{\bold{s}})}{\text{argmax}}
+& & \mathbb{E}[\sum_{t=0}^T R_t | \bold{s}_0, \tilde{\bold{s}}_0, \bold{p}_g, \pi] \label{eq:obj} \\
+& \text{subject to} 
+& & \bold{p}_T = \bold{p}_g \label{eq:goal} \\
+&&& \bold{p}_t = \bold{p}_{t-1} + \Delta t \pi(\bold{s}_{t-1}, \tilde{\bold{s}}_{t-1}) & t = 1, \dots, T \label{eq:kinematics} \\
+&&& \left\Vert \bold{p}_t - \tilde{\bold{p}}_t^i \right\Vert >= r + \tilde{r}^i & i = 1, \dots, n \label{eq:safety}
+\end{align}
+\end{subequations}
+where (\ref{eq:obj}) is the expected total reward that the robot can obtain in the navigation task, (\ref{eq:goal}) is the goal constraint, (\ref{eq:kinematics}) is the kinematics of the robot, (\ref{eq:safety}) is the safety constraint, $T$ is the time to reach the goal, and $\Delta t$ is the time step interval. 
+
+The reward function is designed to penalize the collision and uncomfortable distance and award the accomplishment of the navigation task, 
+\begin{equation}
+    R(\bold{s},\tilde{\bold{s}},\bold{u})= 
+\begin{dcases}
+    -??? & \text{if} ~~ d < 0 \\
+    -0.? + d? & \text{else if} ~~ d < 0.2 \\
+    1 & \text{else if} ~~ \bold{p}=\bold{p}_g \\
+    0 & \text{otherwise} 
+\end{dcases}
+\end{equation}
+where $d$ is the seperation distance between the robot and the pedestrian within the time interval $\Delta t$. 
+
+The problem (\ref{eq:optimization}) can be tackled by a reinforcement learning method, which seeks the optimal policy 
+\begin{equation}
+\pi^{*} = argmax [TODO]
+\end{equation}
+where $V^{*}$ is the optimal value function: 
+\begin{equation}
+V^{*} = 
+\end{equation}
+and $P $ is the transition dynamics. 
 
 \section{APPROACH} \label{sec:approach} 
 
