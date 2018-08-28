@@ -68,11 +68,18 @@ With the rapid growth of machine intelligence, robots are envisioned to expand h
 
 Navigation with social etiquettes is, however, a very challenging task. As communications among agents (e.g. robots, pedestrians, bikers) are not widely available, robots need to perceive and anticipate the evolution of the crowd that can involve complex interactions. Research works in trajectory prediction have proposed several hand-crafted or data-driven methods to model the agent-agent interactions \cite{helbing_social_1995,alahi_social_2016,vemula_social_2017,gupta_social_2018}. In a addition to the predictive model, how to integrate the interaction knowledge into the decision-making process poses another challenge as well. 
 
+\begin{figure} [h]
+  \captionsetup{font=small}
+  \includegraphics[width=0.2\textwidth]{figures/overview}
+  \caption{Illustration of the socially compliant navigation in a crowded scene.}
+  \label{fig:overview}
+\end{figure}
+
 Earlier works split the prediction and planning into two separate steps, attempting to identify a safe trajectory distant from the forecasted regions of the other agents for a few steps \cite{bennewitz_learning_2005,aoude_probabilistically_2013}. However, these untraversable regions can be very large in a crowded scene and cause the freezing robot problem \cite{trautman_unfreezing_2010}. To cope with it, jointly obstacle avoidance methods that plan the paths of all the interactive decision-makers simultaneously are proposed, in hope to make the navigation rooms cooperatively \cite{trautman_unfreezing_2010}. Though conceptually desirable, these methods suffer from the computational costs as well as the behavior stochasticity of the neighbors in practice. 
 
 As an alternative, the reinforcement learning method has been used to train a policy that implicitly encodes the interactions and cooperations among agents. While great progress has been made in recent works \cite{chen_decentralized_2016,chen_socially_2017,long_towards_2017,everett_motion_2018}, existing models are limited in two aspects. i) The impact of a group of moving agents on the navigator is usually treated by a simplified model, such as, a maximum or LSTM operation, which discards some detailed information that might be important for modeling the crowd impact. ii) They are focused on the one-way interaction from the crowd to the navigator but omit the interactions within the crowd that can affect the state of each neighboring agent. These limitations may degrade the capacity of cooperative planning-based reasoning in complex and crowded scenes. 
 
-In this work, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in the complex scenes. Draw aspiration from \cite{gupta_social_2018,vemula_social_2017}, we first extract the pair-wise interaction features between the navigator and its neighbors and subsequently employ the soft attention to learn the importance of these features. The impact of intra-interaction on each agent is represented by a local occupancy map. Based on a social state reflecting these interactions, the robot is trained to learn a value network, which is used to evaluate the scenarios consisting of a group of neighbors and produce a cooperative navigation policy. An extensive set of experiments shows that the robot controlled by our model can effectively learn to navigate through a crowd in a socially-compliant manner, outperforming the state-of-the-art methods. 
+In this work, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in complex scenes. Inspired by \cite{alahi_social_2016,gupta_social_2018,vemula_social_2017}, we first extract the features of the pairwise social interaction between the navigator and each neighbor and subsequently use the soft attention to learn the importance of these interactions. In addition, we encode the impact of intra-interaction on each agent by a local occupancy map. Based on a social state concatenating these interactions, a navigator is trained to navigate through a crowd and learn a value network, which is used to evaluate the scenarios consisting of various group interactions and provide a cooperative navigation policy. An extensive set of experiments shows that the robot controlled by our model can effectively learn to navigate through a crowd in a socially-compliant manner, outperforming the state-of-the-art methods. 
 
 \section{BACKGROUND} \label{sec:background} 
 
@@ -94,7 +101,7 @@ Formulation,
 
 Simulation experiments, 
 
-Real-world experiments, and vidoe. 
+Real-world experiments, and video. 
 
 \section{CONCLUSION} \label{sec:conclusion} 
 
