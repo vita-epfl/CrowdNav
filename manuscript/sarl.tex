@@ -64,37 +64,16 @@ This electronic document is a template. The various components of your paper [ti
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION} \label{sec:intro}
 
-With the rapid growth of machine intelligence, robots are envisioned to expand habitats from isolated environments to social spaces that are shared with humans and other embodied agents. Traditional approaches for robot navigation often consider this as a static or one-step reactive problem [TODO], resulting in short-sighted behaviors. In order to navigate through a crowd in a socially compliant manner, robot needs the ability to understand the others' behavior and take that into account while making its motion decision. 
+With the rapid growth of machine intelligence, robots are envisioned to expand habitats from isolated environments to social spaces that are shared with humans and other embodied agents. Traditional approaches for robot navigation often view the other moving agents as a static obstacle \cite{fox_dynamic_1997} or react to them through a one-step lookahead \cite{berg_reciprocal_2008}, resulting in short-sighted and unnatural behaviors. In order to navigate through a crowd in a socially compliant manner, the robot needs the ability to understand others' behaviors and take that into account while making its movement decision. 
 
-Autonomous navigation with the socially cooperative thinking is, however, a very challenging task. First, a model is required to perceive and predict others' behaviors, when communication is not widely available amoung agents. Pioneering works have proposed several methods to model the agent-agent interactions \cite{helbing_social_1995}. Though effective in simple scenarios, these hand-crafted feature functions can hardly generalize well to complex scene. Recent works try to learn the social interaction by a data-drive approach and present promising results \cite{alahi_social_2016,vemula_social_2017,gupta_social_2018}. 
+Navigation with social etiquettes is, however, a very challenging task. As communications among agents (e.g. robots, pedestrians, bikers) are not widely available, the robot needs to perceive and predict others' behaviors that may involve complex interactions. Research works in trajectory prediction have proposed several hand-crafted or data-driven methods to model the agent-agent interactions \cite{helbing_social_1995,alahi_social_2016,vemula_social_2017,gupta_social_2018}. 
+Given a predictive model, how to integrate the interaction knowledge into the decision-making process also poses a challenge. 
 
-Given a predictive model, how to integrate the interaction knowledge into the decision making process poses another challenge. 
+Earlier works split the prediction and planning into two separate steps, attempting to identify a safe trajectory far distant from the forecasted regions of the other agents \cite{bennewitz_learning_2005,aoude_probabilistically_2013}. However, the untraversable regions covering dynamic obstacles for a few steps can be very large when crowded and eventually cause the freezing robot problem \cite{trautman_unfreezing_2010}. To cope with it, jointly obstacle avoidance methods that plan the paths of the interactive decision-makers simultaneously are proposed, in hope to make rooms for each other cooperatively \cite{trautman_unfreezing_2010}. Though conceptually desirable, these methods suffer from the computational costs as well as the stochasticity of neighbors in practice. 
 
-A set of methods address this issue by splitting the prediction and planning [TODO]. 
+As an alternative, the reinforcement learning method has been used to train a policy that implicitly encodes the interactions and cooperations among agents. While great progress has been made in recent works \cite{chen_decentralized_2016,chen_socially_2017,long_towards_2017,everett_motion_2018}, their policy models are limited in two aspects. i) The impact of a group of other agents is treated by a simple model, for example, a maximum or LSTM operation over the individual impact, which limits the capacity of distinguishing the different importance for each individual neighbor and representing the joint group impact. ii) They omit the interactions within the neighboring agents when producing the joint neighboring state. These dimension reduction may loss critical interaction features and bounds the cooperative planning-based reasoning in complex and crowded scenes. 
 
-Recent research in 
-- Learn a planning model that incorporates social interaction \cite{chen_decentralized_2016,chen_socially_2017,everett_motion_2018}
-
-However, the feature-loss dimension reduction limits its capablity of planning-based reasoning in complex and crowded scenarios. 
-
-\vspace{2cm}
-
-In this work, we propose a model that can effectively address challenge of the social interaction reinforcement leanring. Draw aspiration from, we extend the social pooling module to spatial interaction, and embed it into the rl framework. The propsed model use 
-
-Models that effectively encodes the social interactions for rl. 
-
-\vspace{2cm}
-
-* Voila: here's our awesome solution (additionally) and here's how it works.
-
-Pair-wise interaction feature, soft attention, social pooling, local/global occupancy map.
-
-Capable of accurately estimating the value of the crowd scenarios with respect to social navigation, and effectively learning a socially-compliant navigation policy. 
-
-An extensive set of simulation experiments shows that our model outperforms state-of-the-art methods 
-
-
-\vspace{10cm}
+To address these challenges, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in the complex scenes. Draw aspiration from \cite{gupta_social_2018,vemula_social_2017}, we extract the pair-wise interaction feature between the navigator and the other nearby and employ the soft attention to represent the impact importance. The impact of the adjacent neighbors on a specific agent is modeled by a local occupancy map. Based on a social state reflecting these interactions, the robot is trained to learn the value network which is used to evaluate the scenarios confronting a group of the others controlled by some stochastic policies and navigate through them in a cooperative way. An extensive set of experiments shows that our model can effectively learn a socially-compliant navigation policy in the crowd, outperforming the state-of-the-art methods. 
 
 \section{BACKGROUND} \label{sec:background} 
 
