@@ -108,8 +108,9 @@ class Explorer(object):
             if imitation_learning:
                 # define the value of states in IL as cumulative discounted rewards, which is the same in RL
                 state = self.target_policy.transform(state)
-                value = sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
-                             if t >= i else 0 for t, reward in enumerate(rewards)])
+                # value = pow(self.gamma, (len(states) - 1 - i) * self.navigator.time_step * self.navigator.v_pref)
+                value = sum([pow(self.gamma, max(t - i, 0) * self.navigator.time_step * self.navigator.v_pref) * reward
+                             for t, reward in enumerate(rewards)])
             else:
                 if i == len(states) - 1:
                     # terminal state
