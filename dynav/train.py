@@ -47,7 +47,7 @@ def main():
     rl_weight_file = os.path.join(args.output_dir, 'rl_model.pth')
 
     # configure logging
-    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler = logging.FileHandler(log_file, mode='a')
     stdout_handler = logging.StreamHandler(sys.stdout)
     level = logging.INFO if not args.debug else logging.DEBUG
     logging.basicConfig(level=level, handlers=[stdout_handler, file_handler],
@@ -110,7 +110,10 @@ def main():
         il_epochs = train_config.getint('imitation_learning', 'il_epochs')
         il_learning_rate = train_config.getfloat('imitation_learning', 'il_learning_rate')
         trainer.set_learning_rate(il_learning_rate)
-        safety_space = train_config.getfloat('imitation_learning', 'safety_space')
+        if navigator.visible:
+            safety_space = 0
+        else:
+            safety_space = train_config.getfloat('imitation_learning', 'safety_space')
         il_policy = policy_factory[il_policy]()
         il_policy.multiagent_training = policy.multiagent_training
         il_policy.safety_space = safety_space

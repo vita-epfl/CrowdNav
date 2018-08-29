@@ -306,7 +306,7 @@ class CrowdSim(gym.Env):
                 dist = (dx**2 + dy**2)**(1/2) - self.peds[i].radius - self.peds[j].radius
                 if dist < 0:
                     # detect collision but don't take peds' collision into account
-                    logging.warning('Collision happens between pedestrians in step()')
+                    logging.debug('Collision happens between pedestrians in step()')
 
         # check if reaching the goal
         end_position = np.array(self.navigator.compute_position(action, self.time_step))
