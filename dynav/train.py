@@ -127,6 +127,11 @@ def main():
     navigator.set_policy(policy)
     navigator.print_info()
     trainer.set_learning_rate(rl_learning_rate)
+    # clean imitation learning experience and collect rl experience
+    # memory.clear()
+    # navigator.policy.set_epsilon(epsilon_start)
+    # explorer.run_k_episodes(100, 'train', update_memory=True, episode=0)
+    # logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
     episode = 0
     while episode < train_episodes:
         # epsilon-greedy

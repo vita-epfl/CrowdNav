@@ -23,3 +23,6 @@ class ReplayMemory(Dataset):
 
     def __len__(self):
         return len(self.memory)
+
+    def clear(self):
+        self.memory = list()

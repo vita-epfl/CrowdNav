@@ -59,19 +59,15 @@ class Explorer(object):
             elif isinstance(info, Collision):
                 collision += 1
                 collision_cases.append(i)
-                navigator_times.append(self.env.time_limit)
             elif isinstance(info, Timeout):
                 timeout += 1
                 timeout_cases.append(i)
-                navigator_times.append(self.env.time_limit)
             else:
                 raise ValueError('Invalid end signal from environment')
 
             if update_memory:
-                if (imitation_learning and isinstance(info, ReachGoal)) or \
-                   (not imitation_learning and (isinstance(info, ReachGoal) or isinstance(info, Collision))):
-                    # only provide successful demonstrations in imitation learning
-                    # only add positive(success) or negative(collision) experience in reinforcement learning
+                if isinstance(info, ReachGoal) or isinstance(info, Collision):
+                    # only add positive(success) or negative(collision) experience in experience set
                     self.update_memory(states, actions, rewards, imitation_learning)
 
             cumulative_reward += sum(rewards)
@@ -79,7 +75,7 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
-        avg_nav_time = sum(navigator_times) / len(navigator_times)
+        avg_nav_time = sum(navigator_times) / len(navigator_times) if len(navigator_times) != 0 else 0
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.

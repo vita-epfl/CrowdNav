@@ -12,7 +12,7 @@ def running_mean(x, N):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('log_file', type=str)
-    parser.add_argument('--plot_sr', default=True, action='store_true')
+    parser.add_argument('--plot_sr', default=False, action='store_true')
     parser.add_argument('--plot_cr', default=False, action='store_true')
     parser.add_argument('--plot_time', default=True, action='store_true')
     parser.add_argument('--plot_reward', default=True, action='store_true')
