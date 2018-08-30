@@ -367,7 +367,7 @@
 	author = {Fox, D. and Burgard, W. and Thrun, S.},
 	month = mar,
 	year = {1997},
-	keywords = {0.95 m/s, Acceleration, collision avoidance, Collision avoidance, dynamic window approach, Humans, mobile robots, Mobile robots, Motion control, motion dynamics, Motion planning, Orbital robotics, position control, RHINO, Robot control, Robot sensing systems, Robotics and automation, synchro-drives, synchros},
+	keywords = {collision avoidance, mobile robots, Mobile robots, 0.95 m/s, Acceleration, Collision avoidance, dynamic window approach, Humans, Motion control, motion dynamics, Motion planning, Orbital robotics, position control, RHINO, Robot control, Robot sensing systems, Robotics and automation, synchro-drives, synchros},
 	pages = {23--33},
 	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\2F4E5H86\\580977.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\5ARXP8US\\Fox 等。 - 1997 - The dynamic window approach to collision avoidance.pdf:application/pdf}
 }
@@ -382,5 +382,65 @@
 	year = {2008},
 	keywords = {collision avoidance, mobile robots, Collision avoidance, Motion control, Robotics and automation, Navigation, USA Councils, moving obstacles, Contracts, Multiagent systems, multi-robot systems, Assembly systems, Centralized control, collision-avoidance reasoning, Communication system control, densely populated environments, real-time multiagent navigation, reciprocal velocity obstacles, static obstacles},
 	pages = {1928--1935},
-	file = {IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\MV7ERYI4\\Berg 等。 - 2008 - Reciprocal Velocity Obstacles for real-time multi-.pdf:application/pdf}
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\TXGYC5T5\\4543489.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\MV7ERYI4\\Berg 等。 - 2008 - Reciprocal Velocity Obstacles for real-time multi-.pdf:application/pdf}
+}
+
+@inproceedings{van_den_berg_reciprocal_2011,
+	series = {Springer {Tracts} in {Advanced} {Robotics}},
+	title = {Reciprocal n-{Body} {Collision} {Avoidance}},
+	isbn = {978-3-642-19457-3},
+	abstract = {In this paper, we present a formal approach to reciprocal n-body collision avoidance, where multiple mobile robots need to avoid collisions with each other while moving in a common workspace. In our formulation, each robot acts fully independently, and does not communicate with other robots. Based on the definition of velocity obstacles [5], we derive sufficient conditions for collision-free motion by reducing the problem to solving a low-dimensional linear program. We test our approach on several dense and complex simulation scenarios involving thousands of robots and compute collision-free actions for all of them in only a few milliseconds. To the best of our knowledge, this method is the first that can guarantee local collision-free motion for a large number of robots in a cluttered workspace.},
+	language = {en},
+	booktitle = {Robotics {Research}},
+	publisher = {Springer Berlin Heidelberg},
+	author = {van den Berg, Jur and Guy, Stephen J. and Lin, Ming and Manocha, Dinesh},
+	editor = {Pradalier, Cédric and Siegwart, Roland and Hirzinger, Gerhard},
+	year = {2011},
+	keywords = {Collision Avoidance, Current Velocity, Mobile Robot, Obstacle Avoidance, Optimization Velocity},
+	pages = {3--19},
+	file = {Springer Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\LGZARTHP\\van den Berg 等。 - 2011 - Reciprocal n-Body Collision Avoidance.pdf:application/pdf}
+}
+
+@inproceedings{trautman_sparse_2017,
+	title = {Sparse interacting {Gaussian} processes: {Efficiency} and optimality theorems of autonomous crowd navigation},
+	shorttitle = {Sparse interacting {Gaussian} processes},
+	doi = {10.1109/CDC.2017.8263686},
+	abstract = {We study the sparsity and optimality properties of crowd navigation and find that existing techniques do not satisfy both criteria simultaneously: either they achieve optimality with a prohibitive number of samples or tractability assumptions make them fragile to catastrophe. For example, if the human and robot are modeled independently, then tractability is attained but the planner is prone to overcautious or overaggressive behavior. For sampling based motion planning of joint human-robot cost functions, for ntagents and T step lookahead, 0(22ntT) samples are needed for coverage of the action space. Advanced approaches statically partition the action space into free-space and then sample in those convex regions. However, if the human is moving into free-space, then the partition is misleading and sampling is unsafe: free space will soon be occupied. We diagnose the cause of these deficiencies - optimization happens over trajectory space - and propose a novel solution: optimize over trajectory distribution space by using a Gaussian process (GP) basis. We exploit the “kernel trick” of GPs, where a continuum of trajectories are captured with a mean and covariance function. By using the mean and covariance as proxies for a trajectory family we reason about collective trajectory behavior without resorting to sampling. The GP basis is sparse and optimal with respect to collision avoidance and robot and crowd intention and flexibility. GP sparsity leans heavily on the insight that joint action space decomposes into free regions; however, the decomposition contains feasible solutions only if the partition is dynamically generated. We call our approach 0(2nt)-sparse interacting Gaussian processes.},
+	booktitle = {2017 {IEEE} 56th {Annual} {Conference} on {Decision} and {Control} ({CDC})},
+	author = {Trautman, P.},
+	month = dec,
+	year = {2017},
+	keywords = {collective trajectory behavior, collision avoidance, Collision avoidance, covariance function, crowd intention, free-space, Gaussian process basis, Gaussian processes, GP sparsity, human-robot interaction, joint action space decomposes, joint human-robot cost functions, mean function, mobile robots, Navigation, optimality properties, optimisation, overaggressive behavior, overcautious behavior, Robots, sampling based motion planning, sparse interacting Gaussian processes, Trajectory, trajectory distribution space, Uncertainty, Zirconium},
+	pages = {327--334},
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\9KZBK2XW\\8263686.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\SHTYLFU2\\Trautman - 2017 - Sparse interacting Gaussian processes Efficiency .pdf:application/pdf}
+}
+
+@article{mirowski_learning_2016,
+	title = {Learning to {Navigate} in {Complex} {Environments}},
+	url = {http://arxiv.org/abs/1611.03673},
+	abstract = {Learning to navigate in complex environments with dynamic elements is an important milestone in developing AI agents. In this work we formulate the navigation question as a reinforcement learning problem and show that data efficiency and task performance can be dramatically improved by relying on additional auxiliary tasks leveraging multimodal sensory inputs. In particular we consider jointly learning the goal-driven reinforcement learning problem with auxiliary depth prediction and loop closure classification tasks. This approach can learn to navigate from raw sensory input in complicated 3D mazes, approaching human-level performance even under conditions where the goal location changes frequently. We provide detailed analysis of the agent behaviour, its ability to localise, and its network activity dynamics, showing that the agent implicitly learns key navigation abilities.},
+	urldate = {2018-08-30},
+	journal = {arXiv:1611.03673 [cs]},
+	author = {Mirowski, Piotr and Pascanu, Razvan and Viola, Fabio and Soyer, Hubert and Ballard, Andrew J. and Banino, Andrea and Denil, Misha and Goroshin, Ross and Sifre, Laurent and Kavukcuoglu, Koray and Kumaran, Dharshan and Hadsell, Raia},
+	month = nov,
+	year = {2016},
+	note = {arXiv: 1611.03673},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Computer Vision and Pattern Recognition, Computer Science - Machine Learning, Computer Science - Robotics},
+	file = {arXiv\:1611.03673 PDF:C\:\\Users\\yueji\\Zotero\\storage\\3CK3TLTH\\Mirowski 等。 - 2016 - Learning to Navigate in Complex Environments.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\yueji\\Zotero\\storage\\ALPVK4IQ\\1611.html:text/html}
+}
+
+@article{long_deep-learned_2017,
+	title = {Deep-{Learned} {Collision} {Avoidance} {Policy} for {Distributed} {Multiagent} {Navigation}},
+	volume = {2},
+	issn = {2377-3766},
+	doi = {10.1109/LRA.2017.2651371},
+	abstract = {High-speed, low-latency obstacle avoidance that is insensitive to sensor noise is essential for enabling multiple decentralized robots to function reliably in cluttered and dynamic environments. While other distributed multiagent collision avoidance systems exist, these systems require online geometric optimization where tedious parameter tuning and perfect sensing are necessary. We present a novel end-to-end framework to generate reactive collision avoidance policy for efficient distributed multiagent navigation. Our method formulates an agent's navigation strategy as a deep neural network mapping from the observed noisy sensor measurements to the agent's steering commands in terms of movement velocity. We train the network on a large number of frames of collision avoidance data collected by repeatedly running a multiagent simulator with different parameter settings. We validate the learned deep neural network policy in a set of simulated and real scenarios with noisy measurements and demonstrate that our method is able to generate a robust navigation strategy that is insensitive to imperfect sensing and works reliably in all situations. We also show that our method can be well generalized to scenarios that do not appear in our training data, including scenes with static obstacles and agents with different sizes. Videos are available at https://sites.google.com/view/deepmaca.},
+	number = {2},
+	journal = {IEEE Robotics and Automation Letters},
+	author = {Long, P. and Liu, W. and Pan, J.},
+	month = apr,
+	year = {2017},
+	keywords = {agent steering commands, cluttered environment, collision avoidance, Collision avoidance, deep learning, deep neural network mapping, deep-learned collision avoidance policy, distributed multiagent navigation, distributed robot systems, dynamic environment, high-speed low-latency obstacle avoidance, learning (artificial intelligence), movement velocity, multi-agent navigation, multi-robot systems, multiagent simulator, multiple decentralized robots, Navigation, neural nets, Noise measurement, noisy measurements, noisy sensor measurement, reactive collision avoidance policy, Robot sensing systems, robust navigation strategy, sensor noise, Velocity measurement},
+	pages = {656--663},
+	file = {IEEE Xplore Abstract Record:C\:\\Users\\yueji\\Zotero\\storage\\SJX5VJ5W\\7812634.html:text/html;IEEE Xplore Full Text PDF:C\:\\Users\\yueji\\Zotero\\storage\\YNVR4AAZ\\Long 等。 - 2017 - Deep-Learned Collision Avoidance Policy for Distri.pdf:application/pdf}
 }
