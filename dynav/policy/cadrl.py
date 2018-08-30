@@ -33,7 +33,9 @@ class CADRL(Policy):
         self.speed_samples = None
         self.rotation_samples = None
         self.action_space = None
-        self.joint_state_dim = 13
+        self.self_state_dim = 6
+        self.ped_state_dim = 7
+        self.joint_state_dim = self.self_state_dim + self.ped_state_dim
 
     def configure(self, config):
         self.set_common_parameters(config)

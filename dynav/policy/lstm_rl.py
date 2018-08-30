@@ -6,14 +6,14 @@ from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, self_state_dim, mlp_dims, ped_state_dim, lstm_hidden_dim):
+    def __init__(self, self_state_dim, ped_state_dim, mlp_dims, lstm_hidden_dim):
         super().__init__()
         self.self_state_dim = self_state_dim
         self.lstm_hidden_dim = lstm_hidden_dim
         self.mlp = nn.Sequential(nn.Linear(self_state_dim + lstm_hidden_dim, mlp_dims[0]), nn.ReLU(),
                                  nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
                                  nn.Linear(mlp_dims[1], 1))
-        self.lstm = nn.LSTM(ped_state_dim, lstm_hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(self_state_dim + ped_state_dim, lstm_hidden_dim, batch_first=True)
 
     def forward(self, state):
         """
@@ -24,10 +24,10 @@ class ValueNetwork(nn.Module):
         """
         size = state.shape
         self_state = state[:, 0, :self.self_state_dim]
-        ped_state = state[:, :, self.self_state_dim:]
+        # ped_state = state[:, :, self.self_state_dim:]
         h0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
         c0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        output, (hn, cn) = self.lstm(ped_state, (h0, c0))
+        output, (hn, cn) = self.lstm(state, (h0, c0))
         hn = hn.squeeze(0)
         joint_state = torch.cat([self_state, hn], dim=1)
         value = self.mlp(joint_state)
@@ -42,9 +42,7 @@ class LstmRL(MultiPedRL):
         self.set_common_parameters(config)
         mlp_dims = [int(x) for x in config.get('lstm_rl', 'mlp_dims').split(', ')]
         lstm_hidden_dim = config.getint('lstm_rl', 'lstm_hidden_dim')
-        self_state_dim = 6
-        ped_state_dim = self.joint_state_dim - self_state_dim
-        self.model = ValueNetwork(self_state_dim, mlp_dims, ped_state_dim, lstm_hidden_dim)
+        self.model = ValueNetwork(self.self_state_dim, self.ped_state_dim, mlp_dims, lstm_hidden_dim)
         self.multiagent_training = config.getboolean('lstm_rl', 'multiagent_training')
         logging.info('LSTM-RL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
