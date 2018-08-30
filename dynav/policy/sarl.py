@@ -13,7 +13,8 @@ class ValueNetwork(nn.Module):
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[2], mlp2_dims))
         self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims, 1))
-        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 1))
+        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 50), nn.ReLU(),
+                                       nn.Linear(50, 1))
         self.attention_weights = None
 
     def forward(self, state):
