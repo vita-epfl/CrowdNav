@@ -67,11 +67,11 @@ with Deep Reinforcement Learning}
 
 With the rapid growth of machine intelligence, robots are envisioned to expand habitats from isolated environments to social spaces that are shared with humans and other embodied agents. Traditional approaches for robot navigation often view the moving agents nearby as static obstacles \cite{fox_dynamic_1997} or react to them through a one-step lookahead \cite{berg_reciprocal_2008}, resulting in short-sighted and unsafe / unnatural behaviors. In order to navigate through a crowd in a socially compliant manner, robots need the ability to understand the behaviors of the others while making its movement decision. 
 
-Navigation with social etiquettes is, however, a very challenging task. As communications among agents (e.g. robots, pedestrians, bikers) are not widely available, robots need to perceive and anticipate the evolution of the crowd, which can involve complex interactions. Research works in trajectory prediction have proposed several hand-crafted or data-driven methods to model the agent-agent interactions \cite{helbing_social_1995,alahi_social_2016,vemula_social_2017,gupta_social_2018}. In a addition to the predictive model, how to integrate the interaction knowledge into the decision-making process poses another challenge as well. 
+Navigation with social etiquettes is, however, a very challenging task. As communications among agents (e.g. robots, pedestrians, bikers) are not widely available, robots need to by itself perceive and anticipate the evolution of the crowd, which can involve complex interactions. Research works in trajectory prediction have proposed several hand-crafted or data-driven methods to model the agent-agent interactions \cite{helbing_social_1995,alahi_social_2016,vemula_social_2017,gupta_social_2018}. However, even assuming we have a good predictive model, how to integrate the interaction knowledge into the decision-making process remains another challenge. 
 
-Earlier works split the prediction and planning into two separate steps, attempting to identify a safe trajectory distant from the forecasted regions of the other agents\cite{bennewitz_learning_2005,aoude_probabilistically_2013}. However, the probabilistic untraversable regions in the next steps the can be very large in a crowded scene, causing the freezing robot problem \cite{trautman_unfreezing_2010}. To cope with it, jointly obstacle avoidance methods that plan the paths of all the interactive decision-makers simultaneously are investigated, in hope to make navigation rooms for each other cooperatively \cite{trautman_unfreezing_2010}. Though conceptually desirable, these methods often suffer from the computational costs as well as the behavior stochasticity of the neighbors in practice. 
+Earlier works split the prediction and planning into two separate steps, attempting to identify a safe trajectory distant from the forecasted regions of the other agents \cite{bennewitz_learning_2005,aoude_probabilistically_2013}. However, the probabilistic untraversable regions in the next steps can be very large in a crowded scene, causing the freezing robot problem \cite{trautman_unfreezing_2010}. To cope with it, a large number of works have been focused on the joint obstacle avoidance methods that plan the paths of all the interactive decision-makers simultaneously, in hope to make navigation rooms for each other cooperatively \cite{trautman_unfreezing_2010}. Though conceptually desirable, these methods often suffer from the stochasticity of the neighbors' behaviors as well as the computational costs in practice. 
 
-As an alternative, the reinforcement learning method has been used to train a computationally efficient policy that implicitly encodes the interactions and cooperations among agents. While great progress has been made in recent works \cite{chen_decentralized_2016,chen_socially_2017,long_towards_2017,everett_motion_2018}, existing models are limited in two aspects. i) The joint impact of the nearby agents on the navigator is usually aggregated by a simplified model on top of the pairwise interactions, such as a maximin operator or LSTM, which can hurt the scalability to dense crowds. ii) They are focused on the one-way interactions from the crowd to the navigator but omit interactions within the crowd that can shape the hidden state of each neighboring agent and eventually affect the navigator. These limitations may degrade the performance of cooperative planning-based reasoning in complex and crowded scenes. 
+As an alternative, the reinforcement learning framework has been used to train a computationally efficient policy that implicitly encodes the interactions and cooperations among agents. While great progress has been made in recent works \cite{chen_decentralized_2016,chen_socially_2017,long_towards_2017,everett_motion_2018}, existing models are limited in two aspects. i) The joint impact of the neighboring agents on the navigator is usually modeled by a simplified aggregation of the pairwise interactions, such as a Maximin operator or LSTM, which can hurt the scalability of the encoded cooperation to dense crowds severely. ii) They are focused on the one-way interactions from the crowd to the navigator but omit the interactions within the crowd that essentially shape the hidden state of each interactive neighbor and eventually affect the navigator. These limitations may degrade the performance of cooperative planning-based reasoning in complex and crowded scenes. 
 
 \begin{figure} [t]
   \captionsetup{font=small}
@@ -80,22 +80,22 @@ As an alternative, the reinforcement learning method has been used to train a co
   \label{fig:overview}
 \end{figure}
 
-In this work, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in complex scenes. Inspired by \cite{alahi_social_2016,gupta_social_2018,vemula_social_2017}, we first extract the features of the pairwise social interaction between the navigator and each of its neighbors and subsequently use the soft attention to learn the importance of these interactions. In addition, we encode the impact of intra-interaction on each agent by a local occupancy map. Based on the weighted aggregation of each pair of the interactions, our model can naturally take an unlimited number of neighboring agents into account and provide a good understanding of the crowd cooperation in the form of value estimation, from which the action command can be derived. An extensive set of experiments shows that our approach can effectively learn to perceive the behaviors of the other agents and navigate through them in a socially compliant manner, outperforming the state-of-the-art methods. 
+In this work, we propose a novel pooling module for the reinforcement learning method, aiming to learn a socially compliant navigation policy in complex scenes. Inspired by \cite{alahi_social_2016,gupta_social_2018,vemula_social_2017}, we first extract the features of the pairwise social interaction between the navigator and each of its neighbors and subsequently use the soft attention to learn the importance of these interactions. In addition, we encode the impact of intra-interaction on each agent by a local occupancy map. Based on a weighted aggregation, our model can naturally take an unlimited number of neighboring agents into account and provide a good understanding of the crowd in the form of value estimation, from which a cooperative action command can be derived at each step. An extensive set of experiments shows that our approach can effectively learn to perceive the behaviors of the other agents and navigate through them in a socially compliant manner, outperforming the state-of-the-art methods. 
 
 \section{BACKGROUND} \label{sec:background} 
 
 \subsection{Related Work}
 
-Existing works on cooperative navigation have been extensively focused on the joint obstacle avoidance. The reactive methods such as RVO \cite{berg_reciprocal_2008} and ORCA \cite{van_den_berg_reciprocal_2011} seek the joint collision-free velocities under the reciprocal assumption, which have been successfully applied to the distributed multi-agent systems. Interacting Gaussian Process (IGP) models the trajectory of each agent as an individual Gaussian Process and introduces an interaction potential to couple the individual GP for collaboration in a principled statistical way. The main challenge for these model is that the hand-crafted functions cannot general well to the human-like cooperations in various scenarios. 
+Existing works on cooperative navigation have been extensively focused on the joint obstacle avoidance. The reactive methods such as RVO \cite{berg_reciprocal_2008} and ORCA \cite{van_den_berg_reciprocal_2011} seek the joint collision-free velocities under the reciprocal assumption, which have been successfully applied to the distributed multi-agent systems. The Interacting Gaussian Process (IGP) method models the trajectory of each agent as an individual Gaussian Process and introduces an interaction potential to couple the individual GP in a principled statistical way. The main challenge for these model is that the hand-crafted functions cannot generalize well to the human-like cooperations in various scenarios. 
 
-Another line of works uses the imitation learning approach to program a socially compliant policy from the demonstrations of good cooperative behaviors. \cite{tai_socially_2017} and \cite{long_deep-learned_2017} developed policies that map raw depth images and lidar measurements to actions respectively by directly mimicking the demonstrations. Beyond behavioral cloning, \cite{roy_feature-based_2013, kretzschmar_socially_2016, pfeiffer_predicting_2016} learn the underlying cooperation features from the pedestrians observations by means of the maximum entropy learning inverse reinforcement learning method. The learning outcomes in these works often highly depend on the scale and quality of demonstrations, which is not only resources consuming but also set an upper bound to the performance of the learned policy. In our work, we adopt the imitation learning approach to warm start our model training, and subsequently refine it with reinforcement learning. 
+Another line of works uses the imitation learning approach to program a socially compliant policy from the demonstrations of good cooperative behaviors. \cite{tai_socially_2017} and \cite{long_deep-learned_2017} developed policies that map raw depth images and lidar measurements to actions respectively by directly mimicking the demonstrations. Beyond behavioral cloning, \cite{roy_feature-based_2013, kretzschmar_socially_2016, pfeiffer_predicting_2016} learn the underlying cooperation features from the pedestrians data by means of the maximum entropy learning inverse reinforcement learning method. The learning outcomes in these works often highly depend on the scale and quality of demonstrations, which is not only resources consuming but also constrained by an upper bound from the demonstrator. In our work, we adopt the imitation learning approach to warm start our model training and subsequently refine it with reinforcement learning. 
 
-Deep reinforcement learning has been intensively studied in the recent years and applied to various fields since \cite{mnih_human-level_2015} successfully stabilized it for mastering games from train-and-error experiences. With respect to the robot navigation, \cite{tai_virtual--real_2017,long_towards_2017} use the deep reinforcement learning approach to train sensorimotor policies in static and dynamic environments, while \cite{chen_decentralized_2016,chen_socially_2017,everett_motion_2018} develop social policies with the agent-level state information. Specifically, \cite{chen_decentralized_2016} adapts their formulation for two-agents to the multi-agent cases through a maxmin operation that picks up the best action against the worst-case value rather than the joint value of the crowd. As an extension, \cite{everett_motion_2018} use the LSTM to aggregate each pair of the interactions sequentially in a reverse order of the distance to the navigator. In contrast to these simplifications, our model intends to capture an effective representation for the joint impact of the crowd on cooperative navigation. 
+Deep reinforcement learning has been intensively studied in the recent years and applied to various fields since \cite{mnih_human-level_2015} successfully stabilized it for mastering games from train-and-error experiences. With respect to the robot navigation, \cite{tai_virtual--real_2017,long_towards_2017} use the deep reinforcement learning approach to train sensorimotor policies in static and dynamic environments, while \cite{chen_decentralized_2016,chen_socially_2017,everett_motion_2018} develop social policies with the agent-level state information. Specifically, \cite{chen_decentralized_2016} adapts their formulation from the two-agent to the multi-agent cases through a Maximin operation that picks up the best action against the worst-case value rather than the joint value of the crowd. As an extension, \cite{everett_motion_2018} use the LSTM to aggregate the state of each neighbor sequentially in a reverse order of the distance to the navigator. In contrast to these simplifications, we propose a novel neural network model to capture the joint impact of the crowd with fine-grained information. 
 
-The techniques for learning good representation have been strongly reshaped by the renaissance of neural networks, which has shown powerful capacities on the tasks that human brains excel at, such as visual or speech recognition. One of the important attempts to model the human interaction with neural networks is the Social LSTM, which couples the states of the agents within a neighborhood with occupancy maps. The pooling module was further extended to several structures for improved attention, cooperation as well as computational efficiency \cite{fernando_soft_2017, gupta_social_2018}. Another set of works models the social interactions through spatio-temporal graphs, where attention is recently introduced to learn the relative importance of each neighboring agent \cite{vemula_social_2017}. Our work built upon these works propose a novel social pooling module with self-attention and intra-interactions, with the target to learn a better interaction representation for social navigation. 
+A variety of deep neural networks have been proposed in recent years for modeling the human-human interactions and demonstrated competitive results\cite{becker_evaluation_2018}. One of the inspiring attempts is the Social LSTM, which models each individual by an LSTM and couple the states of agents within in a neighborhood through a social pooling module \cite{alahi_social_2016}. The pooling module is later extended to several structures for improved the attention, cooperation as well as computational efficiency \cite{fernando_soft_2017, gupta_social_2018}. Another set of works models the social interactions through spatio-temporal graphs, where attention is also introduced to learn the relative importance of each neighboring agent \cite{vemula_social_2017}. Our work built upon these models designs a special pooling module to encode cooperative behaviors for the socially compliant navigation. 
 
 Attention \cite{vaswani_attention_2017}
-[TODO]
+[TODO?]
 
 \subsection{Problem Formulation}
 
@@ -155,7 +155,7 @@ The following presents our problem to reason multiagent collision avoidance prob
 
 \begin{figure}[thpb]
   \centering
-    \framebox{\includegraphics[scale=0.2]{figures/model.png}}
+    \framebox{\includegraphics[scale=0.1]{figures/model.png}}
   %\includegraphics[scale=1.0]{figurefile}
   \caption{Model Architecture. (Description)}
   \label{figurelabel}
@@ -171,8 +171,6 @@ Since predicting pedestrians' action without jointly considering the navigator's
 \subsection{Attention Mechanism}
 (how the attention model works and formulation)
 
-
-
 \section{RESULTS}
 
 \subsection{Implementation Details}
@@ -181,7 +179,6 @@ In this work, we choose ORCA [] as the policy for pedestrians. ORCA is a reactio
 The training and testing cases are all crossing scenarios, where agents are positioned on a circle of certain radius and their goals are on the opposite side of circle. Perturbation is added to the x and y coordinates of pedestrians to simulate varying time differences when two agents meet. In test, there are 500 randomly generated test cases.
 
 Compared to multiagent training, in non-reciprocal setting, it's harder to evaluate the policy since in the most extreme case, if one agent goes straight to his goal without slowing down, then all the agents on his way can simply give their paths to him, which results in the shortest time for him to reach goal. But for the other agents, their behaviors will be influenced by that agent. Thus, we first conducted experiments on non-cooperative setting, where the navigator is invisible and it has to learn how to navigate seamlessly. We did the same experiments with the navigator visible and added another metrics to measure the cooperativeness of the navigator. 
-
 
 (timing requirements)
 
@@ -199,7 +196,6 @@ We considered five approaches: one reaction-based, five learning based reinforce
 
 \end{itemize}
 
-
 \subsection{Measurement Metrics}
 
 \begin{itemize}
@@ -214,7 +210,6 @@ We considered five approaches: one reaction-based, five learning based reinforce
 \end{itemize}
 
 \subsection{Performance Comparison on Non-cooperative Agents}
-
 
 \begin{table}[h]
 \caption{Comparison of all the methods}
@@ -239,8 +234,6 @@ OM-SARL &  &  &\\
 \end{tabular}
 \end{center}
 \end{table}
-
-
 
 \subsection{Performance Comparison on Cooperative Agents}
 
@@ -268,9 +261,7 @@ OM-SARL  &  & & & &\\
 \end{center}
 \end{table}
 
-
 \subsection{Hardware Experiment}
-
 
 \section{CONCLUSION}
 
@@ -284,7 +275,7 @@ OM-SARL  &  & & & &\\
 
 % \section{CONCLUSION} \label{sec:conclusion} 
 
-In this paper, 
+% In this paper, 
 
 % \subsection{System Structure}
 
@@ -297,7 +288,7 @@ In this paper,
 
 \section*{ACKNOWLEDGMENT}
 
-We would like to thank ... 
+% We would like to thank ... 
 
 \bibliographystyle{IEEEtran}
 \bibliography{vita-social-nav}
