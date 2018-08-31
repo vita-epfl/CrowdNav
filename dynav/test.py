@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--visualize', default=False, action='store_true')
     parser.add_argument('--phase', type=str, default='test')
     parser.add_argument('--test_case', type=int, default=None)
+    parser.add_argument('--square', default=False, action='store_true')
     parser.add_argument('--video_file', type=str, default=None)
     parser.add_argument('--traj', default=False, action='store_true')
     parser.add_argument('--hist', default=False, action='store_true')
@@ -60,6 +61,10 @@ def main():
     env_config.read(env_config_file)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
+    if args.square:
+        env.test_sim = 'square_crossing'
+    else:
+        env.test_sim = 'circle_crossing'
     navigator = Navigator(env_config, 'navigator')
     navigator.set_policy(policy)
     env.set_navigator(navigator)

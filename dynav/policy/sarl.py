@@ -13,8 +13,9 @@ class ValueNetwork(nn.Module):
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[2], mlp2_dims))
-        self.mlp2 = nn.Sequential(nn.Linear(self.self_state_dim, mlp2_dims, 1))
-        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 1))
+        self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims + self.self_state_dim, 1))
+        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 100), nn.ReLU(),
+                                       nn.Linear(100, 1))
         self.attention_weights = None
 
     def forward(self, state):
@@ -28,7 +29,7 @@ class ValueNetwork(nn.Module):
         self_state = state[:, 0, :self.self_state_dim]
         state = torch.reshape(state, (-1, size[2]))
         mlp1_output = self.mlp1(state)
-        scores = torch.reshape(self.attention(mlp1_output.detach()), (size[0], size[1], 1)).squeeze(dim=2)
+        scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
         # for visualization purpose
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
@@ -37,6 +38,7 @@ class ValueNetwork(nn.Module):
         joint_state = torch.cat([self_state, weighted_feature], dim=1)
         value = self.mlp2(joint_state)
         return value
+
 
 
 class SARL(MultiPedRL):
