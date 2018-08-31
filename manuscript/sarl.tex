@@ -87,24 +87,17 @@ In this work, we propose a novel pooling module for the reinforcement learning m
 
 \subsection{Related Work}
 
-Existing works on cooperative navigation have been extensively focused on the joint obstacle avoidance. Reactive policies such as RVO \cite{berg_reciprocal_2008} and ORCA \cite{van_den_berg_reciprocal_2011} seek the joint collision-free velocities under the reciprocal assumption, which have been successfully applied to the distributed multi-agent systems. \cite{trautman_unfreezing_2010} propose a noval Interacting Gaussian Process (IGP), which models the trajectory of each individual as a Gaussian Process and introduces an interaction potential to couple the individual GP for collaboration. The polices built upon hand-crafted cooperation models, however, sometimes fail to obey the human-like patterns in crowded scenarios.
+Existing works on cooperative navigation have been extensively focused on the joint obstacle avoidance. Reactive policies such as RVO \cite{berg_reciprocal_2008} and ORCA \cite{van_den_berg_reciprocal_2011} seek the joint collision-free velocities under the reciprocal assumption, which have been successfully applied to the distributed multi-agent systems. \cite{trautman_unfreezing_2010} propose a novel Interacting Gaussian Process (IGP), which models the trajectory of each individual as a Gaussian Process and introduces an interaction potential to couple the individual GP for collaboration. The polices built upon hand-crafted cooperation models, however, sometimes fail to obey the human-like patterns in crowded scenarios.
 
-Another line of works uses the imitation learning approach to program a socially compliant policy from demonstrations. \cite{tai_socially_2017} and \cite{long_deep-learned_2017} developed policies that map raw depth images and lidar measurements to actions respectively by directly mimicing the demonstrations. Instead of behaviorior cloning, maximum entropy learning inverse reinforcement learning method was used to learn the features of the observed human behaviors \cite{roy_feature-based_2013, kretzschmar_socially_2016, pfeiffer_predicting_2016}. The learned model of these methods highly depend on the quality of demonstrations, which can be very resources consuming. 
+Another line of works uses the imitation learning approach to program a socially compliant policy from demonstrations. \cite{tai_socially_2017} and \cite{long_deep-learned_2017} developed policies that map raw depth images and lidar measurements to actions respectively by directly mimicking the demonstrations. Different from behavioral cloning, \cite{roy_feature-based_2013, kretzschmar_socially_2016, pfeiffer_predicting_2016} learn the underlying navigation features of the observed human behaviors by means of the maximum entropy learning inverse reinforcement learning method. The learning outcomes in these works are often highly depend on the scale and quality of demonstrations, which is not only resources consuming but also upper bound the performance of the learned policy. In our work, we adopt the imitation learning approach to initialize our model, and subsequently refine it by reinforcement learning. 
 
-Reinforcement leanring for navigation in dynamic enviroment. 
-- Raw sensor input
-- Agent-level state
-Our we extend social interaction model for the agent-level state 
+Deep reinforcement learning has been intensively studied and applied to various fields, since \cite{mnih_human-level_2015} successfully stabilized the combination of the reinforcement learning and deep learning for mastering skills from the trial-and-error experiences. With respect to the robot navigation, \cite{tai_virtual--real_2017,long_towards_2017} used the deep reinforcement learning approach to learn the policy from the raw sensor input in static and dynamic environments, while \cite{chen_decentralized_2016,chen_socially_2017,everett_motion_2018} develop social policies with the agent-level state representation, in which a value function is learned to encode the social cooperations. Specifically, \cite{chen_decentralized_2016} pick up the maximum value among the pairwise interactions between the navigator and other agents to present the overall impact of the crowd, while \cite{everett_motion_2018} use the LSTM as the aggregator that processes the pairwise interaction as input in the reverse order of the distance. In contrast to these simplifications, we present an expressive neural network model to learn the joint impact of the crowd on a navigator. 
 
+Deep neural networks have shown strong capacities for learning good representations on the tasks that human brains excel at, such as visual or speech recognition. To model the interactions among agents, \cite{alahi_social_2016} designs a pooling module coupling the states of the agents in a neighborhood with occupancy maps, which was further extended to similar structures to encode cooperative behavior \cite{fernando_soft_2017, gupta_social_2018}. Another set of works model the strong spatio-temporal interactions through graphs, where attention is recently introduced to learn the importance of the neighboring agents \cite{vemula_social_2017}. Our work built upon these works propose a novel social pooling with self-attention and intra-interactions, with the target to learn a better interaction representation for social navigation. 
+
+Attention \cite{vaswani_attention_2017}
 \vspace{2cm}
 
-Social representation is intensively studied by the deep learning approach in recent years. 
-- LSTM
-- Graph 
-- Soft attention 
-Our work extend the social pooling from sl prediction to rl planning
-
-\vspace{2cm}
 
 \subsection{Problem Formulation}
 
@@ -147,7 +140,7 @@ where $\gamma \in [0,1)$ is a discount factor, $P(\bold{s}_t^{jn},\bold{a_t},\bo
 \begin{figure} [t]
   \captionsetup{font=small}
   \includegraphics[width=0.5\textwidth]{figures/vf} 
-  \caption{TODO: Value function estimation for a navigation task in a dense crowd.}
+  \caption{TODO: Value function estimation for a navigation task in a densely popullated crowd.}
   \label{fig:overview}
 \end{figure}
 
@@ -158,16 +151,140 @@ V^*(\bold{s}_t^{jn}) = \sum_{t}^T \gamma^{t \cdot v_{pref}} R_t(\bold{s}_t^{jn},
 A key challenge for solving the problem (\ref{eq:RL}) is to design an expressive model that can accurately approximate the optimal value function $V^{*}$ encoding the socially cooperative path planning among agents. Previous work on this track made simplied assumptions on the agent-agent interactions, which weaken the accuracy of value estimation for a densely populated scene. The goal of this work is to develop an improved social pooling module integrated into the framework for learning a social compliant policy. 
 
 \section{APPROACH} \label{sec:approach} 
+Two levels of motivation: we use MLP for planning and the input is navigator's state and other pedestrians' information. But since the number of peds varies and the network takes fixed size input. [GA3C-CADRL] proposed to solve the problem by using LSTM and feeds the sorted pedestrian's state in the decreasing order of the distance to the ped. But the distance doesn't necessarily mean the importance of pedestrian. A better way is for agent to reason the relation pairwise with each pedestrian, so it knows which pedestrian he should attend to. When reason other agent's behavior, it's always better to  
 
-Formulation, 
+The following presents our problem to reason multiagent collision avoidance problem. The whole model consists of three modules, and from low-level to high-level they are ped-ped interaction module, attention module and navigator planning module. The first two modules are specifically designed to better reason pedestrians' future behavior and encode the information of varying number of pedestrians.
 
-\section{RESULTS} \label{sec:results} 
+\begin{figure}[thpb]
+  \centering
+    \framebox{\includegraphics[scale=0.2]{figures/model.png}}
+  %\includegraphics[scale=1.0]{figurefile}
+  \caption{Model Architecture. (Description)}
+  \label{figurelabel}
+\end{figure}
 
-Simulation experiments, 
+\subsection{Parameterization}
 
-Real-world experiments, and video. 
 
-\section{CONCLUSION} \label{sec:conclusion} 
+\subsection{Ped-ped Interaction Modeling}
+(describe why the occupancy map is introduced)
+Since predicting pedestrians' action without jointly considering the navigator's action usually leads to freezing robot problem. So in this module, both the information of pedestrian, its surrounding environment and navigator's state are taken as input. We use multilayer perceptron to reason that pedestrian's future action give the observation of other agents. And this learned information can be further used for navigator's action planning. Since the number of pedestrians is varying and the neural network takes fixed size tensor input. One way to handling the varying number agents is to use LSTM model or attention model, but then the computation will be $O(n^2)$, which is not very efficient. So here we represent the knowledge of nearby pedestrian's states in an local occupancy map. The local occupancy map is centered at that pedestrian and aligned with its velocity. Each cell of the grid is represented as the average velocity of pedestrians who occupy that cell. 
+
+\subsection{Attention Mechanism}
+(how the attention model works and formulation)
+
+
+
+\section{RESULTS}
+
+\subsection{Implementation Details}
+In this work, we choose ORCA [] as the policy for pedestrians. ORCA is a reaction-based collision avoidance algorithm and it can guarantee local collision avoidance. And we integrate the public available https://github.com/snape/RVO2 into our framework. To better simulate the real world distribution of pedestrian behaviors and avoid the identical behaviors of pedestrians, the parameters of ORCA for each pedestrians is sampled from certain distribution. So both radius, preferred speed varies from pedestrian to pedestrian.
+
+The training and testing cases are all crossing scenarios, where agents are positioned on a circle of certain radius and their goals are on the opposite side of circle. Perturbation is added to the x and y coordinates of pedestrians to simulate varying time differences when two agents meet. In test, there are 500 randomly generated test cases.
+
+Compared to multiagent training, in non-reciprocal setting, it's harder to evaluate the policy since in the most extreme case, if one agent goes straight to his goal without slowing down, then all the agents on his way can simply give their paths to him, which results in the shortest time for him to reach goal. But for the other agents, their behaviors will be influenced by that agent. Thus, we first conducted experiments on non-cooperative setting, where the navigator is invisible and it has to learn how to navigate seamlessly. We did the same experiments with the navigator visible and added another metrics to measure the cooperativeness of the navigator. 
+
+
+(timing requirements)
+
+\subsection{Methods Evaluated}
+We considered five approaches: one reaction-based, five learning based reinforcement learning algorithms but with different state learning models.
+
+\begin{itemize}
+
+\item ORCA
+\item CADRL
+\item LSTM-RL
+\item SRL
+\item SARL
+\item OM-SARL
+
+\end{itemize}
+
+
+\subsection{Measurement Metrics}
+
+\begin{itemize}
+
+\item Success rate.
+\item Collision rate.
+\item Extra time for navigator to reach goal(ET-NAV).
+\item Average extra time for pedestrians to reach goal(ET-AVG-PED).
+\item Extra time for last pedestrian to reach its goal(ET-LAST-PED).
+\item Average times of being too close to other pedestrians per second.
+
+\end{itemize}
+
+\subsection{Performance Comparison on Non-cooperative Agents}
+
+
+\begin{table}[h]
+\caption{Comparison of all the methods}
+\label{table_example}
+\begin{center}
+\begin{tabular}{|c||c|c|c|}
+\hline
+Methods & Success rate & Collision rate & ET-NAV\\
+\hline
+ORCA &  &  &\\
+\hline
+CADRL &  &  &\\
+\hline
+LSTM-RL &  &  &\\
+\hline
+SRL &  &  &\\
+\hline
+SARL &  &  &\\
+\hline
+OM-SARL &  &  &\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+
+\subsection{Performance Comparison on Cooperative Agents}
+
+\begin{table}[h]
+\caption{Comparison of all the methods}
+\label{table_example}
+\begin{center}
+\begin{tabular}{|c||c|c|c|c|c|}
+\hline
+Methods & Success rate & Collision rate & ET-NAV & ET-AVG-PED & Too-close/s\\
+\hline
+ORCA &  &  & & & \\
+\hline
+CADRL &  &  & &  &\\
+\hline
+LSTM-RL &  &  & & &\\
+\hline
+SRL &  &  & & &\\
+\hline
+SARL &  & & & &\\
+\hline
+OM-SARL  &  & & & &\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\subsection{Hardware Experiment}
+
+
+\section{CONCLUSION}
+
+% Formulation, 
+
+% \section{RESULTS} \label{sec:results} 
+
+% Simulation experiments, 
+
+% Real-world experiments, and video. 
+
+% \section{CONCLUSION} \label{sec:conclusion} 
 
 In this paper, 
 
