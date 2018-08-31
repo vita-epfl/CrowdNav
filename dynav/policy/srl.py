@@ -5,14 +5,16 @@ from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, self_state_dim, ped_state_dim, mlp1_dims, mlp2_dims):
+    def __init__(self, self_state_dim, ped_state_dim, mlp1_dims, mlp2_dims, global_state_dim):
         super().__init__()
         self.self_state_dim = self_state_dim
         self.mlp1 = nn.Sequential(nn.Linear(self_state_dim + ped_state_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[2], mlp2_dims))
-        self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims + self.self_state_dim, 1))
+                                  nn.Linear(mlp1_dims[1], global_state_dim))
+        self.mlp2 = nn.Sequential(nn.Linear(global_state_dim + self.self_state_dim, mlp2_dims[0]), nn.ReLU(),
+                                  nn.Linear(mlp2_dims[0], mlp2_dims[1]), nn.ReLU(),
+                                  nn.Linear(mlp2_dims[1], mlp2_dims[2]), nn.ReLU(),
+                                  nn.Linear(mlp2_dims[1], 1))
 
     def forward(self, state):
         """
@@ -37,7 +39,8 @@ class SRL(MultiPedRL):
     def configure(self, config):
         self.set_common_parameters(config)
         mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
-        mlp2_dims = config.getint('srl', 'mlp2_dims')
-        self.model = ValueNetwork(self.self_state_dim, self.ped_state_dim, mlp1_dims, mlp2_dims)
+        mlp2_dims = [int(x) for x in config.get('srl', 'mlp2_dims').split(', ')]
+        global_state_dim = config.getint('srl', 'global_state_dim')
+        self.model = ValueNetwork(self.self_state_dim, self.ped_state_dim, mlp1_dims, mlp2_dims, global_state_dim)
         self.multiagent_training = config.getboolean('srl', 'multiagent_training')
         logging.info('SRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))

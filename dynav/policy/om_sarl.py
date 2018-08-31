@@ -17,8 +17,11 @@ class OmSarl(SARL):
         self.cell_size = config.getfloat('om_sarl', 'cell_size')
 
         mlp1_dims = [int(x) for x in config.get('om_sarl', 'mlp1_dims').split(', ')]
-        mlp2_dims = config.getint('om_sarl', 'mlp2_dims')
-        self.model = ValueNetwork(self.joint_state_dim + self.cell_num ** 2, mlp1_dims, mlp2_dims)
+        mlp2_dims = [int(x) for x in config.get('om_sarl', 'mlp2_dims').split(', ')]
+        attention_dims = [int(x) for x in config.get('om_sarl', 'attention_dims').split(', ')]
+        global_state_dim = config.getint('om_sarl', 'global_state_dim')
+        self.model = ValueNetwork(self.joint_state_dim, self.ped_state_dim, mlp1_dims, mlp2_dims,
+                                  attention_dims, global_state_dim, input_dim=self.joint_state_dim + self.cell_num ** 2)
         self.multiagent_training = config.getboolean('om_sarl', 'multiagent_training')
         logging.info('OM-SARL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
 
