@@ -9,12 +9,13 @@ class ValueNetwork(nn.Module):
     def __init__(self, self_state_dim, ped_state_dim, mlp1_dims, mlp2_dims):
         super().__init__()
         self.self_state_dim = self_state_dim
+        self.mlp2_dims = mlp2_dims
         self.mlp1 = nn.Sequential(nn.Linear(self_state_dim + ped_state_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], mlp1_dims[2]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[2], mlp2_dims))
         self.mlp2 = nn.Sequential(nn.Linear(mlp2_dims + self.self_state_dim, 1))
-        self.attention = nn.Sequential(nn.Linear(mlp2_dims, 100), nn.ReLU(),
+        self.attention = nn.Sequential(nn.Linear(mlp2_dims * 2, 100), nn.ReLU(),
                                        nn.Linear(100, 1))
         self.attention_weights = None
 
@@ -29,7 +30,12 @@ class ValueNetwork(nn.Module):
         self_state = state[:, 0, :self.self_state_dim]
         state = torch.reshape(state, (-1, size[2]))
         mlp1_output = self.mlp1(state)
-        scores = torch.reshape(self.attention(mlp1_output), (size[0], size[1], 1)).squeeze(dim=2)
+        # calculate the global state
+        global_state = torch.mean(torch.reshape(mlp1_output, (size[0], size[1], -1)), 1, keepdim=True)
+        global_state = torch.reshape(global_state.expand((size[0], size[1], self.mlp2_dims)), (-1, self.mlp2_dims))
+        # concatenate pairwise interaction with global state to compute attention score
+        attention_input = torch.cat([mlp1_output, global_state], dim=1)
+        scores = torch.reshape(self.attention(attention_input), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
         # for visualization purpose
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()

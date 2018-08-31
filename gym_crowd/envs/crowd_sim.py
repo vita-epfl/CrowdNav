@@ -233,14 +233,24 @@ class CrowdSim(gym.Env):
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
             self.navigator.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            np.random.seed(counter_offset[phase] + self.case_counter[phase])
-            if phase in ['train', 'val']:
-                ped_num = self.ped_num if self.navigator.policy.multiagent_training else 1
-                self.generate_random_ped_position(ped_num=ped_num, rule=self.train_val_sim)
+            if self.case_counter[phase] >=0:
+                np.random.seed(counter_offset[phase] + self.case_counter[phase])
+                if phase in ['train', 'val']:
+                    ped_num = self.ped_num if self.navigator.policy.multiagent_training else 1
+                    self.generate_random_ped_position(ped_num=ped_num, rule=self.train_val_sim)
+                else:
+                    self.generate_random_ped_position(ped_num=self.ped_num, rule=self.test_sim)
+                # case_counter is always between 0 and case_size[phase]
+                self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
             else:
-                self.generate_random_ped_position(ped_num=self.ped_num, rule=self.test_sim)
-            # case_counter is always between 0 and case_size[phase]
-            self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
+                assert phase == 'test'
+                if self.case_counter[phase] == -1:
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                    self.peds[0].set(0, -6, 0, 5, 0, 0, np.pi/2)
+                    self.peds[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
+                    self.peds[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
+                else:
+                    raise NotImplemented
 
         for agent in [self.navigator] + self.peds:
             agent.time_step = self.time_step
