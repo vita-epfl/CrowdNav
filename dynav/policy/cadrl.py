@@ -33,6 +33,10 @@ class CADRL(Policy):
         self.speed_samples = None
         self.rotation_samples = None
         self.action_space = None
+        self.with_om = None
+        self.cell_num = None
+        self.cell_size = None
+        self.directional = None
         self.self_state_dim = 6
         self.ped_state_dim = 7
         self.joint_state_dim = self.self_state_dim + self.ped_state_dim
@@ -42,7 +46,7 @@ class CADRL(Policy):
         mlp_dims = [int(x) for x in config.get('cadrl', 'mlp_dims').split(', ')]
         self.model = ValueNetwork(self.joint_state_dim, mlp_dims)
         self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
-        logging.info('CADRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
+        logging.info('Policy: CADRL without occupancy map')
 
     def set_common_parameters(self, config):
         self.gamma = config.getfloat('rl', 'gamma')
@@ -50,6 +54,9 @@ class CADRL(Policy):
         self.sampling = config.get('action_space', 'sampling')
         self.speed_samples = config.getint('action_space', 'speed_samples')
         self.rotation_samples = config.getint('action_space', 'rotation_samples')
+        self.cell_num = config.getint('om', 'cell_num')
+        self.cell_size = config.getint('om', 'cell_size')
+        self.directional = config.getboolean('om', 'directional')
 
     def set_device(self, device):
         self.device = device

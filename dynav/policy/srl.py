@@ -5,10 +5,10 @@ from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, self_state_dim, ped_state_dim, mlp1_dims, mlp2_dims, global_state_dim):
+    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, global_state_dim):
         super().__init__()
         self.self_state_dim = self_state_dim
-        self.mlp1 = nn.Sequential(nn.Linear(self_state_dim + ped_state_dim, mlp1_dims[0]), nn.ReLU(),
+        self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], global_state_dim))
         self.mlp2 = nn.Sequential(nn.Linear(global_state_dim + self.self_state_dim, mlp2_dims[0]), nn.ReLU(),
@@ -41,6 +41,7 @@ class SRL(MultiPedRL):
         mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
         mlp2_dims = [int(x) for x in config.get('srl', 'mlp2_dims').split(', ')]
         global_state_dim = config.getint('srl', 'global_state_dim')
-        self.model = ValueNetwork(self.self_state_dim, self.ped_state_dim, mlp1_dims, mlp2_dims, global_state_dim)
+        self.with_om = config.getboolean('srl', 'with_om')
+        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, global_state_dim)
         self.multiagent_training = config.getboolean('srl', 'multiagent_training')
-        logging.info('SRL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
+        logging.info('Policy: {}SRL'.format('OM-' if self.with_om else ''))

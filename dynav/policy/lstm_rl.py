@@ -6,7 +6,7 @@ from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, self_state_dim, ped_state_dim, mlp_dims, lstm_hidden_dim):
+    def __init__(self, input_dim, self_state_dim, mlp_dims, lstm_hidden_dim):
         super().__init__()
         self.self_state_dim = self_state_dim
         self.lstm_hidden_dim = lstm_hidden_dim
@@ -14,7 +14,7 @@ class ValueNetwork(nn.Module):
                                  nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
                                  nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
                                  nn.Linear(mlp_dims[2], 1))
-        self.lstm = nn.LSTM(self_state_dim + ped_state_dim, lstm_hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(input_dim, lstm_hidden_dim, batch_first=True)
 
     def forward(self, state):
         """
@@ -43,9 +43,10 @@ class LstmRL(MultiPedRL):
         self.set_common_parameters(config)
         mlp_dims = [int(x) for x in config.get('lstm_rl', 'mlp_dims').split(', ')]
         global_state_dim = config.getint('lstm_rl', 'global_state_dim')
-        self.model = ValueNetwork(self.self_state_dim, self.ped_state_dim, mlp_dims, global_state_dim)
+        self.with_om = config.getboolean('lstm_rl', 'with_om')
+        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp_dims, global_state_dim)
         self.multiagent_training = config.getboolean('lstm_rl', 'multiagent_training')
-        logging.info('LSTM-RL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
+        logging.info('Policy: {}LSTM-RL'.format('OM-' if self.with_om else ''))
 
     def predict(self, state):
         """

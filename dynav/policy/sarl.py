@@ -6,13 +6,11 @@ from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, self_state_dim, ped_state_dim, mlp1_dims, mlp2_dims, attention_dims, global_state_dim,
-                 input_dim=None):
+    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, attention_dims, global_state_dim):
         super().__init__()
         self.self_state_dim = self_state_dim
         self.global_state_dim = global_state_dim
-        mlp1_input_dim = input_dim if input_dim is not None else self_state_dim + ped_state_dim
-        self.mlp1 = nn.Sequential(nn.Linear(mlp1_input_dim, mlp1_dims[0]), nn.ReLU(),
+        self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
                                   nn.Linear(mlp1_dims[1], global_state_dim))
         self.attention = nn.Sequential(nn.Linear(global_state_dim * 2, attention_dims[0]), nn.ReLU(),
@@ -62,10 +60,11 @@ class SARL(MultiPedRL):
         mlp2_dims = [int(x) for x in config.get('sarl', 'mlp2_dims').split(', ')]
         attention_dims = [int(x) for x in config.get('sarl', 'attention_dims').split(', ')]
         global_state_dim = config.getint('sarl', 'global_state_dim')
-        self.model = ValueNetwork(self.self_state_dim, self.ped_state_dim, mlp1_dims, mlp2_dims, attention_dims,
+        self.with_om = config.getboolean('sarl', 'with_om')
+        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, attention_dims,
                                   global_state_dim)
         self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
-        logging.info('SARL: {} agent training'.format('single' if not self.multiagent_training else 'multiple'))
+        logging.info('Policy: {}SARL'.format('OM-' if self.with_om else ''))
 
     def get_attention_weights(self):
         return self.model.attention_weights
