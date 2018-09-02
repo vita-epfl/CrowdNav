@@ -1,20 +1,16 @@
 import torch
 import torch.nn as nn
 import logging
+from dynav.policy.cadrl import mlp
 from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, global_state_dim):
+    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims):
         super().__init__()
         self.self_state_dim = self_state_dim
-        self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[1], global_state_dim))
-        self.mlp2 = nn.Sequential(nn.Linear(global_state_dim + self.self_state_dim, mlp2_dims[0]), nn.ReLU(),
-                                  nn.Linear(mlp2_dims[0], mlp2_dims[1]), nn.ReLU(),
-                                  nn.Linear(mlp2_dims[1], mlp2_dims[2]), nn.ReLU(),
-                                  nn.Linear(mlp2_dims[1], 1))
+        self.mlp1 = mlp(input_dim, mlp1_dims)
+        self.mlp2 = mlp(mlp1_dims[-1] + self.self_state_dim, mlp2_dims)
 
     def forward(self, state):
         """
@@ -40,8 +36,7 @@ class SRL(MultiPedRL):
         self.set_common_parameters(config)
         mlp1_dims = [int(x) for x in config.get('srl', 'mlp1_dims').split(', ')]
         mlp2_dims = [int(x) for x in config.get('srl', 'mlp2_dims').split(', ')]
-        global_state_dim = config.getint('srl', 'global_state_dim')
         self.with_om = config.getboolean('srl', 'with_om')
-        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, global_state_dim)
+        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims)
         self.multiagent_training = config.getboolean('srl', 'multiagent_training')
         logging.info('Policy: {}SRL'.format('OM-' if self.with_om else ''))

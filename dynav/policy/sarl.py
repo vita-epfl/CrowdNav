@@ -2,24 +2,19 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
 import logging
+from dynav.policy.cadrl import mlp
 from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, attention_dims, global_state_dim):
+    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims, attention_dims):
         super().__init__()
         self.self_state_dim = self_state_dim
-        self.global_state_dim = global_state_dim
-        self.mlp1 = nn.Sequential(nn.Linear(input_dim, mlp1_dims[0]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[0], mlp1_dims[1]), nn.ReLU(),
-                                  nn.Linear(mlp1_dims[1], global_state_dim))
-        self.attention = nn.Sequential(nn.Linear(global_state_dim * 2, attention_dims[0]), nn.ReLU(),
-                                       nn.Linear(attention_dims[0], attention_dims[1]), nn.ReLU(),
-                                       nn.Linear(attention_dims[1], 1), nn.ReLU())
-        self.mlp2 = nn.Sequential(nn.Linear(global_state_dim + self.self_state_dim, mlp2_dims[0]), nn.ReLU(),
-                                  nn.Linear(mlp2_dims[0], mlp2_dims[1]), nn.ReLU(),
-                                  nn.Linear(mlp2_dims[1], mlp2_dims[2]), nn.ReLU(),
-                                  nn.Linear(mlp2_dims[1], 1))
+        self.global_state_dim = mlp1_dims[-1]
+        self.mlp1 = mlp(input_dim, mlp1_dims, last_relu=True)
+        self.mlp2 = mlp(mlp1_dims[-1], mlp2_dims)
+        self.attention = mlp(mlp1_dims[-1] * 2, attention_dims)
+        self.mlp3 = mlp(mlp2_dims[-1] + self.self_state_dim, mlp3_dims)
         self.attention_weights = None
 
     def forward(self, state):
@@ -33,20 +28,24 @@ class ValueNetwork(nn.Module):
         self_state = state[:, 0, :self.self_state_dim]
         state = torch.reshape(state, (-1, size[2]))
         mlp1_output = self.mlp1(state)
-        # calculate the global state
+        mlp2_output = self.mlp2(mlp1_output)
+
+        # compute attention scores
         global_state = torch.mean(torch.reshape(mlp1_output, (size[0], size[1], -1)), 1, keepdim=True)
         global_state = torch.reshape(global_state.expand((size[0], size[1], self.global_state_dim)),
                                      (-1, self.global_state_dim))
-        # concatenate pairwise interaction with global state to compute attention score
         attention_input = torch.cat([mlp1_output, global_state], dim=1)
         scores = torch.reshape(self.attention(attention_input), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
-        # for visualization purpose
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
-        features = torch.reshape(mlp1_output, (size[0], size[1], -1))
+
+        # output feature is a linear combination of input features
+        features = torch.reshape(mlp2_output, (size[0], size[1], -1))
         weighted_feature = torch.sum(weights.expand_as(features) * features, dim=1)
+
+        # concatenate agent's state with global weighted peds' state
         joint_state = torch.cat([self_state, weighted_feature], dim=1)
-        value = self.mlp2(joint_state)
+        value = self.mlp3(joint_state)
         return value
 
 
@@ -58,11 +57,10 @@ class SARL(MultiPedRL):
         self.set_common_parameters(config)
         mlp1_dims = [int(x) for x in config.get('sarl', 'mlp1_dims').split(', ')]
         mlp2_dims = [int(x) for x in config.get('sarl', 'mlp2_dims').split(', ')]
+        mlp3_dims = [int(x) for x in config.get('sarl', 'mlp3_dims').split(', ')]
         attention_dims = [int(x) for x in config.get('sarl', 'attention_dims').split(', ')]
-        global_state_dim = config.getint('sarl', 'global_state_dim')
         self.with_om = config.getboolean('sarl', 'with_om')
-        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, attention_dims,
-                                  global_state_dim)
+        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims, attention_dims)
         self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
         logging.info('Policy: {}SARL'.format('OM-' if self.with_om else ''))
 

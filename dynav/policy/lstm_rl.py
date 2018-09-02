@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import logging
+from dynav.policy.cadrl import mlp
 from dynav.policy.multi_ped_rl import MultiPedRL
 
 
@@ -10,10 +11,7 @@ class ValueNetwork(nn.Module):
         super().__init__()
         self.self_state_dim = self_state_dim
         self.lstm_hidden_dim = lstm_hidden_dim
-        self.mlp = nn.Sequential(nn.Linear(self_state_dim + lstm_hidden_dim, mlp_dims[0]), nn.ReLU(),
-                                 nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
-                                 nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
-                                 nn.Linear(mlp_dims[2], 1))
+        self.mlp = mlp(self_state_dim + lstm_hidden_dim, mlp_dims)
         self.lstm = nn.LSTM(input_dim, lstm_hidden_dim, batch_first=True)
 
     def forward(self, state):

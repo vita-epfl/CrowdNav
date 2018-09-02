@@ -8,13 +8,21 @@ from gym_crowd.envs.utils.action import ActionRot, ActionXY
 from gym_crowd.envs.utils.state import ObservableState, FullState
 
 
+def mlp(input_dim, mlp_dims, last_relu=False):
+    layers = []
+    mlp_dims = [input_dim] + mlp_dims
+    for i in range(len(mlp_dims) - 1):
+        layers.append(nn.Linear(mlp_dims[i], mlp_dims[i + 1]))
+        if i != len(mlp_dims) - 2 or last_relu:
+            layers.append(nn.ReLU())
+    net = nn.Sequential(*layers)
+    return net
+
+
 class ValueNetwork(nn.Module):
     def __init__(self, input_dim, mlp_dims):
         super().__init__()
-        self.value_network = nn.Sequential(nn.Linear(input_dim, mlp_dims[0]), nn.ReLU(),
-                                           nn.Linear(mlp_dims[0], mlp_dims[1]), nn.ReLU(),
-                                           nn.Linear(mlp_dims[1], mlp_dims[2]), nn.ReLU(),
-                                           nn.Linear(mlp_dims[2], 1))
+        self.value_network = mlp(input_dim, mlp_dims)
 
     def forward(self, state):
         value = self.value_network(state)
