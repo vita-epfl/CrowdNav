@@ -2,7 +2,6 @@ import logging
 import os
 import gym
 import numpy as np
-import trajnettools
 from numpy.linalg import norm
 import rvo2
 import gym_crowd
@@ -50,19 +49,7 @@ class CrowdSim(gym.Env):
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
         if self.config.get('peds', 'policy') == 'trajnet':
-            # load trajnet data
-            trajnet_dir = os.path.join(os.path.dirname(gym_crowd.__file__), 'envs/data/trajnet')
-            train_dir = os.path.join(trajnet_dir, 'train')
-            val_dir = os.path.join(trajnet_dir, 'val')
-            self.scenes = dict({'train': list(trajnettools.load_all(os.path.join(train_dir, 'biwi_hotel.ndjson'),
-                                                                    as_paths=True, sample={'syi.ndjson': 0.05})),
-                                'val': list(trajnettools.load_all(os.path.join(val_dir, 'biwi_hotel.ndjson'),
-                                                                  as_paths=True, sample={'syi.ndjson': 0.05})),
-                                'test': list(trajnettools.load_all(os.path.join(val_dir, 'wildtrack.ndjson'),
-                                                                   as_paths=True, sample={'syi.ndjson': 0.05}))})
-            for phase in ['train', 'val', 'test']:
-                logging.info('Number of scenes in phase {}: {}'.format(phase.upper(), len(self.scenes[phase])))
-            self.case_size['test'] = len(self.scenes['test'])
+            raise NotImplemented
         else:
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
             self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
@@ -212,23 +199,7 @@ class CrowdSim(gym.Env):
         self.ped_times = [0] * self.ped_num
 
         if self.config.get('peds', 'policy') == 'trajnet':
-            if phase == 'train':
-                pass
-            elif phase == 'val':
-                pass
-            else:
-                scene_index = test_case if test_case is not None else self.case_counter
-                self.case_counter['test'] = (self.case_counter['test'] + 1) % self.case_capacity['test']
-                scene = self.scenes[phase][scene_index][1]
-                ped_num = len(scene)
-                if test_case is not None:
-                    logging.info('{} pedestrians in scene {}'.format(ped_num, scene_index))
-                self.peds = [Pedestrian(self.config, 'peds') for _ in range(ped_num)]
-                self.navigator.set(0, -4, 0, 4, 0, 0, np.pi / 2)
-                for i in range(ped_num):
-                    # assign ith trajectory to ith ped's policy
-                    self.peds[i].policy.configure(scene[i])
-                    self.peds[i].set(scene[i][0].x, scene[i][0].y, scene[i][-1].x, scene[i][-1].y, 0, 0, 0)
+            raise NotImplemented
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
