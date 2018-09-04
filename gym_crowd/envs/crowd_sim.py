@@ -1,10 +1,8 @@
 import logging
-import os
 import gym
 import numpy as np
 from numpy.linalg import norm
 import rvo2
-import gym_crowd
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
 from gym_crowd.envs.utils.info import *
@@ -396,7 +394,7 @@ class CrowdSim(gym.Env):
                         for i in range(len(self.peds))]
             ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='white')
                                for i in range(len(self.peds))]
-            time = plt.text(0, 6, 'Step: {}'.format(0), fontsize=12)
+            time = plt.text(-1, 6, 'Time: {}'.format(0), fontsize=12)
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
                                              fontsize=12) for i in range(len(self.peds))]
