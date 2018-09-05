@@ -72,7 +72,7 @@ class MultiPedRL(CADRL):
 
     def input_dim(self):
         if self.directional:
-            return self.joint_state_dim + 2 * self.cell_num ** 2 if self.with_om else self.joint_state_dim
+            return self.joint_state_dim + 3 * self.cell_num ** 2 if self.with_om else self.joint_state_dim
         else:
             return self.joint_state_dim + self.cell_num ** 2 if self.with_om else self.joint_state_dim
 
@@ -112,11 +112,12 @@ class MultiPedRL(CADRL):
                 speed = np.linalg.norm(other_peds[:, 2:4], axis=1)
                 other_vx = np.cos(rotation) * speed
                 other_vy = np.sin(rotation) * speed
-                dm = [list() for _ in range(self.cell_num ** 2 * 2)]
+                dm = [list() for _ in range(self.cell_num ** 2 * 3)]
                 for i, index in np.ndenumerate(grid_indices):
                     if index in range(self.cell_num ** 2):
-                        dm[2 * int(index)].append(other_vx[i])
-                        dm[2 * int(index) + 1].append(other_vy[i])
+                        dm[2 * int(index)].append(1)
+                        dm[2 * int(index) + 1].append(other_vx[i])
+                        dm[2 * int(index) + 2].append(other_vy[i])
                 for i, cell in enumerate(dm):
                     dm[i] = sum(dm[i]) / len(dm[i]) if len(dm[i]) != 0 else 0
                 occupancy_maps.append([dm])

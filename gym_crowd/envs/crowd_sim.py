@@ -218,6 +218,11 @@ class CrowdSim(gym.Env):
                     self.peds[0].set(0, -6, 0, 5, 0, 0, np.pi/2)
                     self.peds[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
                     self.peds[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
+                elif self.case_counter[phase] == -2:
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                    self.peds[0].set(-3, 0, -3, 5, 0, 0, np.pi / 2)
+                    self.peds[1].set(-2, 0, -2, 5, 0, 0, np.pi / 2)
+                    self.peds[2].set(-3, 1, -3, 5, 0, 0, np.pi / 2)
                 else:
                     raise NotImplemented
 
