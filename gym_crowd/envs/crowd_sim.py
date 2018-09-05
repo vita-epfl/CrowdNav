@@ -46,6 +46,7 @@ class CrowdSim(gym.Env):
         self.time_limit = config.getint('env', 'time_limit')
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
+        self.min_separation_dist = config.getfloat('env', 'min_separation_dist')
         if self.config.get('peds', 'policy') == 'trajnet':
             raise NotImplemented
         else:
@@ -81,7 +82,6 @@ class CrowdSim(gym.Env):
         :return:
         """
         # initial min separation distance to avoid danger penalty at beginning
-        min_separation_dist = 0.2
         if rule == 'square_crossing':
             self.peds = []
             for i in range(ped_num):
@@ -97,7 +97,7 @@ class CrowdSim(gym.Env):
                     py = (np.random.random() - 0.5) * self.square_width
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + min_separation_dist:
+                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + self.min_separation_dist:
                             collide = True
                             break
                     if not collide:
@@ -107,7 +107,7 @@ class CrowdSim(gym.Env):
                     gy = (np.random.random() - 0.5) * self.square_width
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + min_separation_dist:
+                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + self.min_separation_dist:
                             collide = True
                             break
                     if not collide:
@@ -232,7 +232,7 @@ class CrowdSim(gym.Env):
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
         if hasattr(self.navigator.policy, 'get_attention_weights'):
-            self.attention_weights = [np.array([0.2] * len(self.peds))]
+            self.attention_weights = [np.array([0.1] * len(self.peds))]
 
         # get current observation
         if self.navigator.sensor == 'coordinates':
@@ -308,7 +308,7 @@ class CrowdSim(gym.Env):
             reward = 1
             done = True
             info = ReachGoal()
-        elif self.navigator.visible and dmin < 0.2:
+        elif self.navigator.visible and dmin < self.min_separation_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
             reward = (-0.1 + dmin / 2) * self.time_step
