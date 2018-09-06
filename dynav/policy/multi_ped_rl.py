@@ -71,10 +71,7 @@ class MultiPedRL(CADRL):
         return state_tensor
 
     def input_dim(self):
-        if self.directional:
-            return self.joint_state_dim + 3 * self.cell_num ** 2 if self.with_om else self.joint_state_dim
-        else:
-            return self.joint_state_dim + self.cell_num ** 2 if self.with_om else self.joint_state_dim
+        return self.joint_state_dim + self.cell_num ** 2 * self.om_channel_size if self.with_om else self.joint_state_dim
 
     def build_occupancy_maps(self, ped_states):
         """
@@ -105,24 +102,30 @@ class MultiPedRL(CADRL):
             other_y_index[other_y_index >= self.cell_num] = float('-inf')
             grid_indices = self.cell_num * other_y_index + other_x_index
             occupancy_map = np.isin(range(self.cell_num ** 2), grid_indices)
-            if self.directional:
+            if self.om_channel_size == 1:
+                occupancy_maps.append([occupancy_map.astype(int)])
+            else:
                 # calculate relative velocity for other agents
                 other_ped_velocity_angles = np.arctan2(other_peds[:, 3], other_peds[:, 2])
                 rotation = other_ped_velocity_angles - ped_velocity_angle
                 speed = np.linalg.norm(other_peds[:, 2:4], axis=1)
                 other_vx = np.cos(rotation) * speed
                 other_vy = np.sin(rotation) * speed
-                dm = [list() for _ in range(self.cell_num ** 2 * 3)]
+                dm = [list() for _ in range(self.cell_num ** 2 * self.om_channel_size)]
                 for i, index in np.ndenumerate(grid_indices):
                     if index in range(self.cell_num ** 2):
-                        dm[2 * int(index)].append(1)
-                        dm[2 * int(index) + 1].append(other_vx[i])
-                        dm[2 * int(index) + 2].append(other_vy[i])
+                        if self.om_channel_size == 2:
+                            dm[2 * int(index)].append(other_vx[i])
+                            dm[2 * int(index) + 1].append(other_vy[i])
+                        elif self.om_channel_size == 3:
+                            dm[2 * int(index)].append(1)
+                            dm[2 * int(index) + 1].append(other_vx[i])
+                            dm[2 * int(index) + 2].append(other_vy[i])
+                        else:
+                            raise NotImplemented
                 for i, cell in enumerate(dm):
                     dm[i] = sum(dm[i]) / len(dm[i]) if len(dm[i]) != 0 else 0
                 occupancy_maps.append([dm])
-            else:
-                occupancy_maps.append([occupancy_map.astype(int)])
 
         return torch.from_numpy(np.concatenate(occupancy_maps, axis=0)).float()
 

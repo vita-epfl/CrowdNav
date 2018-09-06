@@ -44,7 +44,7 @@ class CADRL(Policy):
         self.with_om = None
         self.cell_num = None
         self.cell_size = None
-        self.directional = None
+        self.om_channel_size = None
         self.self_state_dim = 6
         self.ped_state_dim = 7
         self.joint_state_dim = self.self_state_dim + self.ped_state_dim
@@ -64,7 +64,7 @@ class CADRL(Policy):
         self.rotation_samples = config.getint('action_space', 'rotation_samples')
         self.cell_num = config.getint('om', 'cell_num')
         self.cell_size = config.getint('om', 'cell_size')
-        self.directional = config.getboolean('om', 'directional')
+        self.om_channel_size = config.getint('om', 'om_channel_size')
 
     def set_device(self, device):
         self.device = device
