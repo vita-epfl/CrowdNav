@@ -168,8 +168,6 @@ class CrowdSim(gym.Env):
             self.global_time += self.time_step
             if self.global_time > max_time:
                 logging.warning('Simulation cannot terminate!')
-                self.render('video')
-                break
             for i, ped in enumerate(self.peds):
                 if self.ped_times[i] == 0 and ped.reached_destination():
                     self.ped_times[i] = self.global_time
@@ -194,7 +192,10 @@ class CrowdSim(gym.Env):
         if test_case is not None:
             self.case_counter[phase] = test_case
         self.global_time = 0
-        self.ped_times = [0] * self.ped_num
+        if phase == 'test':
+            self.ped_times = [0] * self.ped_num
+        else:
+            self.ped_times = [0] * (self.ped_num if self.navigator.policy.multiagent_training else 1)
 
         if self.config.get('peds', 'policy') == 'trajnet':
             raise NotImplemented
