@@ -32,6 +32,10 @@ class CrowdSim(gym.Env):
         self.case_size = None
         self.case_counter = None
         self.randomize_attributes = None
+        self.success_reward = None
+        self.collision_penalty = None
+        self.discomfort_dist = None
+        self.discomfort_penalty_factor = None
         # orca simulation
         self.train_val_sim = None
         self.test_sim = None
@@ -46,7 +50,10 @@ class CrowdSim(gym.Env):
         self.time_limit = config.getint('env', 'time_limit')
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
-        self.min_separation_dist = config.getfloat('env', 'min_separation_dist')
+        self.success_reward = config.getfloat('reward', 'success_reward')
+        self.collision_penalty = config.getfloat('reward', 'collision_penalty')
+        self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
+        self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
         if self.config.get('peds', 'policy') == 'trajnet':
             raise NotImplemented
         else:
@@ -97,7 +104,7 @@ class CrowdSim(gym.Env):
                     py = (np.random.random() - 0.5) * self.square_width
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + self.min_separation_dist:
+                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + self.discomfort_dist:
                             collide = True
                             break
                     if not collide:
@@ -107,7 +114,7 @@ class CrowdSim(gym.Env):
                     gy = (np.random.random() - 0.5) * self.square_width
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + self.min_separation_dist:
+                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + self.discomfort_dist:
                             collide = True
                             break
                     if not collide:
@@ -129,7 +136,7 @@ class CrowdSim(gym.Env):
                     py = self.circle_radius * np.sin(angle) + py_noise
                     collide = False
                     for agent in [self.navigator] + self.peds:
-                        min_dist = ped.radius + agent.radius + min_separation_dist
+                        min_dist = ped.radius + agent.radius + self.discomfort_dist
                         if norm((px - agent.px, py - agent.py)) < min_dist or \
                                 norm((px - agent.gx, py - agent.gy)) < min_dist:
                             collide = True
@@ -302,17 +309,17 @@ class CrowdSim(gym.Env):
             done = True
             info = Timeout()
         elif collision:
-            reward = -0.25
+            reward = self.collision_penalty
             done = True
             info = Collision()
         elif reaching_goal:
-            reward = 1
+            reward = self.success_reward
             done = True
             info = ReachGoal()
-        elif self.navigator.visible and dmin < self.min_separation_dist:
+        elif self.navigator.visible and dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
-            reward = (-0.1 + dmin / 2) * self.time_step
+            reward = (dmin - self.discomfort_dist) * self.discomfort_penalty_factor * self.time_step
             done = False
             info = Danger(dmin)
         else:
