@@ -7,13 +7,17 @@ from dynav.policy.multi_ped_rl import MultiPedRL
 
 
 class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims, attention_dims):
+    def __init__(self, input_dim, self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims, attention_dims, with_global_state):
         super().__init__()
         self.self_state_dim = self_state_dim
         self.global_state_dim = mlp1_dims[-1]
         self.mlp1 = mlp(input_dim, mlp1_dims, last_relu=True)
         self.mlp2 = mlp(mlp1_dims[-1], mlp2_dims)
-        self.attention = mlp(mlp1_dims[-1] * 2, attention_dims)
+        self.with_global_state = with_global_state
+        if with_global_state:
+            self.attention = mlp(mlp1_dims[-1] * 2, attention_dims)
+        else:
+            self.attention = mlp(mlp1_dims[-1], attention_dims)
         self.mlp3 = mlp(mlp2_dims[-1] + self.self_state_dim, mlp3_dims)
         self.attention_weights = None
 
@@ -30,11 +34,14 @@ class ValueNetwork(nn.Module):
         mlp1_output = self.mlp1(state)
         mlp2_output = self.mlp2(mlp1_output)
 
-        # compute attention scores
-        global_state = torch.mean(torch.reshape(mlp1_output, (size[0], size[1], -1)), 1, keepdim=True)
-        global_state = torch.reshape(global_state.expand((size[0], size[1], self.global_state_dim)),
-                                     (-1, self.global_state_dim))
-        attention_input = torch.cat([mlp1_output, global_state], dim=1)
+        if self.with_global_state:
+            # compute attention scores
+            global_state = torch.mean(torch.reshape(mlp1_output, (size[0], size[1], -1)), 1, keepdim=True)
+            global_state = torch.reshape(global_state.expand((size[0], size[1], self.global_state_dim)),
+                                         (-1, self.global_state_dim))
+            attention_input = torch.cat([mlp1_output, global_state], dim=1)
+        else:
+            attention_input = mlp1_output
         scores = torch.reshape(self.attention(attention_input), (size[0], size[1], 1)).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
@@ -60,9 +67,12 @@ class SARL(MultiPedRL):
         mlp3_dims = [int(x) for x in config.get('sarl', 'mlp3_dims').split(', ')]
         attention_dims = [int(x) for x in config.get('sarl', 'attention_dims').split(', ')]
         self.with_om = config.getboolean('sarl', 'with_om')
-        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims, attention_dims)
+        with_global_state = config.getboolean('sarl', 'with_global_state')
+        self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims,
+                                  attention_dims, with_global_state)
         self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
-        logging.info('Policy: {}SARL'.format('OM-' if self.with_om else ''))
+        logging.info('Policy: {}SARL {} global state'.format('OM-' if self.with_om else '',
+                                                             'w/' if with_global_state else 'w/o'))
 
     def get_attention_weights(self):
         return self.model.attention_weights

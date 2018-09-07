@@ -11,106 +11,129 @@ def running_mean(x, N):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('log_file', type=str)
+    parser.add_argument('log_files', type=str, nargs='+')
     parser.add_argument('--plot_sr', default=False, action='store_true')
     parser.add_argument('--plot_cr', default=False, action='store_true')
-    parser.add_argument('--plot_time', default=True, action='store_true')
+    parser.add_argument('--plot_time', default=False, action='store_true')
     parser.add_argument('--plot_reward', default=True, action='store_true')
     parser.add_argument('--plot_train', default=True, action='store_true')
-    parser.add_argument('--plot_val', default=True, action='store_true')
-    parser.add_argument('--window_size', type=int, default=100)
+    parser.add_argument('--plot_val', default=False, action='store_true')
+    parser.add_argument('--window_size', type=int, default=200)
     args = parser.parse_args()
 
-    with open(args.log_file, 'r') as fo:
-        log = fo.read()
+    models = ['LSTM-RL', 'SARL', 'OM-SARL']
+    max_episodes = 10000
 
-    val_pattern = r"VAL   in episode (?P<episode>\d+) has success rate: (?P<sr>[0-1].\d+), " \
-                  r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), " \
-                  r"total reward: (?P<reward>[-+]?\d+.\d+)"
-    val_episode = []
-    val_sr = []
-    val_cr = []
-    val_time = []
-    val_reward = []
-    for r in re.findall(val_pattern, log):
-        val_episode.append(int(r[0]))
-        val_sr.append(float(r[1]))
-        val_cr.append(float(r[2]))
-        val_time.append(float(r[3]))
-        val_reward.append(float(r[4]))
+    ax1 = ax2 = ax3 = ax4 = None
+    ax1_legends = []
+    ax2_legends = []
+    ax3_legends = []
+    ax4_legends = []
 
-    train_pattern = r"TRAIN in episode (?P<episode>\d+) has success rate: (?P<sr>[0-1].\d+), " \
-                    r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), " \
-                    r"total reward: (?P<reward>[-+]?\d+.\d+)"
-    train_episode = []
-    train_sr = []
-    train_cr = []
-    train_time = []
-    train_reward = []
-    for r in re.findall(train_pattern, log):
-        train_episode.append(int(r[0]))
-        train_sr.append(float(r[1]))
-        train_cr.append(float(r[2]))
-        train_time.append(float(r[3]))
-        train_reward.append(float(r[4]))
+    for i, log_file in enumerate(args.log_files):
+        with open(log_file, 'r') as fo:
+            log = fo.read()
 
-    # smooth training plot
-    train_sr_smooth = running_mean(train_sr, args.window_size)
-    train_cr_smooth = running_mean(train_cr, args.window_size)
-    train_time_smooth = running_mean(train_time, args.window_size)
-    train_reward_smooth = running_mean(train_reward, args.window_size)
+        val_pattern = r"VAL   in episode (?P<episode>\d+) has success rate: (?P<sr>[0-1].\d+), " \
+                      r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), " \
+                      r"total reward: (?P<reward>[-+]?\d+.\d+)"
+        val_episode = []
+        val_sr = []
+        val_cr = []
+        val_time = []
+        val_reward = []
+        for r in re.findall(val_pattern, log):
+            val_episode.append(int(r[0]))
+            val_sr.append(float(r[1]))
+            val_cr.append(float(r[2]))
+            val_time.append(float(r[3]))
+            val_reward.append(float(r[4]))
 
-    # plot sr
-    if args.plot_sr:
-        fig1, ax1 = plt.subplots()
-        legends = []
-        if args.plot_train:
-            ax1.plot(range(len(train_sr_smooth)), train_sr_smooth)
-            legends.append('train')
-        if args.plot_val:
-            ax1.plot(val_episode, val_sr)
-            legends.append('val')
-        ax1.legend(legends)
-        ax1.set_title('Success rate')
+        train_pattern = r"TRAIN in episode (?P<episode>\d+) has success rate: (?P<sr>[0-1].\d+), " \
+                        r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), " \
+                        r"total reward: (?P<reward>[-+]?\d+.\d+)"
+        train_episode = []
+        train_sr = []
+        train_cr = []
+        train_time = []
+        train_reward = []
+        for r in re.findall(train_pattern, log):
+            train_episode.append(int(r[0]))
+            train_sr.append(float(r[1]))
+            train_cr.append(float(r[2]))
+            train_time.append(float(r[3]))
+            train_reward.append(float(r[4]))
+        train_episode = train_episode[:max_episodes]
+        train_sr = train_sr[:max_episodes]
+        train_cr = train_cr[:max_episodes]
+        train_time = train_time[:max_episodes]
+        train_reward = train_reward[:max_episodes]
 
-    # plot time
-    if args.plot_time:
-        fig2, ax2 = plt.subplots()
-        legends = []
-        if args.plot_train:
-            ax2.plot(range(len(train_time_smooth)), train_time_smooth)
-            legends.append('train')
-        if args.plot_val:
-            ax2.plot(val_episode, val_time)
-            legends.append('val')
-        ax2.legend(legends)
-        ax2.set_title("Navigator's time to reach goal")
+        # smooth training plot
+        train_sr_smooth = running_mean(train_sr, args.window_size)
+        train_cr_smooth = running_mean(train_cr, args.window_size)
+        train_time_smooth = running_mean(train_time, args.window_size)
+        train_reward_smooth = running_mean(train_reward, args.window_size)
 
-    # plot cr
-    if args.plot_cr:
-        fig3, ax3 = plt.subplots()
-        legends = []
-        if args.plot_train:
-            ax3.plot(range(len(train_cr_smooth)), train_cr_smooth)
-            legends.append('train')
-        if args.plot_val:
-            ax3.plot(val_episode, val_cr)
-            legends.append('val')
-        ax3.legend(legends)
-        ax3.set_title('Collision rate')
+        # plot sr
+        if args.plot_sr:
+            if ax1 is None:
+                _, ax1 = plt.subplots()
+            if args.plot_train:
+                ax1.plot(range(len(train_sr_smooth)), train_sr_smooth)
+                ax1_legends.append(models[i])
+            if args.plot_val:
+                ax1.plot(val_episode, val_sr)
+                ax1_legends.append(models[i])
 
-    # plot reward
-    if args.plot_reward:
-        fig4, ax4 = plt.subplots()
-        legends = []
-        if args.plot_train:
-            ax4.plot(range(len(train_reward_smooth)), train_reward_smooth)
-            legends.append('train')
-        if args.plot_val:
-            ax4.plot(val_episode, val_reward)
-            legends.append('val')
-        ax4.legend(legends)
-        ax4.set_title('Cumulative reward')
+        # plot time
+        if args.plot_time:
+            if ax2 is None:
+                _, ax2 = plt.subplots()
+            if args.plot_train:
+                ax2.plot(range(len(train_time_smooth)), train_time_smooth)
+                ax2_legends.append(models[i])
+            if args.plot_val:
+                ax2.plot(val_episode, val_time)
+                ax2_legends.append(models[i])
+
+        # plot cr
+        if args.plot_cr:
+            if ax3 is None:
+                _, ax3 = plt.subplots()
+            if args.plot_train:
+                ax3.plot(range(len(train_cr_smooth)), train_cr_smooth)
+                ax3_legends.append(models[i])
+            if args.plot_val:
+                ax3.plot(val_episode, val_cr)
+                ax3_legends.append(models[i])
+
+        # plot reward
+        if args.plot_reward:
+            if ax4 is None:
+                _, ax4 = plt.subplots()
+            if args.plot_train:
+                ax4.plot(range(len(train_reward_smooth)), train_reward_smooth)
+                ax4_legends.append(models[i])
+            if args.plot_val:
+                ax4.plot(val_episode, val_reward)
+                ax4_legends.append(models[i])
+
+        if args.plot_sr:
+            ax1.legend(ax1_legends)
+            ax1.set_title('Success rate')
+
+        if args.plot_time:
+            ax2.legend(ax2_legends)
+            ax2.set_title("Navigator's Time to Reach Goal")
+
+        if args.plot_cr:
+            ax3.legend(ax3_legends)
+            ax3.set_title('Collision Rate')
+
+        if args.plot_reward:
+            ax4.legend(ax4_legends)
+            ax4.set_title('Cumulative Discounted Reward')
 
     plt.show()
 

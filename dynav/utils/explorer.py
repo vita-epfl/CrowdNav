@@ -70,11 +70,8 @@ class Explorer(object):
                     # only add positive(success) or negative(collision) experience in experience set
                     self.update_memory(states, actions, rewards, imitation_learning)
 
-            if self.gamma is not None:
-                cumulative_reward += sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
-                                         for t, reward in enumerate(rewards)])
-            else:
-                cumulative_reward += 0
+            cumulative_reward += sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
+                                     for t, reward in enumerate(rewards)])
 
         success_rate = success / k
         collision_rate = collision / k

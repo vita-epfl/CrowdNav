@@ -69,13 +69,17 @@ def main():
     navigator = Navigator(env_config, 'navigator')
     navigator.set_policy(policy)
     env.set_navigator(navigator)
-    explorer = Explorer(env, navigator, device)
+    explorer = Explorer(env, navigator, device, gamma=0.9)
 
     policy.set_phase(args.phase)
     policy.set_device(device)
     # set safety space for ORCA in non-cooperative simulation
-    if not navigator.visible and isinstance(navigator.policy, ORCA):
-        navigator.policy.safety_space = 0.15
+    if isinstance(navigator.policy, ORCA):
+        if navigator.visible:
+            navigator.policy.safety_space = 0
+        else:
+            navigator.policy.safety_space = 0.15
+        logging.info('ORCA agent buffer: {}'.format(navigator.policy.safety_space))
 
     policy.set_env(env)
     navigator.print_info()
