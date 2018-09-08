@@ -63,7 +63,7 @@ class CADRL(Policy):
         self.speed_samples = config.getint('action_space', 'speed_samples')
         self.rotation_samples = config.getint('action_space', 'rotation_samples')
         self.cell_num = config.getint('om', 'cell_num')
-        self.cell_size = config.getint('om', 'cell_size')
+        self.cell_size = config.getfloat('om', 'cell_size')
         self.om_channel_size = config.getint('om', 'om_channel_size')
 
     def set_device(self, device):

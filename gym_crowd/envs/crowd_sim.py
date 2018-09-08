@@ -203,6 +203,8 @@ class CrowdSim(gym.Env):
             self.ped_times = [0] * self.ped_num
         else:
             self.ped_times = [0] * (self.ped_num if self.navigator.policy.multiagent_training else 1)
+        if not self.navigator.policy.multiagent_training:
+            self.train_val_sim = 'circle_crossing'
 
         if self.config.get('peds', 'policy') == 'trajnet':
             raise NotImplemented
@@ -222,6 +224,7 @@ class CrowdSim(gym.Env):
             else:
                 assert phase == 'test'
                 if self.case_counter[phase] == -1:
+                    self.ped_num = 3
                     self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
                     self.peds[0].set(0, -6, 0, 5, 0, 0, np.pi/2)
                     self.peds[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
@@ -356,7 +359,7 @@ class CrowdSim(gym.Env):
         import matplotlib.animation as animation
         import matplotlib.pyplot as plt
 
-        navigator_color = 'red'
+        navigator_color = 'yellow'
         goal_color = 'blue'
         heading_color = 'red'
 
@@ -383,9 +386,9 @@ class CrowdSim(gym.Env):
                 ax.add_artist(navigator)
                 for ped in peds:
                     ax.add_artist(ped)      
-            time = plt.text(-1, 6, 'Trajectories', fontsize=12)
-            ax.add_artist(time)
-            plt.legend([navigator], ['navigator'])
+            # time = plt.text(-1, 6, 'Trajectories', fontsize=12)
+            # ax.add_artist(time)
+            plt.legend([navigator], ['Robot'])
             plt.show()
         elif mode == 'video':
             navigator_positions = [state[0].position for state in self.states]
@@ -400,39 +403,55 @@ class CrowdSim(gym.Env):
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
             # visualize attention weights using the color saturation
             if self.attention_weights is not None:
-                peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True,
+                peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=False,
                                    color=(self.attention_weights[0][i], 0, 0)) for i in range(len(self.peds))]
             else:
-                peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
+                peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=False, color=str((i+1)/20))
                         for i in range(len(self.peds))]
-            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='white')
+            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='black')
                                for i in range(len(self.peds))]
             time = plt.text(-1, 6, 'Time: {}'.format(0), fontsize=12)
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
                                              fontsize=12) for i in range(len(self.peds))]
+            radius = self.navigator.radius
             if self.navigator.kinematics == 'unicycle':
-                radius = self.navigator.radius
-                heading_pos = [((state[0].px, state[0].px + radius * np.cos(state[0].theta)),
+                orientation = [((state[0].px, state[0].px + radius * np.cos(state[0].theta)),
                                 (state[0].py, state[0].py + radius * np.sin(state[0].theta))) for state in self.states]
-                navigator_heading = plt.Line2D(*heading_pos[0], color=heading_color)
-                ax.add_artist(navigator_heading)
+                orientations = [orientation]
+            else:
+                orientations = []
+                for i in range(self.ped_num + 1):
+                    orientation = []
+                    for state in self.states:
+                        if i == 0:
+                            agent_state = state[0]
+                        else:
+                            agent_state = state[1][i-1]
+                        theta = np.arctan2(agent_state.vy, agent_state.vx)
+                        orientation.append(((agent_state.px, agent_state.px + radius * np.cos(theta)),
+                                           (agent_state.py, agent_state.py + radius * np.sin(theta))))
+                    orientations.append(orientation)
+            orientation_segments = [plt.Line2D(*orientation[0], color=heading_color) for orientation in orientations]
+
+            for segment in orientation_segments:
+                ax.add_artist(segment)
             ax.add_artist(navigator)
             ax.add_artist(goal)
             ax.add_artist(time)
             for i, ped in enumerate(peds):
                 ax.add_artist(ped)
                 ax.add_artist(ped_annotations[i])
-            plt.legend([navigator, goal], ['navigator', 'goal'])
+            plt.legend([navigator, goal], ['Robot', 'Goal'])
 
             def update(frame_num):
                 navigator.center = navigator_positions[frame_num]
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
                     ped_annotations[i].set_position((ped.center[0]-x_offset, ped.center[1]-y_offset))
-                    if self.navigator.kinematics == 'unicycle':
-                        navigator_heading.set_xdata(heading_pos[frame_num][0])
-                        navigator_heading.set_ydata(heading_pos[frame_num][1])
+                    for agent_i, orientation in enumerate(orientations):
+                        orientation_segments[agent_i].set_xdata(orientation[frame_num][0])
+                        orientation_segments[agent_i].set_ydata(orientation[frame_num][1])
                     if self.attention_weights is not None:
                         ped.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))

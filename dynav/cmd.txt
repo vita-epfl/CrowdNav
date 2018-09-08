@@ -1,0 +1,1 @@
+N=5 && scp -r vita$N:$PJ/dynav/data/lstm_rl_circle_5p_visible_0.1_0.05/output.log data/output$N.log && python utils/plot.py data/output$N.log &
