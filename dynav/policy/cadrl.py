@@ -41,6 +41,9 @@ class CADRL(Policy):
         self.speed_samples = None
         self.rotation_samples = None
         self.action_space = None
+        self.speeds = None
+        self.rotations = None
+        self.action_values = None
         self.with_om = None
         self.cell_num = None
         self.cell_size = None
@@ -87,8 +90,10 @@ class CADRL(Policy):
             else:
                 speeds = [(i + 1) / self.speed_samples * v_pref for i in range(self.speed_samples)]
             rotations = [i / self.rotation_samples * 2 * np.pi for i in range(self.rotation_samples)]
-            for speed, rotation in itertools.product(speeds, rotations):
+            for rotation, speed in itertools.product(rotations, speeds):
                 action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
+            self.speeds = speeds
+            self.rotations = rotations
         else:
             action_space = [ActionRot(0, 0)]
             if self.sampling == 'exponential':
@@ -98,7 +103,7 @@ class CADRL(Policy):
                 speeds = [(i + 1) / self.speed_samples * v_pref for i in range(self.speed_samples)]
             # rotations = [i / self.rotation_samples * np.pi / 3 - np.pi / 6 for i in range(self.rotation_samples + 1)]
             rotations = [i / (self.rotation_samples - 1) * 2 * np.pi for i in range(self.rotation_samples)]
-            for speed, rotation in itertools.product(speeds, rotations):
+            for rotation, speed in itertools.product(rotations, speeds):
                 action_space.append(ActionRot(speed, rotation))
 
         self.action_space = action_space

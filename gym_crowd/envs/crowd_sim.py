@@ -26,6 +26,7 @@ class CrowdSim(gym.Env):
         self.global_time = None
         self.ped_times = None
         self.states = None
+        self.action_values = None
         self.attention_weights = None
         self.config = None
         self.case_capacity = None
@@ -242,6 +243,7 @@ class CrowdSim(gym.Env):
             agent.policy.time_step = self.time_step
 
         self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
+        self.action_values = []
         if hasattr(self.navigator.policy, 'get_attention_weights'):
             self.attention_weights = [np.array([0.1] * len(self.peds))]
 
@@ -341,6 +343,7 @@ class CrowdSim(gym.Env):
                 if self.ped_times[i] == 0 and ped.reached_destination():
                     self.ped_times[i] = self.global_time
             self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+            self.action_values.append(self.navigator.policy.action_values)
             if hasattr(self.navigator.policy, 'get_attention_weights'):
                 self.attention_weights.append(self.navigator.policy.get_attention_weights())
             if self.navigator.sensor == 'coordinates':
@@ -377,8 +380,8 @@ class CrowdSim(gym.Env):
             ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
                              for i in range(len(self.states))]
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-7, 7)
-            ax.set_ylim(-7, 7)
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
             for k in range(len(self.states)):
                 navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color=navigator_color)
                 peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
@@ -397,8 +400,8 @@ class CrowdSim(gym.Env):
             y_offset = 0.11
 
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-7, 7)
-            ax.set_ylim(-7, 7)
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
             goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
             # visualize attention weights using the color saturation
@@ -410,9 +413,10 @@ class CrowdSim(gym.Env):
                         for i in range(len(self.peds))]
             ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='black')
                                for i in range(len(self.peds))]
-            time = plt.text(-1, 6, 'Time: {}'.format(0), fontsize=12)
+            time = plt.text(-1, 4.5, 'Time: {}'.format(0), fontsize=12)
+            global_step = 0
             if self.attention_weights is not None:
-                attention_scores = [plt.text(-6, 6 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
+                attention_scores = [plt.text(-4.5, 4.5 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
                                              fontsize=12) for i in range(len(self.peds))]
             radius = self.navigator.radius
             if self.navigator.kinematics == 'unicycle':
@@ -445,6 +449,8 @@ class CrowdSim(gym.Env):
             plt.legend([navigator, goal], ['Robot', 'Goal'])
 
             def update(frame_num):
+                nonlocal global_step
+                global_step = frame_num % len(self.states)
                 navigator.center = navigator_positions[frame_num]
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
@@ -458,12 +464,32 @@ class CrowdSim(gym.Env):
 
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
+            def plot_value_heatmap():
+                # when any key is pressed draw the action value plot
+                fig, axis = plt.subplots()
+                speeds = [0] + self.navigator.policy.speeds
+                rotations = self.navigator.policy.rotations + [np.pi * 2]
+                r, th = np.meshgrid(speeds, rotations)
+                z = np.array(self.action_values[global_step][1:])
+                # z = list(range(80))
+                z = np.reshape(z, (16, 5))
+                # print(speeds, rotations)
+                # print(self.action_values[global_step])
+                plt.subplot(projection="polar")
+                mesh = plt.pcolormesh(th, r, z)
+                plt.plot(rotations, r, color='k', ls='none')
+                plt.grid()
+                cbaxes = fig.add_axes([0.85, 0.1, 0.03, 0.8])
+                plt.colorbar(mesh, cax=cbaxes)
+                plt.show()
+
             def on_click(event):
+                anim.running ^= True
                 if anim.running:
                     anim.event_source.stop()
+                    plot_value_heatmap()
                 else:
                     anim.event_source.start()
-                anim.running ^= True
 
             fig.canvas.mpl_connect('key_press_event', on_click)
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step*1000)

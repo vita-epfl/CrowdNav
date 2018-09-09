@@ -28,6 +28,7 @@ class MultiPedRL(CADRL):
         if self.phase == 'train' and probability < self.epsilon:
             max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
+            self.action_values = list()
             max_value = float('-inf')
             max_action = None
             for action in self.action_space:
@@ -43,6 +44,7 @@ class MultiPedRL(CADRL):
                 # VALUE UPDATE
                 next_state_value = self.model(rotated_batch_input).data.item()
                 value = reward + pow(self.gamma, self.time_step * state.self_state.v_pref) * next_state_value
+                self.action_values.append(value)
                 if value > max_value:
                     max_value = value
                     max_action = action
