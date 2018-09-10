@@ -343,7 +343,8 @@ class CrowdSim(gym.Env):
                 if self.ped_times[i] == 0 and ped.reached_destination():
                     self.ped_times[i] = self.global_time
             self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
-            self.action_values.append(self.navigator.policy.action_values)
+            if hasattr(self.navigator.policy, 'action_values'):
+                self.action_values.append(self.navigator.policy.action_values)
             if hasattr(self.navigator.policy, 'get_attention_weights'):
                 self.attention_weights.append(self.navigator.policy.get_attention_weights())
             if self.navigator.sensor == 'coordinates':
@@ -465,16 +466,14 @@ class CrowdSim(gym.Env):
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             def plot_value_heatmap():
+                assert self.navigator.kinematics == 'holonomic'
                 # when any key is pressed draw the action value plot
                 fig, axis = plt.subplots()
                 speeds = [0] + self.navigator.policy.speeds
                 rotations = self.navigator.policy.rotations + [np.pi * 2]
                 r, th = np.meshgrid(speeds, rotations)
                 z = np.array(self.action_values[global_step][1:])
-                # z = list(range(80))
                 z = np.reshape(z, (16, 5))
-                # print(speeds, rotations)
-                # print(self.action_values[global_step])
                 plt.subplot(projection="polar")
                 mesh = plt.pcolormesh(th, r, z)
                 plt.plot(rotations, r, color='k', ls='none')
