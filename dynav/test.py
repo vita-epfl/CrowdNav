@@ -103,7 +103,7 @@ def main():
             ped_times = env.get_ped_times()
             logging.info('Average time for peds to reach goal: {:.2f}'.format(sum(ped_times) / len(ped_times)))
     else:
-        nav_times, ped_times, rewards = explorer.run_k_episodes(3, args.phase, print_failure=True)
+        nav_times, ped_times, rewards = explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
         if args.hist:
             fig, (ax1, ax2) = plt.subplots(1, 2)
             ax1.hist(nav_times)
