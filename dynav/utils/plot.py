@@ -132,8 +132,14 @@ def main():
             ax3.set_title('Collision Rate')
 
         if args.plot_reward:
-            ax4.legend(ax4_legends)
-            ax4.set_title('Cumulative Discounted Reward')
+            ax4.legend(ax4_legends, fontsize=20)
+            ax4.set_xlabel('Episodes', fontsize=18)
+            ax4.set_ylabel('Reward', fontsize=18)
+            plt.tick_params(axis='both', which='major', labelsize=18)
+            plt.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.125)
+            # ax4.set_xlabel('xlabel', fontsize=18)
+            # ax4.set_ylabel('ylabel', fontsize=16)
+            # ax4.set_title('Cumulative Discounted Reward')
 
     plt.show()
 

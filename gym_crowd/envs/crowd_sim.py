@@ -392,7 +392,7 @@ class CrowdSim(gym.Env):
                     ax.add_artist(ped)      
             # time = plt.text(-1, 6, 'Trajectories', fontsize=12)
             # ax.add_artist(time)
-            plt.legend([navigator], ['Robot'])
+            plt.legend([navigator], ['Robot'], fontsize=20)
             plt.show()
         elif mode == 'video':
             navigator_positions = [state[0].position for state in self.states]
@@ -412,13 +412,13 @@ class CrowdSim(gym.Env):
             else:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=False, color=str((i+1)/20))
                         for i in range(len(self.peds))]
-            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='black')
-                               for i in range(len(self.peds))]
-            time = plt.text(-1, 4.5, 'Time: {}'.format(0), fontsize=12)
+            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='black',
+                                        fontsize=20) for i in range(len(self.peds))]
+            time = plt.text(-1, 4.5, 'Time: {}'.format(0), fontsize=20)
             global_step = 0
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-4.5, 4.5 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
-                                             fontsize=12) for i in range(len(self.peds))]
+                                             fontsize=20) for i in range(len(self.peds))]
             radius = self.navigator.radius
             if self.navigator.kinematics == 'unicycle':
                 orientation = [((state[0].px, state[0].px + radius * np.cos(state[0].theta)),
@@ -447,7 +447,7 @@ class CrowdSim(gym.Env):
             for i, ped in enumerate(peds):
                 ax.add_artist(ped)
                 ax.add_artist(ped_annotations[i])
-            plt.legend([navigator, goal], ['Robot', 'Goal'])
+            plt.legend([navigator, goal], ['Robot', 'Goal'], fontsize=20)
 
             def update(frame_num):
                 nonlocal global_step

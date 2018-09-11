@@ -29,7 +29,7 @@ class Explorer(object):
         timeout = 0
         too_close = 0
         min_dist = []
-        cumulative_reward = 0
+        cumulative_rewards = []
         collision_cases = []
         timeout_cases = []
         for i in range(k):
@@ -54,7 +54,7 @@ class Explorer(object):
                 navigator_times.append(self.env.global_time)
                 if self.navigator.visible and phase in ['val', 'test']:
                     times = self.env.get_ped_times()
-                    ped_times += times
+                    ped_times.append(average(times))
                     last_ped_time.append(max(times))
             elif isinstance(info, Collision):
                 collision += 1
@@ -70,8 +70,8 @@ class Explorer(object):
                     # only add positive(success) or negative(collision) experience in experience set
                     self.update_memory(states, actions, rewards, imitation_learning)
 
-            cumulative_reward += sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
-                                     for t, reward in enumerate(rewards)])
+            cumulative_rewards.append(sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
+                                          for t, reward in enumerate(rewards)]))
 
         success_rate = success / k
         collision_rate = collision / k
@@ -80,7 +80,8 @@ class Explorer(object):
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.
-                     format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time, cumulative_reward/k))
+                     format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time,
+                            average(cumulative_rewards)))
         if self.navigator.visible and phase in ['val', 'test']:
             logging.info('Average time for peds to reach goal: {:.2f}'.format(average(ped_times)))
             logging.info('Average time for last ped to reach goal: {:.2f}'.format(average(last_ped_time)))
@@ -91,7 +92,7 @@ class Explorer(object):
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        return navigator_times, ped_times
+        return navigator_times, ped_times, cumulative_rewards
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:
