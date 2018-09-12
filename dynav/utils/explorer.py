@@ -22,7 +22,9 @@ class Explorer(object):
                        print_failure=False):
         self.navigator.policy.set_phase(phase)
         navigator_times = []
+        all_nav_times = []
         ped_times = []
+        all_ped_times = []
         last_ped_time = []
         success = 0
         collision = 0
@@ -52,16 +54,23 @@ class Explorer(object):
             if isinstance(info, ReachGoal):
                 success += 1
                 navigator_times.append(self.env.global_time)
+                all_nav_times.append(self.env.global_time)
                 if self.navigator.visible and phase in ['val', 'test']:
                     times = self.env.get_ped_times()
                     ped_times.append(average(times))
                     last_ped_time.append(max(times))
+                else:
+                    all_ped_times.append(self.env.time_limit)
             elif isinstance(info, Collision):
                 collision += 1
                 collision_cases.append(i)
+                all_nav_times.append(self.env.time_limit)
+                all_ped_times.append(self.env.time_limit)
             elif isinstance(info, Timeout):
                 timeout += 1
                 timeout_cases.append(i)
+                all_nav_times.append(self.env.time_limit)
+                all_ped_times.append(self.env.time_limit)
             else:
                 raise ValueError('Invalid end signal from environment')
 
@@ -92,7 +101,7 @@ class Explorer(object):
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        return navigator_times, ped_times, cumulative_rewards
+        return all_nav_times, all_ped_times, cumulative_rewards
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:
