@@ -394,8 +394,8 @@ class CrowdSim(gym.Env):
 
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-5, 5)
-            ax.set_ylim(-5, 5)
+            ax.set_xlim(-4, 4)
+            ax.set_ylim(-4, 4)
             for ped in self.peds:
                 ped_circle = plt.Circle(ped.get_position(), ped.radius, fill=True, color='b')
                 ax.add_artist(ped_circle)
@@ -445,8 +445,9 @@ class CrowdSim(gym.Env):
             ped_positions = [[state[1][j].position for j in range(len(self.peds))] for state in self.states]
 
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.set_xlim(-5, 5)
-            ax.set_ylim(-5, 5)
+            ax.tick_params(labelsize=16)
+            ax.set_xlim(-2.6, 2.6)
+            ax.set_ylim(-1, 4.2)
             goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
             # visualize attention weights using the color saturation
@@ -456,12 +457,12 @@ class CrowdSim(gym.Env):
             else:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=False, color=str((i+1)/20))
                         for i in range(len(self.peds))]
-            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='black',
+            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i+1), color='black',
                                         fontsize=20) for i in range(len(self.peds))]
-            time = plt.text(-1, 4.5, 'Time: {}'.format(0), fontsize=20)
+            time = plt.text(0.5, 4.2, 'Time: {}'.format(0), fontsize=20)
             global_step = 0
             if self.attention_weights is not None:
-                attention_scores = [plt.text(-4.5, 4.5 - 0.5 * i, 'Ped {}: {:.2f}'.format(i, self.attention_weights[0][i]),
+                attention_scores = [plt.text(-2.5, 3.8 - 0.3 * i, 'Ped {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
                                              fontsize=20) for i in range(len(self.peds))]
             radius = self.navigator.radius
             if self.navigator.kinematics == 'unicycle':
@@ -522,12 +523,14 @@ class CrowdSim(gym.Env):
                 z = np.array(self.action_values[global_step % len(self.states)][1:])
                 z = (z - np.min(z)) / (np.max(z) - np.min(z))
                 z = np.reshape(z, (16, 5))
-                plt.subplot(projection="polar")
+                polar = plt.subplot(projection="polar")
+                polar.tick_params(labelsize=16)
                 mesh = plt.pcolormesh(th, r, z, vmin=0, vmax=1)
                 plt.plot(rotations, r, color='k', ls='none')
                 plt.grid()
                 cbaxes = fig.add_axes([0.85, 0.1, 0.03, 0.8])
-                plt.colorbar(mesh, cax=cbaxes)
+                cbar = plt.colorbar(mesh, cax=cbaxes)
+                cbar.ax.tick_params(labelsize=16)
                 plt.show()
 
             def on_click(event):
