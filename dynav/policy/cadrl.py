@@ -32,6 +32,7 @@ class ValueNetwork(nn.Module):
 class CADRL(Policy):
     def __init__(self):
         super().__init__()
+        self.name = 'CADRL'
         self.trainable = True
         self.multiagent_training = None
         self.kinematics = None
@@ -156,6 +157,7 @@ class CADRL(Policy):
         if self.phase == 'train' and probability < self.epsilon:
             max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
+            self.action_values = list()
             max_min_value = float('-inf')
             max_action = None
             for action in self.action_space:
@@ -167,6 +169,7 @@ class CADRL(Policy):
                 outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)
                 min_value = reward + pow(self.gamma, self.time_step * state.self_state.v_pref) * min_output.data.item()
+                self.action_values.append(min_value)
                 if min_value > max_min_value:
                     max_min_value = min_value
                     max_action = action

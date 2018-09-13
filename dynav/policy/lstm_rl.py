@@ -68,6 +68,7 @@ class ValueNetwork2(nn.Module):
 class LstmRL(MultiPedRL):
     def __init__(self):
         super().__init__()
+        self.name = 'LSTM-RL'
         self.with_interaction_module = None
         self.interaction_module_dims = None
 

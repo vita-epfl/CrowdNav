@@ -59,6 +59,7 @@ class ValueNetwork(nn.Module):
 class SARL(MultiPedRL):
     def __init__(self):
         super().__init__()
+        self.name = 'SARL'
 
     def configure(self, config):
         self.set_common_parameters(config)
@@ -71,8 +72,9 @@ class SARL(MultiPedRL):
         self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims,
                                   attention_dims, with_global_state)
         self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
-        logging.info('Policy: {}SARL {} global state'.format('OM-' if self.with_om else '',
-                                                             'w/' if with_global_state else 'w/o'))
+        if self.with_om:
+            self.name = 'OM-SARL'
+        logging.info('Policy: {} {} global state'.format(self.name, 'w/' if with_global_state else 'w/o'))
 
     def get_attention_weights(self):
         return self.model.attention_weights

@@ -213,7 +213,7 @@ class CrowdSim(gym.Env):
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
             self.navigator.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            if self.case_counter[phase] >=0:
+            if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
                     ped_num = self.ped_num if self.navigator.policy.multiagent_training else 1
@@ -226,15 +226,32 @@ class CrowdSim(gym.Env):
                 assert phase == 'test'
                 if self.case_counter[phase] == -1:
                     self.ped_num = 3
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.ped_num)]
                     self.peds[0].set(0, -6, 0, 5, 0, 0, np.pi/2)
                     self.peds[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
                     self.peds[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
                 elif self.case_counter[phase] == -2:
-                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(3)]
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.ped_num)]
                     self.peds[0].set(-3, 0, -3, 5, 0, 0, np.pi / 2)
                     self.peds[1].set(-2, 0, -2, 5, 0, 0, np.pi / 2)
                     self.peds[2].set(-3, 1, -3, 5, 0, 0, np.pi / 2)
+                elif self.case_counter[phase] == -3:
+                    self.ped_num = 5
+                    self.navigator.set(2.0191, 0.7173, 0.0000, 4.0000, 0.0000, 0.1289, 1.5708)
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.ped_num)]
+                    self.peds[0].set(-0.1247, 1.4739, 3.3379, 2.8420, 0.6149, 0.7886, 0.0000)
+                    self.peds[1].set(1.8997, -0.3898, 3.6275, -0.3209, 0.9992, 0.0399, 0.0000)
+                    self.peds[2].set(-0.0124, 0.8459, 2.3581, 3.3641, 0.6854, 0.7281, 0.0000)
+                    self.peds[3].set(-0.3289, -0.1324, -4.3308, -1.2543, -0.9629, -0.2699, 0.0000)
+                    self.peds[4].set(0.6299, 0.0899, 1.7150, -3.9515, 0.2593, -0.9658, 0.0000)
+                elif self.case_counter[phase] == -4:
+                    self.ped_num = 5
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.ped_num)]
+                    self.peds[0].set(-2, -3, 1, -3, 0, 0, np.pi / 2)
+                    self.peds[1].set(3, -2, -3, -2, 0, 0, np.pi / 2)
+                    self.peds[2].set(-4, -1, 3, -1, 0, 0, np.pi / 2)
+                    self.peds[3].set(5, 0, -5, 0, 0, 0, np.pi / 2)
+                    self.peds[4].set(-6, 1, 5, 1, 0, 0, np.pi / 2)
                 else:
                     raise NotImplemented
 
@@ -242,10 +259,11 @@ class CrowdSim(gym.Env):
             agent.time_step = self.time_step
             agent.policy.time_step = self.time_step
 
-        self.states = [[self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]]]
-        self.action_values = []
+        self.states = list()
+        if hasattr(self.navigator.policy, 'action_values'):
+            self.action_values = list()
         if hasattr(self.navigator.policy, 'get_attention_weights'):
-            self.attention_weights = [np.array([0.1] * len(self.peds))]
+            self.attention_weights = list()
 
         # get current observation
         if self.navigator.sensor == 'coordinates':
@@ -333,6 +351,13 @@ class CrowdSim(gym.Env):
             info = Nothing()
 
         if update:
+            # store state, action value and attention weights
+            self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
+            if hasattr(self.navigator.policy, 'action_values'):
+                self.action_values.append(self.navigator.policy.action_values)
+            if hasattr(self.navigator.policy, 'get_attention_weights'):
+                self.attention_weights.append(self.navigator.policy.get_attention_weights())
+
             # update all agents
             self.navigator.step(action)
             for i, ped_action in enumerate(ped_actions):
@@ -342,11 +367,8 @@ class CrowdSim(gym.Env):
                 # only record the first time the ped reaches the goal
                 if self.ped_times[i] == 0 and ped.reached_destination():
                     self.ped_times[i] = self.global_time
-            self.states.append([self.navigator.get_full_state(), [ped.get_full_state() for ped in self.peds]])
-            if hasattr(self.navigator.policy, 'action_values'):
-                self.action_values.append(self.navigator.policy.action_values)
-            if hasattr(self.navigator.policy, 'get_attention_weights'):
-                self.attention_weights.append(self.navigator.policy.get_attention_weights())
+
+            # compute the observation
             if self.navigator.sensor == 'coordinates':
                 ob = [ped.get_observable_state() for ped in self.peds]
             elif self.navigator.sensor == 'RGB':
@@ -366,6 +388,9 @@ class CrowdSim(gym.Env):
         navigator_color = 'yellow'
         goal_color = 'blue'
         heading_color = 'red'
+        x_offset = 0.11
+        y_offset = 0.11
+        cmap = plt.cm.get_cmap('hsv', self.ped_num+1)
 
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
@@ -384,21 +409,40 @@ class CrowdSim(gym.Env):
             ax.set_xlim(-5, 5)
             ax.set_ylim(-5, 5)
             for k in range(len(self.states)):
-                navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color=navigator_color)
-                peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=True, color=str((i+1)/20))
-                        for i in range(len(self.peds))]
-                ax.add_artist(navigator)
-                for ped in peds:
-                    ax.add_artist(ped)      
+                if k % 2 == 0:
+                    navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color=navigator_color)
+                    peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=False, color=cmap(i))
+                            for i in range(len(self.peds))]
+                    ax.add_artist(navigator)
+                    for ped in peds:
+                        ax.add_artist(ped)
+                # add time annotation
+                global_time = k * self.time_step
+                if global_time % 4 == 0:
+                    agents = peds + [navigator]
+                    times = [plt.text(agents[i].center[0] - x_offset, agents[i].center[1] - y_offset, str(global_time),
+                                      color='black', fontsize=10) for i in range(self.ped_num + 1)]
+                    for time in times:
+                        ax.add_artist(time)
+                if k != 0:
+                    nav_direction = plt.Line2D((self.states[k-1][0].px, self.states[k][0].px),
+                                               (self.states[k-1][0].py, self.states[k][0].py),
+                                               color=navigator_color, ls='solid')
+                    ped_directions = [plt.Line2D((self.states[k-1][1][i].px, self.states[k][1][i].px),
+                                                 (self.states[k-1][1][i].py, self.states[k][1][i].py),
+                                                 color=cmap(i), ls='solid')
+                                      for i in range(self.ped_num)]
+                    ax.add_artist(nav_direction)
+                    for ped_direction in ped_directions:
+                        ax.add_artist(ped_direction)
             # time = plt.text(-1, 6, 'Trajectories', fontsize=12)
             # ax.add_artist(time)
             plt.legend([navigator], ['Robot'], fontsize=20)
+            # plt.title(self.navigator.policy.name)
             plt.show()
         elif mode == 'video':
             navigator_positions = [state[0].position for state in self.states]
             ped_positions = [[state[1][j].position for j in range(len(self.peds))] for state in self.states]
-            x_offset = 0.11
-            y_offset = 0.11
 
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-5, 5)
@@ -451,7 +495,7 @@ class CrowdSim(gym.Env):
 
             def update(frame_num):
                 nonlocal global_step
-                global_step = frame_num % len(self.states)
+                global_step = frame_num
                 navigator.center = navigator_positions[frame_num]
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
@@ -467,15 +511,19 @@ class CrowdSim(gym.Env):
 
             def plot_value_heatmap():
                 assert self.navigator.kinematics == 'holonomic'
+                for agent in [self.states[global_step][0]] + self.states[global_step][1]:
+                    print(('{:.4f}, ' * 6 + '{:.4f}').format(agent.px, agent.py, agent.gx, agent.gy,
+                                                             agent.vx, agent.vy, agent.theta))
                 # when any key is pressed draw the action value plot
                 fig, axis = plt.subplots()
                 speeds = [0] + self.navigator.policy.speeds
                 rotations = self.navigator.policy.rotations + [np.pi * 2]
                 r, th = np.meshgrid(speeds, rotations)
-                z = np.array(self.action_values[global_step][1:])
+                z = np.array(self.action_values[global_step % len(self.states)][1:])
+                z = (z - np.min(z)) / (np.max(z) - np.min(z))
                 z = np.reshape(z, (16, 5))
                 plt.subplot(projection="polar")
-                mesh = plt.pcolormesh(th, r, z)
+                mesh = plt.pcolormesh(th, r, z, vmin=0, vmax=1)
                 plt.plot(rotations, r, color='k', ls='none')
                 plt.grid()
                 cbaxes = fig.add_axes([0.85, 0.1, 0.03, 0.8])
@@ -486,9 +534,13 @@ class CrowdSim(gym.Env):
                 anim.running ^= True
                 if anim.running:
                     anim.event_source.stop()
-                    plot_value_heatmap()
+                    if hasattr(self.navigator.policy, 'action_values'):
+                        plot_value_heatmap()
                 else:
                     anim.event_source.start()
+
+            if self.case_counter['test'] == -3:
+                plot_value_heatmap()
 
             fig.canvas.mpl_connect('key_press_event', on_click)
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step*1000)
