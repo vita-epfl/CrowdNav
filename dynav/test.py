@@ -5,7 +5,6 @@ import configparser
 import numpy as np
 import gym
 import os
-import matplotlib.pyplot as plt
 from dynav.utils.navigator import Navigator
 from dynav.utils.explorer import Explorer
 from dynav.policy.policy_factory import policy_factory
@@ -35,7 +34,10 @@ def main():
         if args.il:
             model_weights = os.path.join(args.model_dir, 'il_model.pth')
         else:
-            model_weights = os.path.join(args.model_dir, 'rl_model.pth')
+            if os.path.exists(os.path.join(args.model_dir, 'resumed_rl_model.pth')):
+                model_weights = os.path.join(args.model_dir, 'resumed_rl_model.pth')
+            else:
+                model_weights = os.path.join(args.model_dir, 'rl_model.pth')
     else:
         env_config_file = args.env_config
         policy_config_file = args.env_config
@@ -77,7 +79,7 @@ def main():
         if navigator.visible:
             navigator.policy.safety_space = 0
         else:
-            navigator.policy.safety_space = 0.15
+            navigator.policy.safety_space = 0
         logging.info('ORCA agent buffer: {}'.format(navigator.policy.safety_space))
 
     policy.set_env(env)

@@ -385,19 +385,19 @@ class CrowdSim(gym.Env):
         import matplotlib.animation as animation
         import matplotlib.pyplot as plt
 
-        navigator_color = 'yellow'
+        x_offset = 0.25
+        y_offset = 0.11
+        cmap = plt.cm.get_cmap('hsv', self.ped_num * 2)
+        navigator_color = cmap(5)
         goal_color = 'blue'
         heading_color = 'red'
-        x_offset = 0.11
-        y_offset = 0.11
-        cmap = plt.cm.get_cmap('hsv', self.ped_num+1)
 
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_xlim(-4, 4)
             ax.set_ylim(-4, 4)
             for ped in self.peds:
-                ped_circle = plt.Circle(ped.get_position(), ped.radius, fill=True, color='b')
+                ped_circle = plt.Circle(ped.get_position(), ped.radius, fill=False, color='b')
                 ax.add_artist(ped_circle)
             ax.add_artist(plt.Circle(self.navigator.get_position(), self.navigator.radius, fill=True, color='r'))
             plt.show()
@@ -406,10 +406,11 @@ class CrowdSim(gym.Env):
             ped_positions = [[self.states[i][1][j].position for j in range(len(self.peds))]
                              for i in range(len(self.states))]
             fig, ax = plt.subplots(figsize=(7, 7))
+            ax.tick_params(labelsize=16)
             ax.set_xlim(-5, 5)
             ax.set_ylim(-5, 5)
             for k in range(len(self.states)):
-                if k % 2 == 0:
+                if k % 4 == 0 or k == len(self.states) - 1:
                     navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color=navigator_color)
                     peds = [plt.Circle(ped_positions[k][i], self.peds[i].radius, fill=False, color=cmap(i))
                             for i in range(len(self.peds))]
@@ -418,10 +419,10 @@ class CrowdSim(gym.Env):
                         ax.add_artist(ped)
                 # add time annotation
                 global_time = k * self.time_step
-                if global_time % 4 == 0:
+                if global_time % 4 == 0 or k == len(self.states) - 1:
                     agents = peds + [navigator]
-                    times = [plt.text(agents[i].center[0] - x_offset, agents[i].center[1] - y_offset, str(global_time),
-                                      color='black', fontsize=10) for i in range(self.ped_num + 1)]
+                    times = [plt.text(agents[i].center[0] - x_offset, agents[i].center[1] - y_offset, '{:.1f}'.format(global_time),
+                                      color='black', fontsize=14) for i in range(self.ped_num + 1)]
                     for time in times:
                         ax.add_artist(time)
                 if k != 0:
@@ -448,6 +449,8 @@ class CrowdSim(gym.Env):
             ax.tick_params(labelsize=16)
             ax.set_xlim(-2.6, 2.6)
             ax.set_ylim(-1, 4.2)
+            # ax.set_xlim(-5, 5)
+            # ax.set_ylim(-5, 5)
             goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
             # visualize attention weights using the color saturation
@@ -459,7 +462,7 @@ class CrowdSim(gym.Env):
                         for i in range(len(self.peds))]
             ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i+1), color='black',
                                         fontsize=20) for i in range(len(self.peds))]
-            time = plt.text(0.5, 4.2, 'Time: {}'.format(0), fontsize=20)
+            # time = plt.text(0.5, 4.2, 'Time: {}'.format(0), fontsize=20)
             global_step = 0
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-2.5, 3.8 - 0.3 * i, 'Ped {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
@@ -488,7 +491,7 @@ class CrowdSim(gym.Env):
                 ax.add_artist(segment)
             ax.add_artist(navigator)
             ax.add_artist(goal)
-            ax.add_artist(time)
+            # ax.add_artist(time)
             for i, ped in enumerate(peds):
                 ax.add_artist(ped)
                 ax.add_artist(ped_annotations[i])
@@ -508,7 +511,7 @@ class CrowdSim(gym.Env):
                         ped.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
 
-                time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
+                # time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             def plot_value_heatmap():
                 assert self.navigator.kinematics == 'holonomic'

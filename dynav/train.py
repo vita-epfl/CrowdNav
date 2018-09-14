@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--train_config', type=str, default='configs/train.config')
     parser.add_argument('--output_dir', type=str, default='data/output')
     parser.add_argument('--weights', type=str)
+    parser.add_argument('--resume', default=False, action='store_true')
     parser.add_argument('--gpu', default=False, action='store_true')
     parser.add_argument('--debug', default=False, action='store_true')
     args = parser.parse_args()
@@ -30,7 +31,7 @@ def main():
     make_new_dir = True
     if os.path.exists(args.output_dir):
         key = input('Output directory already exists! Overwrite the folder? (y/n)')
-        if key == 'y':
+        if key == 'y' and not args.resume:
             shutil.rmtree(args.output_dir)
         else:
             make_new_dir = False
@@ -47,7 +48,8 @@ def main():
     rl_weight_file = os.path.join(args.output_dir, 'rl_model.pth')
 
     # configure logging
-    file_handler = logging.FileHandler(log_file, mode='a')
+    mode = 'a' if args.resume else 'w'
+    file_handler = logging.FileHandler(log_file, mode=mode)
     stdout_handler = logging.StreamHandler(sys.stdout)
     level = logging.INFO if not args.debug else logging.DEBUG
     logging.basicConfig(level=level, handlers=[stdout_handler, file_handler],
@@ -101,7 +103,12 @@ def main():
     explorer = Explorer(env, navigator, device, memory, policy.gamma, target_policy=policy)
 
     # imitation learning
-    if os.path.exists(il_weight_file):
+    if args.resume:
+        if not os.path.exists(rl_weight_file):
+            logging.error('RL weights does not exist')
+        model.load_state_dict(torch.load(rl_weight_file))
+        logging.info('Load reinforcement learning trained weights. Resume training')
+    elif os.path.exists(il_weight_file):
         model.load_state_dict(torch.load(il_weight_file))
         logging.info('Load imitation learning trained weights.')
     else:
@@ -130,18 +137,20 @@ def main():
     navigator.set_policy(policy)
     navigator.print_info()
     trainer.set_learning_rate(rl_learning_rate)
-    # clean imitation learning experience and collect rl experience
-    # memory.clear()
-    # navigator.policy.set_epsilon(epsilon_start)
-    # explorer.run_k_episodes(100, 'train', update_memory=True, episode=0)
-    # logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
+    # fill the memory pool with some RL experience
+    if args.resume:
+        navigator.policy.set_epsilon(epsilon_end)
+        explorer.run_k_episodes(100, 'train', update_memory=True, episode=0)
+        logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
     episode = 0
     while episode < train_episodes:
-        # epsilon-greedy
-        if episode < epsilon_decay:
-            epsilon = epsilon_start + (epsilon_end - epsilon_start) / epsilon_decay * episode
-        else:
+        if args.resume:
             epsilon = epsilon_end
+        else:
+            if episode < epsilon_decay:
+                epsilon = epsilon_start + (epsilon_end - epsilon_start) / epsilon_decay * episode
+            else:
+                epsilon = epsilon_end
         navigator.policy.set_epsilon(epsilon)
 
         # evaluate the model
@@ -157,7 +166,10 @@ def main():
             explorer.update_target_model(model)
 
         if episode != 0 and episode % checkpoint_interval == 0:
-            torch.save(model.state_dict(), rl_weight_file)
+            if args.resume:
+                torch.save(model.state_dict(), 'resumed_' + rl_weight_file)
+            else:
+                torch.save(model.state_dict(), rl_weight_file)
 
     # final test
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
