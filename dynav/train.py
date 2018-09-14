@@ -107,6 +107,7 @@ def main():
         if not os.path.exists(rl_weight_file):
             logging.error('RL weights does not exist')
         model.load_state_dict(torch.load(rl_weight_file))
+        rl_weight_file = os.path.join(args.output_dir, 'resumed_rl_model.pth')
         logging.info('Load reinforcement learning trained weights. Resume training')
     elif os.path.exists(il_weight_file):
         model.load_state_dict(torch.load(il_weight_file))
@@ -166,10 +167,7 @@ def main():
             explorer.update_target_model(model)
 
         if episode != 0 and episode % checkpoint_interval == 0:
-            if args.resume:
-                torch.save(model.state_dict(), 'resumed_' + rl_weight_file)
-            else:
-                torch.save(model.state_dict(), rl_weight_file)
+            torch.save(model.state_dict(), rl_weight_file)
 
     # final test
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
