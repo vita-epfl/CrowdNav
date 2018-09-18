@@ -2,6 +2,8 @@ import logging
 import gym
 import numpy as np
 from numpy.linalg import norm
+from matplotlib import patches
+import matplotlib.lines as mlines
 import rvo2
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
@@ -385,12 +387,13 @@ class CrowdSim(gym.Env):
         import matplotlib.animation as animation
         import matplotlib.pyplot as plt
 
-        x_offset = 0.25
+        x_offset = 0.2
         y_offset = 0.11
         cmap = plt.cm.get_cmap('hsv', self.ped_num * 2)
         navigator_color = cmap(5)
-        goal_color = 'blue'
+        goal_color = 'red'
         heading_color = 'red'
+        arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
 
         if mode == 'human':
             fig, ax = plt.subplots(figsize=(7, 7))
@@ -409,6 +412,8 @@ class CrowdSim(gym.Env):
             ax.tick_params(labelsize=16)
             ax.set_xlim(-5, 5)
             ax.set_ylim(-5, 5)
+            ax.set_xlabel('x(m)', fontsize=16)
+            ax.set_ylabel('y(m)', fontsize=16)
             for k in range(len(self.states)):
                 if k % 4 == 0 or k == len(self.states) - 1:
                     navigator = plt.Circle(navigator_positions[k], self.navigator.radius, fill=True, color=navigator_color)
@@ -447,12 +452,16 @@ class CrowdSim(gym.Env):
 
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-2.6, 2.6)
-            ax.set_ylim(-1, 4.2)
-            # ax.set_xlim(-5, 5)
-            # ax.set_ylim(-5, 5)
-            goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
+            ax.set_xlim(-5, 5)
+            ax.set_ylim(-5, 5)
+            # ax.set_xlim(-2.6, 2.6)
+            # ax.set_ylim(-1, 4.2)
+            ax.set_xlabel('x(m)', fontsize=16)
+            ax.set_ylabel('y(m)', fontsize=16)
+            # goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
+            goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
             navigator = plt.Circle(navigator_positions[0], self.navigator.radius, fill=True, color=navigator_color)
+
             # visualize attention weights using the color saturation
             if self.attention_weights is not None:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=False,
@@ -463,14 +472,15 @@ class CrowdSim(gym.Env):
             ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i+1), color='black',
                                         fontsize=20) for i in range(len(self.peds))]
             # time = plt.text(0.5, 4.2, 'Time: {}'.format(0), fontsize=20)
+
             global_step = 0
             if self.attention_weights is not None:
                 attention_scores = [plt.text(-2.5, 3.8 - 0.3 * i, 'Ped {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
                                              fontsize=20) for i in range(len(self.peds))]
             radius = self.navigator.radius
             if self.navigator.kinematics == 'unicycle':
-                orientation = [((state[0].px, state[0].px + radius * np.cos(state[0].theta)),
-                                (state[0].py, state[0].py + radius * np.sin(state[0].theta))) for state in self.states]
+                orientation = [((state[0].px, state[0].py), (state[0].px + radius * np.cos(state[0].theta),
+                                state[0].py + radius * np.sin(state[0].theta))) for state in self.states]
                 orientations = [orientation]
             else:
                 orientations = []
@@ -482,15 +492,18 @@ class CrowdSim(gym.Env):
                         else:
                             agent_state = state[1][i-1]
                         theta = np.arctan2(agent_state.vy, agent_state.vx)
-                        orientation.append(((agent_state.px, agent_state.px + radius * np.cos(theta)),
-                                           (agent_state.py, agent_state.py + radius * np.sin(theta))))
+                        orientation.append(((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
+                                                                               agent_state.py + radius * np.sin(theta))))
                     orientations.append(orientation)
-            orientation_segments = [plt.Line2D(*orientation[0], color=heading_color) for orientation in orientations]
+            orientation_arrows = [patches.FancyArrowPatch(*orientation[0], color=heading_color, arrowstyle=arrow_style)
+                                  for orientation in orientations]
 
-            for segment in orientation_segments:
-                ax.add_artist(segment)
+            # nav_goal = plt.Line2D([navigator_positions[0][0], 0], [navigator_positions[0][1], 4], linestyle='dashed', color='black')
+            # ax.add_artist(nav_goal)
             ax.add_artist(navigator)
             ax.add_artist(goal)
+            for arrow in orientation_arrows:
+                ax.add_artist(arrow)
             # ax.add_artist(time)
             for i, ped in enumerate(peds):
                 ax.add_artist(ped)
@@ -499,14 +512,18 @@ class CrowdSim(gym.Env):
 
             def update(frame_num):
                 nonlocal global_step
+                nonlocal orientation_arrows
                 global_step = frame_num
                 navigator.center = navigator_positions[frame_num]
                 for i, ped in enumerate(peds):
                     ped.center = ped_positions[frame_num][i]
                     ped_annotations[i].set_position((ped.center[0]-x_offset, ped.center[1]-y_offset))
-                    for agent_i, orientation in enumerate(orientations):
-                        orientation_segments[agent_i].set_xdata(orientation[frame_num][0])
-                        orientation_segments[agent_i].set_ydata(orientation[frame_num][1])
+                    for arrow in orientation_arrows:
+                        arrow.remove()
+                    orientation_arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=heading_color,
+                                          arrowstyle=arrow_style) for orientation in orientations]
+                    for arrow in orientation_arrows:
+                        ax.add_artist(arrow)
                     if self.attention_weights is not None:
                         ped.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('Ped {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))

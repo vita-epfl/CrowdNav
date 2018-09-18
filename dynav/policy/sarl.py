@@ -36,26 +36,28 @@ class ValueNetwork(nn.Module):
         """
         size = state.shape
         self_state = state[:, 0, :self.self_state_dim]
-        mlp1_output = self.mlp1(torch.reshape(state, (-1, size[2])))
+        mlp1_output = self.mlp1(state.view((-1, size[2])))
         mlp2_output = self.mlp2(mlp1_output)
-        if True:
+        if self.global_om:
             global_om = self.build_global_om(state)
 
         if self.with_global_state:
             # compute attention scores
-            global_state = torch.mean(torch.reshape(mlp1_output, (size[0], size[1], -1)), 1, keepdim=True)
-            global_state = torch.reshape(global_state.expand((size[0], size[1], self.global_state_dim)),
-                                         (-1, self.global_state_dim))
+            global_state = torch.mean(mlp1_output.view(size[0], size[1], -1), 1, keepdim=True)
+            global_state = global_state.expand((size[0], size[1], self.global_state_dim)).\
+                contiguous().view(-1, self.global_state_dim)
             attention_input = torch.cat([mlp1_output, global_state], dim=1)
         else:
             attention_input = mlp1_output
-        scores = torch.reshape(self.attention(attention_input), (size[0], size[1], 1)).squeeze(dim=2)
+        scores = self.attention(attention_input).view(size[0], size[1], 1).squeeze(dim=2)
         weights = softmax(scores, dim=1).unsqueeze(2)
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
 
         # output feature is a linear combination of input features
-        features = torch.reshape(mlp2_output, (size[0], size[1], -1))
-        weighted_feature = torch.sum(weights.expand_as(features) * features, dim=1)
+        features = mlp2_output.view(size[0], size[1], -1)
+        # for converting to onnx
+        # expanded_weights = torch.cat([torch.zeros(weights.size()).copy_(weights) for _ in range(50)], dim=2)
+        weighted_feature = torch.sum(torch.mul(weights, features), dim=1)
 
         # concatenate agent's state with global weighted peds' state
         if self.global_om:

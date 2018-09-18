@@ -19,7 +19,7 @@ class Trainer(object):
 
     def set_learning_rate(self, learning_rate):
         logging.info('Current learning rate: {}'.format(learning_rate))
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=0.9)
 
     def optimize_epoch(self, num_epochs):
         if self.optimizer is None:
