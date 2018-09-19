@@ -33,13 +33,18 @@ class MultiPedRL(CADRL):
             max_action = None
             for action in self.action_space:
                 next_self_state = self.propagate(state.self_state, action)
-                ob, reward, done, info = self.env.onestep_lookahead(action)
+                if self.query_env:
+                    next_ped_states, reward, done, info = self.env.onestep_lookahead(action)
+                else:
+                    next_ped_states = [self.propagate(ped_state, ActionXY(ped_state.vx, ped_state.vy))
+                                       for ped_state in state.ped_states]
+                    reward = self.compute_reward(next_self_state, next_ped_states)
                 batch_next_states = torch.cat([torch.Tensor([next_self_state + next_ped_state]).to(self.device)
-                                              for next_ped_state in ob], dim=0)
+                                              for next_ped_state in next_ped_states], dim=0)
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
                 if self.with_om:
                     if occupancy_maps is None:
-                        occupancy_maps = self.build_occupancy_maps(ob).unsqueeze(0)
+                        occupancy_maps = self.build_occupancy_maps(next_ped_states).unsqueeze(0)
                     rotated_batch_input = torch.cat([rotated_batch_input, occupancy_maps], dim=2)
                 # VALUE UPDATE
                 next_state_value = self.model(rotated_batch_input).data.item()
@@ -55,6 +60,31 @@ class MultiPedRL(CADRL):
             self.last_state = self.transform(state)
 
         return max_action
+
+    def compute_reward(self, nav, peds):
+        # collision detection
+        dmin = float('inf')
+        collision = False
+        for i, ped in enumerate(peds):
+            dist = np.linalg.norm((nav.px - ped.px, nav.py - ped.py)) - nav.radius - ped.radius
+            if dist < 0:
+                collision = True
+                break
+            if dist < dmin:
+                dmin = dist
+
+        # check if reaching the goal
+        reaching_goal = np.linalg.norm((nav.px - nav.gx, nav.py - nav.gy)) < nav.radius
+        if collision:
+            reward = -0.25
+        elif reaching_goal:
+            reward = 1
+        elif dmin < 0.2:
+            reward = (dmin - 0.2) * 0.5 * self.time_step
+        else:
+            reward = 0
+
+        return reward
 
     def transform(self, state):
         """

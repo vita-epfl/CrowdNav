@@ -12,7 +12,6 @@ model = ValueNetwork(input_dim=13,
                      mlp3_dims=[100, 100, 1],
                      attention_dims=[150, 100, 100, 1],
                      with_global_state=True,
-                     global_om=False,
                      cell_size=1,
                      cell_num=4)
 value = model(data)

@@ -41,6 +41,7 @@ class CADRL(Policy):
         self.sampling = None
         self.speed_samples = None
         self.rotation_samples = None
+        self.query_env = None
         self.action_space = None
         self.speeds = None
         self.rotations = None
@@ -66,6 +67,7 @@ class CADRL(Policy):
         self.sampling = config.get('action_space', 'sampling')
         self.speed_samples = config.getint('action_space', 'speed_samples')
         self.rotation_samples = config.getint('action_space', 'rotation_samples')
+        self.query_env = config.getboolean('action_space', 'query_env')
         self.cell_num = config.getint('om', 'cell_num')
         self.cell_size = config.getfloat('om', 'cell_size')
         self.om_channel_size = config.getint('om', 'om_channel_size')
