@@ -83,32 +83,23 @@ class CADRL(Policy):
         """
         Action space consists of 25 uniformly sampled actions in permitted range and 25 randomly sampled actions.
         """
-        if self.action_space is not None:
-            return
-        if self.kinematics == 'holonomic':
-            action_space = [ActionXY(0, 0)]
-            if self.sampling == 'exponential':
-                speeds = [(np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref
-                          for i in range(self.speed_samples)]
-            else:
-                speeds = [(i + 1) / self.speed_samples * v_pref for i in range(self.speed_samples)]
-            rotations = [i / self.rotation_samples * 2 * np.pi for i in range(self.rotation_samples)]
-            for rotation, speed in itertools.product(rotations, speeds):
-                action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
-            self.speeds = speeds
-            self.rotations = rotations
+        holonomic = True if self.kinematics == 'holonomic' else False
+        speeds = [(np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref for i in range(self.speed_samples)]
+        if holonomic:
+            rotations = np.linspace(0, 2 * np.pi, self.rotation_samples, endpoint=False)
         else:
-            action_space = [ActionRot(0, 0)]
-            if self.sampling == 'exponential':
-                speeds = [(np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref
-                          for i in range(self.speed_samples)]
+            rotations = np.linspace(-np.pi / 4, np.pi / 4, self.rotation_samples)
+        print(rotations)
+
+        action_space = [ActionXY(0, 0) if holonomic else ActionRot(0, 0)]
+        for rotation, speed in itertools.product(rotations, speeds):
+            if holonomic:
+                action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
             else:
-                speeds = [(i + 1) / self.speed_samples * v_pref for i in range(self.speed_samples)]
-            # rotations = [i / self.rotation_samples * np.pi / 3 - np.pi / 6 for i in range(self.rotation_samples + 1)]
-            rotations = [i / (self.rotation_samples - 1) * 2 * np.pi for i in range(self.rotation_samples)]
-            for rotation, speed in itertools.product(rotations, speeds):
                 action_space.append(ActionRot(speed, rotation))
 
+        self.speeds = speeds
+        self.rotations = rotations
         self.action_space = action_space
 
     def propagate(self, state, action):
@@ -126,11 +117,11 @@ class CADRL(Policy):
                 next_state = FullState(next_px, next_py, action.vx, action.vy, state.radius,
                                        state.gx, state.gy, state.v_pref, state.theta)
             else:
-                next_px = state.px + np.cos(action.r + state.theta) * action.v * self.time_step
-                next_py = state.py + np.sin(action.r + state.theta) * action.v * self.time_step
                 next_theta = state.theta + action.r
                 next_vx = action.v * np.cos(next_theta)
                 next_vy = action.v * np.sin(next_theta)
+                next_px = state.px + next_vx * self.time_step
+                next_py = state.py + next_vy * self.time_step
                 next_state = FullState(next_px, next_py, next_vx, next_vy, state.radius, state.gx, state.gy,
                                        state.v_pref, next_theta)
         else:
@@ -153,7 +144,8 @@ class CADRL(Policy):
 
         if self.reach_destination(state):
             return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
-        self.build_action_space(state.self_state.v_pref)
+        if self.action_space is not None:
+            self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
@@ -212,11 +204,12 @@ class CADRL(Policy):
         vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
 
         radius = state[:, 4].reshape((batch, -1))
-        if self.kinematics == 'unicycle':
-            theta = (state[:, 8] - rot).reshape((batch, -1))
-        else:
-            # set theta to be zero since it's not used
-            theta = torch.zeros_like(v_pref)
+        # TODO: temporarily set theta to be always 0
+        # if self.kinematics == 'unicycle':
+        #     theta = (state[:, 8] - rot).reshape((batch, -1))
+        # else:
+        #     # set theta to be zero since it's not used
+        theta = torch.zeros_like(v_pref)
         vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
         vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
         px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)

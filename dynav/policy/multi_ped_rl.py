@@ -21,7 +21,8 @@ class MultiPedRL(CADRL):
 
         if self.reach_destination(state):
             return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
-        self.build_action_space(state.self_state.v_pref)
+        if self.action_space is None:
+            self.build_action_space(state.self_state.v_pref)
 
         occupancy_maps = None
         probability = np.random.random()
@@ -103,7 +104,7 @@ class MultiPedRL(CADRL):
         return state_tensor
 
     def input_dim(self):
-        return self.joint_state_dim + self.cell_num ** 2 * self.om_channel_size if self.with_om else self.joint_state_dim
+        return self.joint_state_dim + (self.cell_num ** 2 * self.om_channel_size if self.with_om else 0)
 
     def build_occupancy_maps(self, ped_states):
         """

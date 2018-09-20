@@ -254,6 +254,12 @@ class CrowdSim(gym.Env):
                     self.peds[2].set(-4, -1, 3, -1, 0, 0, np.pi / 2)
                     self.peds[3].set(5, 0, -5, 0, 0, 0, np.pi / 2)
                     self.peds[4].set(-6, 1, 5, 1, 0, 0, np.pi / 2)
+                elif self.case_counter[phase] == -5:
+                    # loomo experiment
+                    self.navigator.set(0, 0, 5, 0, 0, 0, 0)
+                    self.ped_num = 1
+                    self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.ped_num)]
+                    self.peds[0].set(10, 10, 10, 10, 0, 0, 0)
                 else:
                     raise NotImplemented
 
@@ -452,8 +458,8 @@ class CrowdSim(gym.Env):
 
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
-            ax.set_xlim(-5, 5)
-            ax.set_ylim(-5, 5)
+            ax.set_xlim(-6, 6)
+            ax.set_ylim(-6, 6)
             # ax.set_xlim(-2.6, 2.6)
             # ax.set_ylim(-1, 4.2)
             ax.set_xlabel('x(m)', fontsize=16)
@@ -497,9 +503,6 @@ class CrowdSim(gym.Env):
                     orientations.append(orientation)
             orientation_arrows = [patches.FancyArrowPatch(*orientation[0], color=heading_color, arrowstyle=arrow_style)
                                   for orientation in orientations]
-
-            # nav_goal = plt.Line2D([navigator_positions[0][0], 0], [navigator_positions[0][1], 4], linestyle='dashed', color='black')
-            # ax.add_artist(nav_goal)
             ax.add_artist(navigator)
             ax.add_artist(goal)
             for arrow in orientation_arrows:

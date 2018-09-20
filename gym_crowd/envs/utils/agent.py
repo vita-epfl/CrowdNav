@@ -5,6 +5,9 @@ import logging
 from gym_crowd.envs.policy.policy_factory import policy_factory
 from gym_crowd.envs.utils.action import ActionXY, ActionRot
 from gym_crowd.envs.utils.state import ObservableState, FullState
+import sys
+if 'threading' in sys.modules:
+    del sys.modules['threading']
 
 
 class Agent(object):
