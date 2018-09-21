@@ -23,9 +23,6 @@ class Explorer(object):
         self.navigator.policy.set_phase(phase)
         navigator_times = []
         all_nav_times = []
-        ped_times = []
-        all_ped_times = []
-        last_ped_time = []
         success = 0
         collision = 0
         timeout = 0
@@ -55,22 +52,14 @@ class Explorer(object):
                 success += 1
                 navigator_times.append(self.env.global_time)
                 all_nav_times.append(self.env.global_time)
-                if self.navigator.visible and phase in ['val', 'test']:
-                    times = self.env.get_ped_times()
-                    ped_times.append(average(times))
-                    last_ped_time.append(max(times))
-                else:
-                    all_ped_times.append(self.env.time_limit)
             elif isinstance(info, Collision):
                 collision += 1
                 collision_cases.append(i)
                 all_nav_times.append(self.env.time_limit)
-                all_ped_times.append(self.env.time_limit)
             elif isinstance(info, Timeout):
                 timeout += 1
                 timeout_cases.append(i)
                 all_nav_times.append(self.env.time_limit)
-                all_ped_times.append(self.env.time_limit)
             else:
                 raise ValueError('Invalid end signal from environment')
 
@@ -91,9 +80,7 @@ class Explorer(object):
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time,
                             average(cumulative_rewards)))
-        if self.navigator.visible and phase in ['val', 'test']:
-            logging.info('Average time for peds to reach goal: {:.2f}'.format(average(ped_times)))
-            logging.info('Average time for last ped to reach goal: {:.2f}'.format(average(last_ped_time)))
+        if phase in ['val', 'test']:
             logging.info('Frequency of being in danger: {:.2f} and average min separate distance in danger: {:.2f}'.
                          format(too_close/sum(navigator_times)*self.navigator.time_step, average(min_dist)))
 
@@ -101,7 +88,7 @@ class Explorer(object):
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        return all_nav_times, all_ped_times, cumulative_rewards
+        return all_nav_times, cumulative_rewards
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:

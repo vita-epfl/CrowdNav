@@ -347,7 +347,7 @@ class CrowdSim(gym.Env):
             reward = self.success_reward
             done = True
             info = ReachGoal()
-        elif self.navigator.visible and dmin < self.discomfort_dist:
+        elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
             reward = (dmin - self.discomfort_dist) * self.discomfort_penalty_factor * self.time_step

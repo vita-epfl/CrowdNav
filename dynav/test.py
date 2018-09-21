@@ -104,12 +104,10 @@ def main():
             ped_times = env.get_ped_times()
             logging.info('Average time for peds to reach goal: {:.2f}'.format(sum(ped_times) / len(ped_times)))
     else:
-        nav_times, ped_times, rewards = explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
+        nav_times, rewards = explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
         if args.model_dir is not None:
             with open(os.path.join(args.model_dir, 'results.txt'), mode='w') as fo:
                 fo.write(' '.join([str(time) for time in nav_times]))
-                if navigator.visible:
-                    fo.write('\n' + ' '.join([str(time) for time in ped_times]))
                 fo.write('\n' + ' '.join([str(reward) for reward in rewards]))
 
 

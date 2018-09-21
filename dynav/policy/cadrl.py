@@ -204,12 +204,11 @@ class CADRL(Policy):
         vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
 
         radius = state[:, 4].reshape((batch, -1))
-        # TODO: temporarily set theta to be always 0
-        # if self.kinematics == 'unicycle':
-        #     theta = (state[:, 8] - rot).reshape((batch, -1))
-        # else:
-        #     # set theta to be zero since it's not used
-        theta = torch.zeros_like(v_pref)
+        if self.kinematics == 'unicycle':
+            theta = (state[:, 8] - rot).reshape((batch, -1))
+        else:
+            # set theta to be zero since it's not used
+            theta = torch.zeros_like(v_pref)
         vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
         vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
         px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
