@@ -21,8 +21,9 @@ class Explorer(object):
     def run_k_episodes(self, k, phase, update_memory=False, imitation_learning=False, episode=None,
                        print_failure=False):
         self.navigator.policy.set_phase(phase)
-        navigator_times = []
-        all_nav_times = []
+        success_times = []
+        collision_times = []
+        timeout_times = []
         success = 0
         collision = 0
         timeout = 0
@@ -50,16 +51,15 @@ class Explorer(object):
 
             if isinstance(info, ReachGoal):
                 success += 1
-                navigator_times.append(self.env.global_time)
-                all_nav_times.append(self.env.global_time)
+                success_times.append(self.env.global_time)
             elif isinstance(info, Collision):
                 collision += 1
                 collision_cases.append(i)
-                all_nav_times.append(self.env.time_limit)
+                collision_times.append(self.env.global_time)
             elif isinstance(info, Timeout):
                 timeout += 1
                 timeout_cases.append(i)
-                all_nav_times.append(self.env.time_limit)
+                timeout_times.append(self.env.time_limit)
             else:
                 raise ValueError('Invalid end signal from environment')
 
@@ -68,27 +68,27 @@ class Explorer(object):
                     # only add positive(success) or negative(collision) experience in experience set
                     self.update_memory(states, actions, rewards, imitation_learning)
 
-            cumulative_rewards.append(sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref) * reward
-                                          for t, reward in enumerate(rewards)]))
+            cumulative_rewards.append(sum([pow(self.gamma, t * self.navigator.time_step * self.navigator.v_pref)
+                                           * reward for t, reward in enumerate(rewards)]))
 
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
-        avg_nav_time = sum(navigator_times) / len(navigator_times) if len(navigator_times) != 0 else self.env.time_limit
+        avg_nav_time = sum(success_times) / len(success_times) if len(success_times) != 0 else self.env.time_limit
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time,
                             average(cumulative_rewards)))
         if phase in ['val', 'test']:
+            total_time = sum(success_times + collision_times + timeout_times) * self.navigator.time_step
             logging.info('Frequency of being in danger: {:.2f} and average min separate distance in danger: {:.2f}'.
-                         format(too_close/sum(navigator_times)*self.navigator.time_step, average(min_dist)))
+                         format(too_close / total_time, average(min_dist)))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
-        return all_nav_times, cumulative_rewards
 
     def update_memory(self, states, actions, rewards, imitation_learning=False):
         if self.memory is None or self.gamma is None:
@@ -115,6 +115,11 @@ class Explorer(object):
                     value = reward + gamma_bar * self.target_model(next_state.unsqueeze(0)).data.item()
             value = torch.Tensor([value]).to(self.device)
 
+            # transform state of different ped_num into fixed-size tensor
+            ped_num, feature_size = state.size()
+            if ped_num != 5:
+                padding = torch.zeros((5 - ped_num, feature_size))
+                state = torch.cat([state, padding])
             self.memory.push((state, value))
 
 

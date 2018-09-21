@@ -92,6 +92,9 @@ class ORCA(Policy):
         """
         self_state = state.self_state
         params = self.neighbor_dist, self.max_neighbors, self.time_horizon, self.time_horizon_obst
+        if self.sim is not None and self.sim.getNumAgents() != len(state.ped_states) + 1:
+            del self.sim
+            self.sim = None
         if self.sim is None:
             self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
             self.sim.addAgent(self_state.position, *params, self_state.radius + 0.01 + self.safety_space,

@@ -143,7 +143,7 @@ class CADRL(Policy):
 
         if self.reach_destination(state):
             return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
-        if self.action_space is not None:
+        if self.action_space is None:
             self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()

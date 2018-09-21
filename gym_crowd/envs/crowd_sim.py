@@ -107,7 +107,6 @@ class CrowdSim(gym.Env):
             dynamic_ped_num = {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
             static = True if np.random.random() < 0.2 else False
             prob = np.random.random()
-            print(prob)
             for key, value in sorted(static_ped_num.items() if static else dynamic_ped_num.items()):
                 if prob - value <= 0:
                     ped_num = key
@@ -116,7 +115,6 @@ class CrowdSim(gym.Env):
                     prob -= value
             self.peds = []
             if static:
-                print('static')
                 # randomly initialize static objects in a square of (width, height)
                 width = 4
                 height = 8

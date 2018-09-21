@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
@@ -47,7 +46,11 @@ class ValueNetwork(nn.Module):
         else:
             attention_input = mlp1_output
         scores = self.attention(attention_input).view(size[0], size[1], 1).squeeze(dim=2)
-        weights = softmax(scores, dim=1).unsqueeze(2)
+
+        # masked softmax
+        # weights = softmax(scores, dim=1).unsqueeze(2)
+        scores_exp = torch.exp(scores) * (scores != 0).float()
+        weights = (scores_exp / torch.sum(scores_exp, dim=1, keepdim=True)).unsqueeze(2)
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
 
         # output feature is a linear combination of input features
