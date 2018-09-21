@@ -89,7 +89,6 @@ class CADRL(Policy):
             rotations = np.linspace(0, 2 * np.pi, self.rotation_samples, endpoint=False)
         else:
             rotations = np.linspace(-np.pi / 4, np.pi / 4, self.rotation_samples)
-        print(rotations)
 
         action_space = [ActionXY(0, 0) if holonomic else ActionRot(0, 0)]
         for rotation, speed in itertools.product(rotations, speeds):

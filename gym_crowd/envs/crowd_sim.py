@@ -5,6 +5,7 @@ from numpy.linalg import norm
 from matplotlib import patches
 import matplotlib.lines as mlines
 import rvo2
+import time
 from gym_crowd.envs.utils.pedestrian import Pedestrian
 from gym_crowd.envs.utils.utils import point_to_segment_dist
 from gym_crowd.envs.utils.info import *
@@ -95,59 +96,117 @@ class CrowdSim(gym.Env):
         if rule == 'square_crossing':
             self.peds = []
             for i in range(ped_num):
-                ped = Pedestrian(self.config, 'peds')
-                if self.randomize_attributes:
-                    ped.sample_random_attributes()
-                if np.random.random() > 0.5:
-                    sign = -1
-                else:
-                    sign = 1
-                while True:
-                    px = np.random.random() * self.square_width * 0.5 * sign
-                    py = (np.random.random() - 0.5) * self.square_width
-                    collide = False
-                    for agent in [self.navigator] + self.peds:
-                        if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + self.discomfort_dist:
-                            collide = True
-                            break
-                    if not collide:
-                        break
-                while True:
-                    gx = np.random.random() * self.square_width * 0.5 * -sign
-                    gy = (np.random.random() - 0.5) * self.square_width
-                    collide = False
-                    for agent in [self.navigator] + self.peds:
-                        if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + self.discomfort_dist:
-                            collide = True
-                            break
-                    if not collide:
-                        break
-                ped.set(px, py, gx, gy, 0, 0, 0)
-                self.peds.append(ped)
+                self.peds.append(self.generate_square_crossing_ped())
         elif rule == 'circle_crossing':
             self.peds = []
             for i in range(ped_num):
-                ped = Pedestrian(self.config, 'peds')
-                if self.randomize_attributes:
-                    ped.sample_random_attributes()
-                while True:
-                    angle = np.random.random() * np.pi * 2
-                    # add some noise to simulate all the possible cases navigator could meet with pedestrian
-                    px_noise = (np.random.random() - 0.5) * ped.v_pref
-                    py_noise = (np.random.random() - 0.5) * ped.v_pref
-                    px = self.circle_radius * np.cos(angle) + px_noise
-                    py = self.circle_radius * np.sin(angle) + py_noise
-                    collide = False
-                    for agent in [self.navigator] + self.peds:
-                        min_dist = ped.radius + agent.radius + self.discomfort_dist
-                        if norm((px - agent.px, py - agent.py)) < min_dist or \
-                                norm((px - agent.gx, py - agent.gy)) < min_dist:
-                            collide = True
+                self.peds.append(self.generate_circle_crossing_ped())
+        elif rule == 'mixed':
+            # mix different raining simulation with certain distribution
+            static_ped_num = {0: 0.05, 1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.15}
+            dynamic_ped_num = {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
+            static = True if np.random.random() < 0.2 else False
+            prob = np.random.random()
+            print(prob)
+            for key, value in sorted(static_ped_num.items() if static else dynamic_ped_num.items()):
+                if prob - value <= 0:
+                    ped_num = key
+                    break
+                else:
+                    prob -= value
+            self.peds = []
+            if static:
+                print('static')
+                # randomly initialize static objects in a square of (width, height)
+                width = 4
+                height = 8
+                if ped_num == 0:
+                    ped = Pedestrian(self.config, 'peds')
+                    ped.set(0, 100, 0, 100, 0, 0, 0)
+                    self.peds.append(ped)
+                for i in range(ped_num):
+                    ped = Pedestrian(self.config, 'peds')
+                    if np.random.random() > 0.5:
+                        sign = -1
+                    else:
+                        sign = 1
+                    while True:
+                        px = np.random.random() * width * 0.5 * sign
+                        py = (np.random.random() - 0.5) * height
+                        collide = False
+                        for agent in [self.navigator] + self.peds:
+                            if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + self.discomfort_dist:
+                                collide = True
+                                break
+                        if not collide:
                             break
-                    if not collide:
-                        break
-                ped.set(px, py, -px, -py, 0, 0, 0)
-                self.peds.append(ped)
+                    ped.set(px, py, px, py, 0, 0, 0)
+                    self.peds.append(ped)
+            else:
+                # the first 2 two pedestrians will be in the circle crossing scenarios
+                # the rest humans will have a random starting and end position
+                for i in range(ped_num):
+                    if i < 2:
+                        ped = self.generate_circle_crossing_ped()
+                    else:
+                        ped = self.generate_square_crossing_ped()
+                    self.peds.append(ped)
+        else:
+            raise ValueError("Rule doesn't exist")
+
+    def generate_circle_crossing_ped(self):
+        ped = Pedestrian(self.config, 'peds')
+        if self.randomize_attributes:
+            ped.sample_random_attributes()
+        while True:
+            angle = np.random.random() * np.pi * 2
+            # add some noise to simulate all the possible cases navigator could meet with pedestrian
+            px_noise = (np.random.random() - 0.5) * ped.v_pref
+            py_noise = (np.random.random() - 0.5) * ped.v_pref
+            px = self.circle_radius * np.cos(angle) + px_noise
+            py = self.circle_radius * np.sin(angle) + py_noise
+            collide = False
+            for agent in [self.navigator] + self.peds:
+                min_dist = ped.radius + agent.radius + self.discomfort_dist
+                if norm((px - agent.px, py - agent.py)) < min_dist or \
+                        norm((px - agent.gx, py - agent.gy)) < min_dist:
+                    collide = True
+                    break
+            if not collide:
+                break
+        ped.set(px, py, -px, -py, 0, 0, 0)
+        return ped
+
+    def generate_square_crossing_ped(self):
+        ped = Pedestrian(self.config, 'peds')
+        if self.randomize_attributes:
+            ped.sample_random_attributes()
+        if np.random.random() > 0.5:
+            sign = -1
+        else:
+            sign = 1
+        while True:
+            px = np.random.random() * self.square_width * 0.5 * sign
+            py = (np.random.random() - 0.5) * self.square_width
+            collide = False
+            for agent in [self.navigator] + self.peds:
+                if norm((px - agent.px, py - agent.py)) < ped.radius + agent.radius + self.discomfort_dist:
+                    collide = True
+                    break
+            if not collide:
+                break
+        while True:
+            gx = np.random.random() * self.square_width * 0.5 * -sign
+            gy = (np.random.random() - 0.5) * self.square_width
+            collide = False
+            for agent in [self.navigator] + self.peds:
+                if norm((gx - agent.gx, gy - agent.gy)) < ped.radius + agent.radius + self.discomfort_dist:
+                    collide = True
+                    break
+            if not collide:
+                break
+        ped.set(px, py, gx, gy, 0, 0, 0)
+        return ped
 
     def get_ped_times(self):
         """
@@ -256,10 +315,12 @@ class CrowdSim(gym.Env):
                     self.peds[4].set(-6, 1, 5, 1, 0, 0, np.pi / 2)
                 elif self.case_counter[phase] == -5:
                     # loomo experiment
-                    self.navigator.set(0, 0, 5, 0, 0, 0, 0)
-                    self.ped_num = 1
+                    self.navigator.set(0, 0, 0, 3, 0, 0, -np.pi / 2)
+                    self.ped_num = 3
                     self.peds = [Pedestrian(self.config, 'peds') for _ in range(self.ped_num)]
-                    self.peds[0].set(10, 10, 10, 10, 0, 0, 0)
+                    self.peds[0].set(0, 1, 0, 1, 0, 0, 0)
+                    self.peds[1].set(1, 2, 1, 2, 0, 0, 0)
+                    self.peds[2].set(-2, 2, -2, 2, 0, 0, 0)
                 else:
                     raise NotImplemented
 
@@ -395,8 +456,8 @@ class CrowdSim(gym.Env):
 
         x_offset = 0.2
         y_offset = 0.11
-        cmap = plt.cm.get_cmap('hsv', self.ped_num * 2)
-        navigator_color = cmap(5)
+        cmap = plt.cm.get_cmap('hsv', 10)
+        navigator_color = 'yellow'
         goal_color = 'red'
         heading_color = 'red'
         arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
@@ -475,14 +536,14 @@ class CrowdSim(gym.Env):
             else:
                 peds = [plt.Circle(ped_positions[0][i], self.peds[i].radius, fill=False, color=str((i+1)/20))
                         for i in range(len(self.peds))]
-            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i+1), color='black',
-                                        fontsize=20) for i in range(len(self.peds))]
+            ped_annotations = [plt.text(peds[i].center[0]-x_offset, peds[i].center[1]-y_offset, str(i), color='black',
+                                        fontsize=14) for i in range(len(self.peds))]
             # time = plt.text(0.5, 4.2, 'Time: {}'.format(0), fontsize=20)
 
             global_step = 0
             if self.attention_weights is not None:
-                attention_scores = [plt.text(-2.5, 3.8 - 0.3 * i, 'Ped {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
-                                             fontsize=20) for i in range(len(self.peds))]
+                attention_scores = [plt.text(-5.5, 5 - 0.5 * i, 'Ped {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
+                                             fontsize=16) for i in range(len(self.peds))]
             radius = self.navigator.radius
             if self.navigator.kinematics == 'unicycle':
                 orientation = [((state[0].px, state[0].py), (state[0].px + radius * np.cos(state[0].theta),
