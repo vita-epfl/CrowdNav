@@ -103,8 +103,8 @@ class CrowdSim(gym.Env):
                 self.peds.append(self.generate_circle_crossing_ped())
         elif rule == 'mixed':
             # mix different raining simulation with certain distribution
-            static_ped_num = {0: 0.05, 1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.15}
-            dynamic_ped_num = {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
+            static_ped_num = {0: 0.05, 1: 0.2, 2: 0.2, 3: 0.3, 4: 0.1, 5: 0.15}
+            dynamic_ped_num = {1: 0.3, 2: 0.3, 3: 0.2, 4: 0.1, 5: 0.1}
             static = True if np.random.random() < 0.2 else False
             prob = np.random.random()
             for key, value in sorted(static_ped_num.items() if static else dynamic_ped_num.items()):
@@ -120,7 +120,7 @@ class CrowdSim(gym.Env):
                 height = 8
                 if ped_num == 0:
                     ped = Pedestrian(self.config, 'peds')
-                    ped.set(0, 100, 0, 100, 0, 0, 0)
+                    ped.set(0, -10, 0, -10, 0, 0, 0)
                     self.peds.append(ped)
                 for i in range(ped_num):
                     ped = Pedestrian(self.config, 'peds')
