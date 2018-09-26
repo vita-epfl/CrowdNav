@@ -26,6 +26,9 @@ Various experiments demonstrate that our model can anticipate human dynamics and
 outperforming state-of-the-art methods.
 
 
+## Method Overview
+<img src="https://i.imgur.com/YOPHXD1.png" width="600" />
+
 ## Setup
 1. Install [Python-RVO2](https://github.com/sybrenstuvel/Python-RVO2) library
 2. Install crowd_sim and crowd_nav into pip
@@ -64,18 +67,13 @@ python utils/plot.py data/output/output.log
 ```
 
 ## Simulation Videos
-CADRL
-![](https://i.imgur.com/f8ES7Lb.gif)
+Qualitative comparison between CADRL, LSTM-RL, SARL and OM-SARL
 
-LSTM-RL
-![](https://i.imgur.com/6Pe3Xlp.gif)
 
-SARL
-![](https://i.imgur.com/ktRTdiD.gif)
-
-OM-SARL
-![](https://i.imgur.com/JKW1wl8.gif)
-
+<img src="https://i.imgur.com/f8ES7Lb.gif" height="300" />
+<img src="https://i.imgur.com/6Pe3Xlp.gif" height="300" />
+<img src="https://i.imgur.com/ktRTdiD.gif" height="300" />
+<img src="https://i.imgur.com/JKW1wl8.gif" height="300" />
 
 
 ## Simulation Framework
