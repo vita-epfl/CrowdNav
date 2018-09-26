@@ -1,9 +1,9 @@
-# CrowdNav
+# Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning
 This repository contains the codes for our ICRA 2018 submission.
-Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning
 
+For more details, please refer to the [paper](https://arxiv.org/abs/1809.08835). 
 
-For more details, please refer to [paper](https://arxiv.org/abs/1809.08835). If you find the codes or paper useful for your research, please cite our paper:
+If you find the codes or paper useful for your research, please cite our paper:
 ```
 @misc{1809.08835,
 Author = {Changan Chen and Yuejiang Liu and Sven Kreiss and Alexandre Alahi},
@@ -65,16 +65,16 @@ python utils/plot.py data/output/output.log
 
 ## Simulation Videos
 CADRL
-![](https://i.imgur.com/f8ES7Lb.gifv)
+![](https://i.imgur.com/f8ES7Lb.gif)
 
 LSTM-RL
-![](https://i.imgur.com/6Pe3Xlp.gifv)
+![](https://i.imgur.com/6Pe3Xlp.gif)
 
 SARL
-![](https://i.imgur.com/ktRTdiD.gifv)
+![](https://i.imgur.com/ktRTdiD.gif)
 
 OM-SARL
-![](https://i.imgur.com/JKW1wl8.gifv)
+![](https://i.imgur.com/JKW1wl8.gif)
 
 
 
