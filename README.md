@@ -26,7 +26,7 @@ outperforming state-of-the-art methods.
 
 
 ## Method Overview
-<img src="https://i.imgur.com/YOPHXD1.png" width="600" />
+<img src="https://i.imgur.com/YOPHXD1.png" width="1000" />
 
 ## Setup
 1. Install [Python-RVO2](https://github.com/sybrenstuvel/Python-RVO2) library
@@ -68,9 +68,9 @@ python utils/plot.py data/output/output.log
 ## Simulation Videos
 CADRL             | LSTM-RL  
 :-------------------------:|:-------------------------:
-<img src="https://i.imgur.com/f8ES7Lb.gif" width="400" />|<img src="https://i.imgur.com/6Pe3Xlp.gif" width="400" />
+<img src="https://i.imgur.com/vrWsxPM.gif" width="400" />|<img src="https://i.imgur.com/6gjT0nG.gif" width="400" />
 SARL             |  OM-SARL
-<img src="https://i.imgur.com/ktRTdiD.gif" width="400" />|<img src="https://i.imgur.com/JKW1wl8.gif" width="400" />
+<img src="https://i.imgur.com/rUtAGVP.gif" width="400" />|<img src="https://i.imgur.com/UXhcvZL.gif" width="400" />
 
 
 ## Simulation Framework
