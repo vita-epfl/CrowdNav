@@ -1,7 +1,6 @@
-# Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning
-This repository contains the codes for our ICRA 2018 submission.
-
-For more details, please refer to the [paper](https://arxiv.org/abs/1809.08835). 
+# CrowdNav
+This repository contains the codes for our ICRA 2018 submission. For more details, please refer to the paper
+[Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835). 
 
 If you find the codes or paper useful for your research, please cite our paper:
 ```
@@ -67,13 +66,11 @@ python utils/plot.py data/output/output.log
 ```
 
 ## Simulation Videos
-Qualitative comparison between CADRL, LSTM-RL, SARL and OM-SARL
-
-
-<img src="https://i.imgur.com/f8ES7Lb.gif" height="300" />
-<img src="https://i.imgur.com/6Pe3Xlp.gif" height="300" />
-<img src="https://i.imgur.com/ktRTdiD.gif" height="300" />
-<img src="https://i.imgur.com/JKW1wl8.gif" height="300" />
+CADRL             | LSTM-RL  
+:-------------------------:|:-------------------------:
+<img src="https://i.imgur.com/f8ES7Lb.gif" width="400" />|<img src="https://i.imgur.com/6Pe3Xlp.gif" width="400" />
+SARL             |  OM-SARL
+<img src="https://i.imgur.com/ktRTdiD.gif" width="400" />|<img src="https://i.imgur.com/JKW1wl8.gif" width="400" />
 
 
 ## Simulation Framework
