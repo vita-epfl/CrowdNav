@@ -326,7 +326,7 @@ class CrowdSim(gym.Env):
             obs = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
                 obs += [self.robot.get_observable_state()]
-            human_actions.append(human.act(ob))
+            human_actions.append(human.act(obs))
 
         # collision detection
         dmin = float('inf')
