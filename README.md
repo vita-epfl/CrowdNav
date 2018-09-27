@@ -44,7 +44,7 @@ inside the crowd_nav/ folder.
 
 1. Train a policy.
 ```
-python -m crowd_nav.train --policy sarl
+python train.py --policy sarl
 ```
 2. Test policies with 500 test cases.
 ```
