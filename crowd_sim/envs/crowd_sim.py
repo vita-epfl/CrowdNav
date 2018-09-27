@@ -1,13 +1,13 @@
 import logging
 import gym
-import numpy as np
-from numpy.linalg import norm
-from matplotlib import patches
 import matplotlib.lines as mlines
+import numpy as np
 import rvo2
+from matplotlib import patches
+from numpy.linalg import norm
 from crowd_sim.envs.utils.human import Human
-from crowd_sim.envs.utils.utils import point_to_segment_dist
 from crowd_sim.envs.utils.info import *
+from crowd_sim.envs.utils.utils import point_to_segment_dist
 
 
 class CrowdSim(gym.Env):
@@ -27,24 +27,26 @@ class CrowdSim(gym.Env):
         self.humans = None
         self.global_time = None
         self.human_times = None
-        self.states = None
-        self.action_values = None
-        self.attention_weights = None
+        # reward function
+        self.success_reward = None
+        self.collision_penalty = None
+        self.discomfort_dist = None
+        self.discomfort_penalty_factor = None
+        # simulation configuration
         self.config = None
         self.case_capacity = None
         self.case_size = None
         self.case_counter = None
         self.randomize_attributes = None
-        self.success_reward = None
-        self.collision_penalty = None
-        self.discomfort_dist = None
-        self.discomfort_penalty_factor = None
-        # orca simulation
         self.train_val_sim = None
         self.test_sim = None
         self.square_width = None
         self.circle_radius = None
         self.human_num = None
+        # for visualization
+        self.states = None
+        self.action_values = None
+        self.attention_weights = None
 
     def configure(self, config):
         self.config = config
@@ -110,6 +112,7 @@ class CrowdSim(gym.Env):
                     break
                 else:
                     prob -= value
+            self.human_num = human_num
             self.humans = []
             if static:
                 # randomly initialize static objects in a square of (width, height)
@@ -130,7 +133,8 @@ class CrowdSim(gym.Env):
                         py = (np.random.random() - 0.5) * height
                         collide = False
                         for agent in [self.robot] + self.humans:
-                            if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
+                            if norm((
+                                    px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
                                 collide = True
                                 break
                         if not collide:
@@ -281,41 +285,12 @@ class CrowdSim(gym.Env):
             else:
                 assert phase == 'test'
                 if self.case_counter[phase] == -1:
+                    # for debugging purposes
                     self.human_num = 3
                     self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(0, -6, 0, 5, 0, 0, np.pi/2)
+                    self.humans[0].set(0, -6, 0, 5, 0, 0, np.pi / 2)
                     self.humans[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
                     self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
-                elif self.case_counter[phase] == -2:
-                    self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(-3, 0, -3, 5, 0, 0, np.pi / 2)
-                    self.humans[1].set(-2, 0, -2, 5, 0, 0, np.pi / 2)
-                    self.humans[2].set(-3, 1, -3, 5, 0, 0, np.pi / 2)
-                elif self.case_counter[phase] == -3:
-                    self.human_num = 5
-                    self.robot.set(2.0191, 0.7173, 0.0000, 4.0000, 0.0000, 0.1289, 1.5708)
-                    self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(-0.1247, 1.4739, 3.3379, 2.8420, 0.6149, 0.7886, 0.0000)
-                    self.humans[1].set(1.8997, -0.3898, 3.6275, -0.3209, 0.9992, 0.0399, 0.0000)
-                    self.humans[2].set(-0.0124, 0.8459, 2.3581, 3.3641, 0.6854, 0.7281, 0.0000)
-                    self.humans[3].set(-0.3289, -0.1324, -4.3308, -1.2543, -0.9629, -0.2699, 0.0000)
-                    self.humans[4].set(0.6299, 0.0899, 1.7150, -3.9515, 0.2593, -0.9658, 0.0000)
-                elif self.case_counter[phase] == -4:
-                    self.human_num = 5
-                    self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(-2, -3, 1, -3, 0, 0, np.pi / 2)
-                    self.humans[1].set(3, -2, -3, -2, 0, 0, np.pi / 2)
-                    self.humans[2].set(-4, -1, 3, -1, 0, 0, np.pi / 2)
-                    self.humans[3].set(5, 0, -5, 0, 0, 0, np.pi / 2)
-                    self.humans[4].set(-6, 1, 5, 1, 0, 0, np.pi / 2)
-                elif self.case_counter[phase] == -5:
-                    # loomo experiment
-                    self.robot.set(0, 0, 0, 3, 0, 0, -np.pi / 2)
-                    self.human_num = 3
-                    self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(0, 1, 0, 1, 0, 0, 0)
-                    self.humans[1].set(1, 2, 1, 2, 0, 0, 0)
-                    self.humans[2].set(-2, 2, -2, 2, 0, 0, 0)
                 else:
                     raise NotImplemented
 
@@ -379,10 +354,10 @@ class CrowdSim(gym.Env):
         # collision detection between humans
         human_num = len(self.humans)
         for i in range(human_num):
-            for j in range(i+1, human_num):
+            for j in range(i + 1, human_num):
                 dx = self.humans[i].px - self.humans[j].px
                 dy = self.humans[i].py - self.humans[j].py
-                dist = (dx**2 + dy**2)**(1/2) - self.humans[i].radius - self.humans[j].radius
+                dist = (dx ** 2 + dy ** 2) ** (1 / 2) - self.humans[i].radius - self.humans[j].radius
                 if dist < 0:
                     # detect collision but don't take humans' collision into account
                     logging.debug('Collision happens between humans in step()')
@@ -455,7 +430,7 @@ class CrowdSim(gym.Env):
         cmap = plt.cm.get_cmap('hsv', 10)
         robot_color = 'yellow'
         goal_color = 'red'
-        heading_color = 'red'
+        arrow_color = 'red'
         arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
 
         if mode == 'human':
@@ -467,21 +442,22 @@ class CrowdSim(gym.Env):
                 ax.add_artist(human_circle)
             ax.add_artist(plt.Circle(self.robot.get_position(), self.robot.radius, fill=True, color='r'))
             plt.show()
-        if mode == 'traj':
-            robot_positions = [self.states[i][0].position for i in range(len(self.states))]
-            human_positions = [[self.states[i][1][j].position for j in range(len(self.humans))]
-                             for i in range(len(self.states))]
+        elif mode == 'traj':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
             ax.set_xlim(-5, 5)
             ax.set_ylim(-5, 5)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
+
+            robot_positions = [self.states[i][0].position for i in range(len(self.states))]
+            human_positions = [[self.states[i][1][j].position for j in range(len(self.humans))]
+                               for i in range(len(self.states))]
             for k in range(len(self.states)):
                 if k % 4 == 0 or k == len(self.states) - 1:
                     robot = plt.Circle(robot_positions[k], self.robot.radius, fill=True, color=robot_color)
                     humans = [plt.Circle(human_positions[k][i], self.humans[i].radius, fill=False, color=cmap(i))
-                            for i in range(len(self.humans))]
+                              for i in range(len(self.humans))]
                     ax.add_artist(robot)
                     for human in humans:
                         ax.add_artist(human)
@@ -489,61 +465,66 @@ class CrowdSim(gym.Env):
                 global_time = k * self.time_step
                 if global_time % 4 == 0 or k == len(self.states) - 1:
                     agents = humans + [robot]
-                    times = [plt.text(agents[i].center[0] - x_offset, agents[i].center[1] - y_offset, '{:.1f}'.format(global_time),
+                    times = [plt.text(agents[i].center[0] - x_offset, agents[i].center[1] - y_offset,
+                                      '{:.1f}'.format(global_time),
                                       color='black', fontsize=14) for i in range(self.human_num + 1)]
                     for time in times:
                         ax.add_artist(time)
                 if k != 0:
-                    nav_direction = plt.Line2D((self.states[k-1][0].px, self.states[k][0].px),
-                                               (self.states[k-1][0].py, self.states[k][0].py),
+                    nav_direction = plt.Line2D((self.states[k - 1][0].px, self.states[k][0].px),
+                                               (self.states[k - 1][0].py, self.states[k][0].py),
                                                color=robot_color, ls='solid')
-                    human_directions = [plt.Line2D((self.states[k-1][1][i].px, self.states[k][1][i].px),
-                                                 (self.states[k-1][1][i].py, self.states[k][1][i].py),
-                                                 color=cmap(i), ls='solid')
-                                      for i in range(self.human_num)]
+                    human_directions = [plt.Line2D((self.states[k - 1][1][i].px, self.states[k][1][i].px),
+                                                   (self.states[k - 1][1][i].py, self.states[k][1][i].py),
+                                                   color=cmap(i), ls='solid')
+                                        for i in range(self.human_num)]
                     ax.add_artist(nav_direction)
                     for human_direction in human_directions:
                         ax.add_artist(human_direction)
-            # time = plt.text(-1, 6, 'Trajectories', fontsize=12)
-            # ax.add_artist(time)
             plt.legend([robot], ['Robot'], fontsize=16)
-            # plt.title(self.robot.policy.name)
             plt.show()
         elif mode == 'video':
-            robot_positions = [state[0].position for state in self.states]
-            human_positions = [[state[1][j].position for j in range(len(self.humans))] for state in self.states]
-
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=16)
             ax.set_xlim(-6, 6)
             ax.set_ylim(-6, 6)
-            # ax.set_xlim(-2.6, 2.6)
-            # ax.set_ylim(-1, 4.2)
             ax.set_xlabel('x(m)', fontsize=16)
             ax.set_ylabel('y(m)', fontsize=16)
-            # goal = plt.Circle((0, 4), 0.05, fill=True, color=goal_color)
+
+            # add robot and its goal
+            robot_positions = [state[0].position for state in self.states]
             goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
+            ax.add_artist(robot)
+            ax.add_artist(goal)
+            plt.legend([robot, goal], ['Robot', 'Goal'], fontsize=16)
 
-            # visualize attention weights using the color saturation
-            if self.attention_weights is not None:
-                humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False,
-                                   color=(self.attention_weights[0][i], 0, 0)) for i in range(len(self.humans))]
-            else:
-                humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False, color=str((i+1)/20))
-                        for i in range(len(self.humans))]
-            human_annotations = [plt.text(humans[i].center[0]-x_offset, humans[i].center[1]-y_offset, str(i), color='black',
-                                        fontsize=12) for i in range(len(self.humans))]
+            # add humans and their numbers
+            human_positions = [[state[1][j].position for j in range(len(self.humans))] for state in self.states]
+            humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False,
+                                 color=(self.attention_weights[0][i], 0, 0)) for i in range(len(self.humans))]
+            human_numbers = [plt.text(humans[i].center[0] - x_offset, humans[i].center[1] - y_offset, str(i),
+                                      color='black', fontsize=12) for i in range(len(self.humans))]
+            for i, human in enumerate(humans):
+                ax.add_artist(human)
+                ax.add_artist(human_numbers[i])
+
+            # add time annotation
             time = plt.text(-1, 5, 'Time: {}'.format(0), fontsize=16)
+            ax.add_artist(time)
 
-            global_step = 0
+            # compute attention scores
             if self.attention_weights is not None:
-                attention_scores = [plt.text(-5.5, 5 - 0.5 * i, 'human {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
-                                             fontsize=16) for i in range(len(self.humans))]
+                attention_scores = [
+                    plt.text(-5.5, 5 - 0.5 * i, 'Human {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
+                             fontsize=16) for i in range(len(self.humans))]
+
+            # compute orientation in each step and use arrow to show the direction
             radius = self.robot.radius
             if self.robot.kinematics == 'unicycle':
                 orientation = [((state[0].px, state[0].py), (state[0].px + radius * np.cos(state[0].theta),
-                                state[0].py + radius * np.sin(state[0].theta))) for state in self.states]
+                                                             state[0].py + radius * np.sin(state[0].theta))) for state
+                               in self.states]
                 orientations = [orientation]
             else:
                 orientations = []
@@ -553,36 +534,30 @@ class CrowdSim(gym.Env):
                         if i == 0:
                             agent_state = state[0]
                         else:
-                            agent_state = state[1][i-1]
+                            agent_state = state[1][i - 1]
                         theta = np.arctan2(agent_state.vy, agent_state.vx)
                         orientation.append(((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
-                                                                               agent_state.py + radius * np.sin(theta))))
+                                            agent_state.py + radius * np.sin(theta))))
                     orientations.append(orientation)
-            orientation_arrows = [patches.FancyArrowPatch(*orientation[0], color=heading_color, arrowstyle=arrow_style)
-                                  for orientation in orientations]
-            ax.add_artist(robot)
-            ax.add_artist(goal)
-            for arrow in orientation_arrows:
+            arrows = [patches.FancyArrowPatch(*orientation[0], color=arrow_color, arrowstyle=arrow_style)
+                      for orientation in orientations]
+            for arrow in arrows:
                 ax.add_artist(arrow)
-            ax.add_artist(time)
-            for i, human in enumerate(humans):
-                ax.add_artist(human)
-                ax.add_artist(human_annotations[i])
-            plt.legend([robot, goal], ['Robot', 'Goal'], fontsize=16)
+            global_step = 0
 
             def update(frame_num):
                 nonlocal global_step
-                nonlocal orientation_arrows
+                nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
-                    human_annotations[i].set_position((human.center[0]-x_offset, human.center[1]-y_offset))
-                    for arrow in orientation_arrows:
+                    human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
+                    for arrow in arrows:
                         arrow.remove()
-                    orientation_arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=heading_color,
-                                          arrowstyle=arrow_style) for orientation in orientations]
-                    for arrow in orientation_arrows:
+                    arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
+                                                      arrowstyle=arrow_style) for orientation in orientations]
+                    for arrow in arrows:
                         ax.add_artist(arrow)
                     if self.attention_weights is not None:
                         human.set_color(str(self.attention_weights[frame_num][i]))
@@ -622,11 +597,8 @@ class CrowdSim(gym.Env):
                 else:
                     anim.event_source.start()
 
-            if self.case_counter['test'] == -3:
-                plot_value_heatmap()
-
             fig.canvas.mpl_connect('key_press_event', on_click)
-            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step*1000)
+            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step * 1000)
             anim.running = True
 
             if output_file is not None:

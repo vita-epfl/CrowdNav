@@ -7,7 +7,7 @@ import os
 import shutil
 import gym
 import git
-from crowd_nav.utils.robot import Robot
+from crowd_sim.envs.utils.robot import Robot
 from crowd_nav.utils.trainer import Trainer
 from crowd_nav.utils.memory import ReplayMemory
 from crowd_nav.utils.explorer import Explorer

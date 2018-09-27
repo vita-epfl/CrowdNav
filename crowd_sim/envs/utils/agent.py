@@ -5,9 +5,6 @@ import logging
 from crowd_sim.envs.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.action import ActionXY, ActionRot
 from crowd_sim.envs.utils.state import ObservableState, FullState
-import sys
-if 'threading' in sys.modules:
-    del sys.modules['threading']
 
 
 class Agent(object):
