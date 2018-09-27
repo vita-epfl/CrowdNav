@@ -306,11 +306,11 @@ class CrowdSim(gym.Env):
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            ob = [human.get_observable_state() for human in self.humans]
+            obs = [human.get_observable_state() for human in self.humans]
         elif self.robot.sensor == 'RGB':
             raise NotImplemented
 
-        return ob
+        return obs
 
     def onestep_lookahead(self, action):
         return self.step(action, update=False)
@@ -323,9 +323,9 @@ class CrowdSim(gym.Env):
         human_actions = []
         for human in self.humans:
             # observation for humans is always coordinates
-            ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
+            obs = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
-                ob += [self.robot.get_observable_state()]
+                obs += [self.robot.get_observable_state()]
             human_actions.append(human.act(ob))
 
         # collision detection
@@ -409,19 +409,19 @@ class CrowdSim(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                ob = [human.get_observable_state() for human in self.humans]
+                obs = [human.get_observable_state() for human in self.humans]
             elif self.robot.sensor == 'RGB':
                 raise NotImplemented
         else:
             if self.robot.sensor == 'coordinates':
-                ob = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
+                obs = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
             elif self.robot.sensor == 'RGB':
                 raise NotImplemented
 
-        return ob, reward, done, info
+        return obs, reward, done, info
 
     def render(self, mode='human', output_file=None):
-        import matplotlib.animation as animation
+        from matplotlib import animation
         import matplotlib.pyplot as plt
         plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
 

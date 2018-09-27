@@ -1,7 +1,14 @@
+# editors
 .idea/
+.vscode/
+
+# Python
 *.egg-info/
 .pytest_cache/
 __pycache__
-data/
 .cache/
+venv*/
+
+# data
+data/
 *.mp4

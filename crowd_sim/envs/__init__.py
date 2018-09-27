@@ -1,1 +1,1 @@
-from crowd_sim.envs.crowd_sim import CrowdSim
+from .crowd_sim import CrowdSim
