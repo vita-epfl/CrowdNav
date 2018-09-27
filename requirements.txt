@@ -1,7 +1,0 @@
-gym
-torch
-torchvision
-matplotlib
-numpy
-scipy
-gitpython
