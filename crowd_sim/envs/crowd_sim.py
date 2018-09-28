@@ -27,6 +27,7 @@ class CrowdSim(gym.Env):
         self.humans = None
         self.global_time = None
         self.human_times = None
+        self.robot_sensor_range = None
         # reward function
         self.success_reward = None
         self.collision_penalty = None
@@ -53,6 +54,7 @@ class CrowdSim(gym.Env):
         self.time_limit = config.getint('env', 'time_limit')
         self.time_step = config.getfloat('env', 'time_step')
         self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
+        self.robot_sensor_range = config.getfloat('env', 'robot_sensor_range')
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
@@ -81,7 +83,7 @@ class CrowdSim(gym.Env):
     def set_robot(self, robot):
         self.robot = robot
 
-    def generate_random_human_position(self, human_num, rule):
+    def generate_human_position(self, human_num, rule):
         """
         Generate human position according to certain rule
         Rule square_crossing: generate start/goal position at two sides of y-axis
@@ -91,13 +93,12 @@ class CrowdSim(gym.Env):
         :param rule:
         :return:
         """
+        self.humans = []
         # initial min separation distance to avoid danger penalty at beginning
         if rule == 'square_crossing':
-            self.humans = []
             for i in range(human_num):
                 self.humans.append(self.generate_square_crossing_human())
         elif rule == 'circle_crossing':
-            self.humans = []
             for i in range(human_num):
                 self.humans.append(self.generate_circle_crossing_human())
         elif rule == 'mixed':
@@ -113,7 +114,7 @@ class CrowdSim(gym.Env):
                 else:
                     prob -= value
             self.human_num = human_num
-            self.humans = []
+
             if static:
                 # randomly initialize static objects in a square of (width, height)
                 width = 4
@@ -149,6 +150,10 @@ class CrowdSim(gym.Env):
                     else:
                         human = self.generate_square_crossing_human()
                     self.humans.append(human)
+        elif rule == 'infinite':
+            # agents will walk back and forth between their starting position and end position
+            for i in range(human_num):
+                self.humans.append(self.generate_circle_crossing_human())
         else:
             raise ValueError("Rule doesn't exist")
 
@@ -276,9 +281,9 @@ class CrowdSim(gym.Env):
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 if phase in ['train', 'val']:
                     human_num = self.human_num if self.robot.policy.multiagent_training else 1
-                    self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
+                    self.generate_human_position(human_num=human_num, rule=self.train_val_sim)
                 else:
-                    self.generate_random_human_position(human_num=self.human_num, rule=self.test_sim)
+                    self.generate_human_position(human_num=self.human_num, rule=self.test_sim)
                 # case_counter is always between 0 and case_size[phase]
                 self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
             else:
@@ -305,7 +310,7 @@ class CrowdSim(gym.Env):
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            ob = [human.get_observable_state() for human in self.humans]
+            ob = self.compute_observation_for(self.robot)
         elif self.robot.sensor == 'RGB':
             raise NotImplementedError
 
@@ -321,10 +326,7 @@ class CrowdSim(gym.Env):
         """
         human_actions = []
         for human in self.humans:
-            # observation for humans is always coordinates
-            ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
-            if self.robot.visible:
-                ob += [self.robot.get_observable_state()]
+            ob = self.compute_observation_for(human)
             human_actions.append(human.act(ob))
 
         # collision detection
@@ -408,7 +410,7 @@ class CrowdSim(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                ob = [human.get_observable_state() for human in self.humans]
+                ob = self.compute_observation_for(self.robot)
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
@@ -418,6 +420,18 @@ class CrowdSim(gym.Env):
                 raise NotImplementedError
 
         return ob, reward, done, info
+
+    def compute_observation_for(self, agent):
+        if agent == self.robot:
+            ob = []
+            for human in self.humans:
+                if norm((self.robot.px - human.px, self.robot.py - human.py)) < self.robot_sensor_range:
+                    ob.append(human.get_observable_state())
+        else:
+            ob = [other_human.get_observable_state() for other_human in self.humans if other_human != agent]
+            if self.robot.visible:
+                ob += [self.robot.get_observable_state()]
+        return ob
 
     def render(self, mode='human', output_file=None):
         from matplotlib import animation

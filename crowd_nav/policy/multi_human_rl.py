@@ -38,10 +38,13 @@ class MultiHumanRL(CADRL):
                     next_human_states, reward, done, info = self.env.onestep_lookahead(action)
                 else:
                     next_human_states = [self.propagate(human_state, ActionXY(human_state.vx, human_state.vy))
-                                       for human_state in state.human_states]
+                                         for human_state in state.human_states]
                     reward = self.compute_reward(next_self_state, next_human_states)
-                batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
-                                              for next_human_state in next_human_states], dim=0)
+                if next_human_states:
+                    batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
+                                                  for next_human_state in next_human_states], dim=0)
+                else:
+                    batch_next_states = torch.Tensor([next_self_state]).to(self.device).unsqueeze(0)
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
                 if self.with_om:
                     if occupancy_maps is None:
@@ -94,14 +97,16 @@ class MultiHumanRL(CADRL):
         :param state:
         :return: tensor of shape (# of humans, len(state))
         """
-        state_tensor = torch.cat([torch.Tensor([state.self_state + human_state]).to(self.device)
-                                  for human_state in state.human_states], dim=0)
+        if state.human_states:
+            state_tensor = torch.cat([torch.Tensor([state.self_state + human_state]).to(self.device)
+                                      for human_state in state.human_states], dim=0)
+        else:
+            state_tensor = torch.Tensor([state.self_state.to_tuple()]).to(self.device)
+        rotated_state_tensor = self.rotate(state_tensor)
         if self.with_om:
             occupancy_maps = self.build_occupancy_maps(state.human_states)
-            state_tensor = torch.cat([self.rotate(state_tensor), occupancy_maps], dim=1)
-        else:
-            state_tensor = self.rotate(state_tensor)
-        return state_tensor
+            rotated_state_tensor = torch.cat([rotated_state_tensor, occupancy_maps], dim=1)
+        return rotated_state_tensor
 
     def input_dim(self):
         return self.joint_state_dim + (self.cell_num ** 2 * self.om_channel_size if self.with_om else 0)
@@ -115,7 +120,7 @@ class MultiHumanRL(CADRL):
         occupancy_maps = []
         for human in human_states:
             other_humans = np.concatenate([np.array([(other_human.px, other_human.py, other_human.vx, other_human.vy)])
-                                         for other_human in human_states if other_human != human], axis=0)
+                                          for other_human in human_states if other_human != human], axis=0)
             other_px = other_humans[:, 0] - human.px
             other_py = other_humans[:, 1] - human.py
             # new x-axis is in the direction of human's velocity

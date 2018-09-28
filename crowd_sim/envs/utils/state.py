@@ -21,6 +21,9 @@ class FullState(object):
         return ' '.join([str(x) for x in [self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy,
                                           self.v_pref, self.theta]])
 
+    def to_tuple(self):
+        return self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta
+
 
 class ObservableState(object):
     def __init__(self, px, py, vx, vy, radius):
@@ -38,6 +41,9 @@ class ObservableState(object):
 
     def __str__(self):
         return ' '.join([str(x) for x in [self.px, self.py, self.vx, self.vy, self.radius]])
+
+    def to_tuple(self):
+        return self.px, self.py, self.vx, self.vy, self.radius
 
 
 class JointState(object):
