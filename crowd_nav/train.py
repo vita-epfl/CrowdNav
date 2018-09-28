@@ -1,10 +1,10 @@
-import torch
 import sys
 import logging
 import argparse
 import configparser
 import os
 import shutil
+import torch
 import gym
 import git
 from crowd_sim.envs.utils.robot import Robot
@@ -55,9 +55,9 @@ def main():
     logging.basicConfig(level=level, handlers=[stdout_handler, file_handler],
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     repo = git.Repo(search_parent_directories=True)
-    logging.info('Current git head hash code: {}'.format(repo.head.object.hexsha))
+    logging.info('Current git head hash code: %s'.format(repo.head.object.hexsha))
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
-    logging.info('Using device: {}'.format(device))
+    logging.info('Using device: %s', device)
 
     # configure policy
     policy = policy_factory[args.policy]()
@@ -130,7 +130,7 @@ def main():
         trainer.optimize_epoch(il_epochs)
         torch.save(model.state_dict(), il_weight_file)
         logging.info('Finish imitation learning. Weights saved.')
-        logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
+        logging.info('Experience set size: %d/%d', len(memory), memory.capacity)
     explorer.update_target_model(model)
 
     # reinforcement learning
@@ -142,7 +142,7 @@ def main():
     if args.resume:
         robot.policy.set_epsilon(epsilon_end)
         explorer.run_k_episodes(100, 'train', update_memory=True, episode=0)
-        logging.info('Experience set size: {}/{}'.format(len(memory), memory.capacity))
+        logging.info('Experience set size: %d/%d', len(memory), memory.capacity)
     episode = 0
     while episode < train_episodes:
         if args.resume:

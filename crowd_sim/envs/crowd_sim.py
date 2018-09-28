@@ -67,7 +67,7 @@ class CrowdSim(gym.Env):
             self.circle_radius = config.getfloat('sim', 'circle_radius')
             self.human_num = config.getint('sim', 'human_num')
         else:
-            raise NotImplemented
+            raise NotImplementedError
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
         logging.info('human number: {}'.format(self.human_num))
@@ -133,8 +133,7 @@ class CrowdSim(gym.Env):
                         py = (np.random.random() - 0.5) * height
                         collide = False
                         for agent in [self.robot] + self.humans:
-                            if norm((
-                                    px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
+                            if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
                                 collide = True
                                 break
                         if not collide:
@@ -268,7 +267,7 @@ class CrowdSim(gym.Env):
             self.train_val_sim = 'circle_crossing'
 
         if self.config.get('humans', 'policy') == 'trajnet':
-            raise NotImplemented
+            raise NotImplementedError
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
@@ -292,7 +291,7 @@ class CrowdSim(gym.Env):
                     self.humans[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
                     self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
                 else:
-                    raise NotImplemented
+                    raise NotImplementedError
 
         for agent in [self.robot] + self.humans:
             agent.time_step = self.time_step
@@ -306,11 +305,11 @@ class CrowdSim(gym.Env):
 
         # get current observation
         if self.robot.sensor == 'coordinates':
-            obs = [human.get_observable_state() for human in self.humans]
+            ob = [human.get_observable_state() for human in self.humans]
         elif self.robot.sensor == 'RGB':
-            raise NotImplemented
+            raise NotImplementedError
 
-        return obs
+        return ob
 
     def onestep_lookahead(self, action):
         return self.step(action, update=False)
@@ -323,10 +322,10 @@ class CrowdSim(gym.Env):
         human_actions = []
         for human in self.humans:
             # observation for humans is always coordinates
-            obs = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
+            ob = [other_human.get_observable_state() for other_human in self.humans if other_human != human]
             if self.robot.visible:
-                obs += [self.robot.get_observable_state()]
-            human_actions.append(human.act(obs))
+                ob += [self.robot.get_observable_state()]
+            human_actions.append(human.act(ob))
 
         # collision detection
         dmin = float('inf')
@@ -409,16 +408,16 @@ class CrowdSim(gym.Env):
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
-                obs = [human.get_observable_state() for human in self.humans]
+                ob = [human.get_observable_state() for human in self.humans]
             elif self.robot.sensor == 'RGB':
-                raise NotImplemented
+                raise NotImplementedError
         else:
             if self.robot.sensor == 'coordinates':
-                obs = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
+                ob = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
             elif self.robot.sensor == 'RGB':
-                raise NotImplemented
+                raise NotImplementedError
 
-        return obs, reward, done, info
+        return ob, reward, done, info
 
     def render(self, mode='human', output_file=None):
         from matplotlib import animation
@@ -537,7 +536,7 @@ class CrowdSim(gym.Env):
                             agent_state = state[1][i - 1]
                         theta = np.arctan2(agent_state.vy, agent_state.vx)
                         orientation.append(((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
-                                            agent_state.py + radius * np.sin(theta))))
+                                             agent_state.py + radius * np.sin(theta))))
                     orientations.append(orientation)
             arrows = [patches.FancyArrowPatch(*orientation[0], color=arrow_color, arrowstyle=arrow_style)
                       for orientation in orientations]
@@ -608,4 +607,4 @@ class CrowdSim(gym.Env):
             else:
                 plt.show()
         else:
-            raise NotImplemented
+            raise NotImplementedError

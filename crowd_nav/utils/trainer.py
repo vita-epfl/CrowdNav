@@ -1,8 +1,8 @@
+import logging
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-import logging
 
 
 class Trainer(object):
@@ -18,7 +18,7 @@ class Trainer(object):
         self.optimizer = None
 
     def set_learning_rate(self, learning_rate):
-        logging.info('Current learning rate: {}'.format(learning_rate))
+        logging.info('Current learning rate: %f', learning_rate)
         self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=0.9)
 
     def optimize_epoch(self, num_epochs):
@@ -40,7 +40,7 @@ class Trainer(object):
                 epoch_loss += loss.data.item()
 
             average_epoch_loss = epoch_loss / len(self.memory)
-            logging.debug('Average loss in epoch {}: {:.2E}'.format(epoch, average_epoch_loss))
+            logging.debug('Average loss in epoch %d: %.2E', epoch, average_epoch_loss)
 
         return average_epoch_loss
 
@@ -48,7 +48,7 @@ class Trainer(object):
         if self.optimizer is None:
             raise ValueError('Learning rate is not set!')
         losses = 0
-        for batch in range(num_batches):
+        for _ in range(num_batches):
             inputs, values = next(iter(self.data_loader))
             inputs = Variable(inputs)
             values = Variable(values)
@@ -61,6 +61,6 @@ class Trainer(object):
             losses += loss.data.item()
 
         average_loss = losses / num_batches
-        logging.debug('Average loss : {:.2E}'.format(average_loss))
+        logging.debug('Average loss : %.2E', average_loss)
 
         return average_loss

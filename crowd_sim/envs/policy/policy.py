@@ -1,5 +1,5 @@
-import numpy as np
 import abc
+import numpy as np
 
 
 class Policy(object):

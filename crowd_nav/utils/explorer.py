@@ -1,6 +1,6 @@
 import logging
-import torch
 import copy
+import torch
 from crowd_sim.envs.utils.info import *
 
 
@@ -74,7 +74,7 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
-        avg_nav_time = sum(success_times) / len(success_times) if len(success_times) != 0 else self.env.time_limit
+        avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
         logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.
@@ -82,8 +82,8 @@ class Explorer(object):
                             average(cumulative_rewards)))
         if phase in ['val', 'test']:
             total_time = sum(success_times + collision_times + timeout_times) * self.robot.time_step
-            logging.info('Frequency of being in danger: {:.2f} and average min separate distance in danger: {:.2f}'.
-                         format(too_close / total_time, average(min_dist)))
+            logging.info('Frequency of being in danger: %.2f and average min separate distance in danger: %.2f',
+                         too_close / total_time, average(min_dist))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
@@ -93,8 +93,7 @@ class Explorer(object):
         if self.memory is None or self.gamma is None:
             raise ValueError('Memory or gamma value is not set!')
 
-        for i in range(len(states)):
-            state = states[i]
+        for i, state in enumerate(states):
             reward = rewards[i]
 
             # VALUE UPDATE
@@ -122,8 +121,8 @@ class Explorer(object):
             self.memory.push((state, value))
 
 
-def average(li):
-    if len(li) == 0:
-        return 0
+def average(input_list):
+    if input_list:
+        return sum(input_list) / len(input_list)
     else:
-        return sum(li) / len(li)
+        return 0

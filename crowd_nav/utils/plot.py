@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def running_mean(x, N):
+def running_mean(x, n):
     cumsum = np.cumsum(np.insert(x, 0, 0))
-    return (cumsum[N:] - cumsum[:-N]) / float(N)
+    return (cumsum[n:] - cumsum[:-n]) / float(n)
 
 
 def main():
@@ -31,8 +31,8 @@ def main():
     ax4_legends = []
 
     for i, log_file in enumerate(args.log_files):
-        with open(log_file, 'r') as fo:
-            log = fo.read()
+        with open(log_file, 'r') as file:
+            log = file.read()
 
         val_pattern = r"VAL   in episode (?P<episode>\d+) has success rate: (?P<sr>[0-1].\d+), " \
                       r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), " \

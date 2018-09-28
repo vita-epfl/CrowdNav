@@ -155,7 +155,7 @@ class MultiHumanRL(CADRL):
                             dm[2 * int(index) + 1].append(other_vx[i])
                             dm[2 * int(index) + 2].append(other_vy[i])
                         else:
-                            raise NotImplemented
+                            raise NotImplementedError
                 for i, cell in enumerate(dm):
                     dm[i] = sum(dm[i]) / len(dm[i]) if len(dm[i]) != 0 else 0
                 occupancy_maps.append([dm])

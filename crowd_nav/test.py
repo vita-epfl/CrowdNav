@@ -1,10 +1,10 @@
-import torch
 import logging
 import argparse
 import configparser
+import os
+import torch
 import numpy as np
 import gym
-import os
 from crowd_nav.utils.explorer import Explorer
 from crowd_nav.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.robot import Robot
@@ -46,7 +46,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
-    logging.info('Using device: {}'.format(device))
+    logging.info('Using device: %s', device)
 
     # configure policy
     policy = policy_factory[args.policy]()
@@ -80,7 +80,7 @@ def main():
             robot.policy.safety_space = 0
         else:
             robot.policy.safety_space = 0
-        logging.info('ORCA agent buffer: {}'.format(robot.policy.safety_space))
+        logging.info('ORCA agent buffer: %f', robot.policy.safety_space)
 
     policy.set_env(env)
     robot.print_info()
@@ -90,19 +90,19 @@ def main():
         last_pos = np.array(robot.get_position())
         while not done:
             action = robot.act(ob)
-            ob, reward, done, info = env.step(action)
+            ob, _, done, info = env.step(action)
             current_pos = np.array(robot.get_position())
-            logging.debug('Speed: {:.2f}'.format(np.linalg.norm(current_pos - last_pos) / robot.time_step))
+            logging.debug('Speed: %.2f', np.linalg.norm(current_pos - last_pos) / robot.time_step)
             last_pos = current_pos
         if args.traj:
             env.render('traj', args.video_file)
         else:
             env.render('video', args.video_file)
 
-        logging.info('It takes {:.2f} seconds to finish. Final status is {}'.format(env.global_time, info))
+        logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
         if robot.visible and info == 'reach goal':
             human_times = env.get_human_times()
-            logging.info('Average time for humans to reach goal: {:.2f}'.format(sum(human_times) / len(human_times)))
+            logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
     else:
         explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
 

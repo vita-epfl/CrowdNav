@@ -1,6 +1,6 @@
+import numpy as np
 from crowd_sim.envs.policy.policy import Policy
 from crowd_sim.envs.utils.action import ActionXY
-import numpy as np
 
 
 class Linear(Policy):

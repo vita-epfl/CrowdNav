@@ -1,7 +1,7 @@
 [BASIC]
 
 #variable-rgx=[a-z0-9_]{1,30}$
-good-names=dx,dy,i,j,k,px,py,r,th,vx,vy,x,y,z
+good-names=dx,dy,i,j,k,px,py,r,th,vx,vy,x,y,z,ob
 
 [TYPECHECK]
 
@@ -12,3 +12,4 @@ generated-members=numpy.*,torch.*
 
 
 disable=missing-docstring,useless-object-inheritance
+max-line-length=120
