@@ -39,8 +39,8 @@ class ValueNetwork2(nn.Module):
         self.self_state_dim = self_state_dim
         self.lstm_hidden_dim = lstm_hidden_dim
         self.mlp1 = mlp(input_dim, mlp1_dims)
-        self.mlp = mlp(self_state_dim + lstm_hidden_dim, mlp_dims)
         self.lstm = nn.LSTM(mlp1_dims[-1], lstm_hidden_dim, batch_first=True)
+        self.mlp = mlp(self_state_dim + lstm_hidden_dim, mlp_dims)
 
     def forward(self, state):
         """
@@ -70,7 +70,6 @@ class LstmRL(MultiHumanRL):
         super().__init__()
         self.name = 'LSTM-RL'
         self.with_interaction_module = None
-        self.interaction_module_dims = None
 
     def configure(self, config):
         self.set_common_parameters(config)

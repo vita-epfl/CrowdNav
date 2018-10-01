@@ -58,17 +58,14 @@ class CrowdSim(gym.Env):
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
         self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
-        if self.config.get('humans', 'policy') == 'orca':
-            self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
-            self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
-                              'test': config.getint('env', 'test_size')}
-            self.train_val_sim = config.get('sim', 'train_val_sim')
-            self.test_sim = config.get('sim', 'test_sim')
-            self.square_width = config.getfloat('sim', 'square_width')
-            self.circle_radius = config.getfloat('sim', 'circle_radius')
-            self.human_num = config.getint('sim', 'human_num')
-        else:
-            raise NotImplementedError
+        self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
+        self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
+                          'test': config.getint('env', 'test_size')}
+        self.train_val_sim = config.get('sim', 'train_val_sim')
+        self.test_sim = config.get('sim', 'test_sim')
+        self.square_width = config.getfloat('sim', 'square_width')
+        self.circle_radius = config.getfloat('sim', 'circle_radius')
+        self.human_num = config.getint('sim', 'human_num')
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
         logging.info('human number: {}'.format(self.human_num))
@@ -174,37 +171,34 @@ class CrowdSim(gym.Env):
         if test_case is not None:
             self.case_counter[phase] = test_case
         self.global_time = 0
-        if self.config.get('humans', 'policy') == 'orca':
-            counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
-                              'val': 0, 'test': self.case_capacity['val']}
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            if self.case_counter[phase] >= 0:
-                np.random.seed(counter_offset[phase] + self.case_counter[phase])
-                if not self.robot.policy.multiagent_training and phase in ['train', 'val']:
-                    # only CADRL trains in circle crossing simulation
-                    human_num = 1
-                    self.rule = 'circle_crossing'
-                else:
-                    human_num = self.human_num
-                    self.rule = self.test_sim
-                self.humans = []
-                for _ in range(human_num):
-                    self.humans.append(self.generate_human())
-                # case_counter is always between 0 and case_size[phase]
-                self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
+        counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
+                          'val': 0, 'test': self.case_capacity['val']}
+        self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
+        if self.case_counter[phase] >= 0:
+            np.random.seed(counter_offset[phase] + self.case_counter[phase])
+            if not self.robot.policy.multiagent_training and phase in ['train', 'val']:
+                # only CADRL trains in circle crossing simulation
+                human_num = 1
+                self.rule = 'circle_crossing'
             else:
-                assert phase == 'test'
-                if self.case_counter[phase] == -1:
-                    # for debugging purposes
-                    self.human_num = 3
-                    self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
-                    self.humans[0].set(0, -6, 0, 5, 0, 0, np.pi / 2)
-                    self.humans[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
-                    self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
-                else:
-                    raise NotImplementedError
+                human_num = self.human_num
+                self.rule = self.test_sim
+            self.humans = []
+            for _ in range(human_num):
+                self.humans.append(self.generate_human())
+            # case_counter is always between 0 and case_size[phase]
+            self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
         else:
-            raise NotImplementedError
+            assert phase == 'test'
+            if self.case_counter[phase] == -1:
+                # for debugging purposes
+                self.human_num = 3
+                self.humans = [Human(self.config, 'humans') for _ in range(self.human_num)]
+                self.humans[0].set(0, -6, 0, 5, 0, 0, np.pi / 2)
+                self.humans[1].set(-5, -5, -5, 5, 0, 0, np.pi / 2)
+                self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
+            else:
+                raise NotImplementedError
 
         for agent in [self.robot] + self.humans:
             agent.time_step = self.time_step
@@ -412,7 +406,8 @@ class CrowdSim(gym.Env):
 
             # add robot and its goal
             robot_positions = [state[0].position for state in self.states]
-            goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
+            goal = mlines.Line2D([0], [self.circle_radius], color=goal_color, marker='*', linestyle='None',
+                                 markersize=15, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
             sensor_range = plt.Circle(robot_positions[0], self.robot_sensor_range, fill=False, ls='dashed')
             ax.add_artist(robot)
