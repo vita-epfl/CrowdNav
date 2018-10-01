@@ -2,7 +2,6 @@ import logging
 import gym
 import matplotlib.lines as mlines
 import numpy as np
-import rvo2
 from matplotlib import patches
 from numpy.linalg import norm
 from crowd_sim.envs.utils.human import Human
@@ -26,7 +25,6 @@ class CrowdSim(gym.Env):
         self.robot = None
         self.humans = None
         self.global_time = None
-        self.human_times = None
         self.robot_sensor_range = None
         # reward function
         self.success_reward = None
@@ -41,6 +39,7 @@ class CrowdSim(gym.Env):
         self.randomize_attributes = None
         self.train_val_sim = None
         self.test_sim = None
+        self.rule = None
         self.square_width = None
         self.circle_radius = None
         self.human_num = None
@@ -83,207 +82,114 @@ class CrowdSim(gym.Env):
     def set_robot(self, robot):
         self.robot = robot
 
-    def generate_human_position(self, human_num, rule):
-        """
-        Generate human position according to certain rule
-        Rule square_crossing: generate start/goal position at two sides of y-axis
-        Rule circle_crossing: generate start position on a circle, goal position is at the opposite side
+    def generate_human(self, human=None):
+        if human is None:
+            human = Human(self.config, 'humans')
+        if self.randomize_attributes:
+            human.sample_random_attributes()
 
-        :param human_num:
-        :param rule:
-        :return:
-        """
-        self.humans = []
-        # initial min separation distance to avoid danger penalty at beginning
-        if rule == 'square_crossing':
-            for i in range(human_num):
-                self.humans.append(self.generate_square_crossing_human())
-        elif rule == 'circle_crossing':
-            for i in range(human_num):
-                self.humans.append(self.generate_circle_crossing_human())
-        elif rule == 'mixed':
-            # mix different raining simulation with certain distribution
-            static_human_num = {0: 0.05, 1: 0.2, 2: 0.2, 3: 0.3, 4: 0.1, 5: 0.15}
-            dynamic_human_num = {1: 0.3, 2: 0.3, 3: 0.2, 4: 0.1, 5: 0.1}
-            static = True if np.random.random() < 0.2 else False
-            prob = np.random.random()
-            for key, value in sorted(static_human_num.items() if static else dynamic_human_num.items()):
-                if prob - value <= 0:
-                    human_num = key
+        if self.rule == 'circle_crossing':
+            while True:
+                angle = np.random.random() * np.pi * 2
+                # add some noise to simulate all the possible cases robot could meet with human
+                px_noise = (np.random.random() - 0.5) * human.v_pref
+                py_noise = (np.random.random() - 0.5) * human.v_pref
+                px = self.circle_radius * np.cos(angle) + px_noise
+                py = self.circle_radius * np.sin(angle) + py_noise
+                collide = False
+                for agent in [self.robot] + self.humans:
+                    min_dist = human.radius + agent.radius + self.discomfort_dist
+                    if norm((px - agent.px, py - agent.py)) < min_dist or \
+                            norm((px - agent.gx, py - agent.gy)) < min_dist:
+                        collide = True
+                        break
+                if not collide:
                     break
-                else:
-                    prob -= value
-            self.human_num = human_num
-
-            if static:
-                # randomly initialize static objects in a square of (width, height)
-                width = 4
-                height = 8
-                if human_num == 0:
-                    human = Human(self.config, 'humans')
-                    human.set(0, -10, 0, -10, 0, 0, 0)
-                    self.humans.append(human)
-                for i in range(human_num):
-                    human = Human(self.config, 'humans')
-                    if np.random.random() > 0.5:
-                        sign = -1
-                    else:
-                        sign = 1
-                    while True:
-                        px = np.random.random() * width * 0.5 * sign
-                        py = (np.random.random() - 0.5) * height
-                        collide = False
-                        for agent in [self.robot] + self.humans:
-                            if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
-                                collide = True
-                                break
-                        if not collide:
-                            break
-                    human.set(px, py, px, py, 0, 0, 0)
-                    self.humans.append(human)
+            human.set(px, py, -px, -py, 0, 0, 0)
+        elif self.rule == 'square_crossing':
+            if np.random.random() > 0.5:
+                sign = -1
             else:
-                # the first 2 two humans will be in the circle crossing scenarios
-                # the rest humans will have a random starting and end position
-                for i in range(human_num):
-                    if i < 2:
-                        human = self.generate_circle_crossing_human()
-                    else:
-                        human = self.generate_square_crossing_human()
-                    self.humans.append(human)
-        elif rule == 'infinite':
-            # agents will walk back and forth between their starting position and end position
-            for i in range(human_num):
-                self.humans.append(self.generate_circle_crossing_human())
+                sign = 1
+            while True:
+                px = np.random.random() * self.square_width * 0.5 * sign
+                py = (np.random.random() - 0.5) * self.square_width
+                collide = False
+                for agent in [self.robot] + self.humans:
+                    if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
+                        collide = True
+                        break
+                if not collide:
+                    break
+            while True:
+                gx = np.random.random() * self.square_width * 0.5 * -sign
+                gy = (np.random.random() - 0.5) * self.square_width
+                collide = False
+                for agent in [self.robot] + self.humans:
+                    if norm((gx - agent.gx, gy - agent.gy)) < human.radius + agent.radius + self.discomfort_dist:
+                        collide = True
+                        break
+                if not collide:
+                    break
+            human.set(px, py, gx, gy, 0, 0, 0)
+        elif self.rule == 'corridor':
+            if np.random.random() > 0.5:
+                sign = -1
+            else:
+                sign = 1
+            while True:
+                px = np.random.random() * self.square_width * 0.5 * sign
+                py = (np.random.random() - 0.5) * self.square_width
+                collide = False
+                for agent in [self.robot] + self.humans:
+                    if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
+                        collide = True
+                        break
+                if not collide:
+                    break
+            while True:
+                gx = np.random.random() * self.square_width * 0.5 * -sign
+                gy = (np.random.random() - 0.5) * self.square_width
+                collide = False
+                for agent in [self.robot] + self.humans:
+                    if norm((gx - agent.gx, gy - agent.gy)) < human.radius + agent.radius + self.discomfort_dist:
+                        collide = True
+                        break
+                if not collide:
+                    break
+            human.set(px, py, gx, gy, 0, 0, 0)
         else:
-            raise ValueError("Rule doesn't exist")
-
-    def generate_circle_crossing_human(self):
-        human = Human(self.config, 'humans')
-        if self.randomize_attributes:
-            human.sample_random_attributes()
-        while True:
-            angle = np.random.random() * np.pi * 2
-            # add some noise to simulate all the possible cases robot could meet with human
-            px_noise = (np.random.random() - 0.5) * human.v_pref
-            py_noise = (np.random.random() - 0.5) * human.v_pref
-            px = self.circle_radius * np.cos(angle) + px_noise
-            py = self.circle_radius * np.sin(angle) + py_noise
-            collide = False
-            for agent in [self.robot] + self.humans:
-                min_dist = human.radius + agent.radius + self.discomfort_dist
-                if norm((px - agent.px, py - agent.py)) < min_dist or \
-                        norm((px - agent.gx, py - agent.gy)) < min_dist:
-                    collide = True
-                    break
-            if not collide:
-                break
-        human.set(px, py, -px, -py, 0, 0, 0)
+            raise NotImplementedError
         return human
-
-    def generate_square_crossing_human(self):
-        human = Human(self.config, 'humans')
-        if self.randomize_attributes:
-            human.sample_random_attributes()
-        if np.random.random() > 0.5:
-            sign = -1
-        else:
-            sign = 1
-        while True:
-            px = np.random.random() * self.square_width * 0.5 * sign
-            py = (np.random.random() - 0.5) * self.square_width
-            collide = False
-            for agent in [self.robot] + self.humans:
-                if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
-                    collide = True
-                    break
-            if not collide:
-                break
-        while True:
-            gx = np.random.random() * self.square_width * 0.5 * -sign
-            gy = (np.random.random() - 0.5) * self.square_width
-            collide = False
-            for agent in [self.robot] + self.humans:
-                if norm((gx - agent.gx, gy - agent.gy)) < human.radius + agent.radius + self.discomfort_dist:
-                    collide = True
-                    break
-            if not collide:
-                break
-        human.set(px, py, gx, gy, 0, 0, 0)
-        return human
-
-    def get_human_times(self):
-        """
-        Run the whole simulation to the end and compute the average time for human to reach goal.
-        Once an agent reaches the goal, it stops moving and becomes an obstacle
-        (doesn't need to take half responsibility to avoid collision).
-
-        :return:
-        """
-        # centralized orca simulator for all humans
-        if not self.robot.reached_destination():
-            raise ValueError('Episode is not done yet')
-        params = (10, 10, 5, 5)
-        sim = rvo2.PyRVOSimulator(self.time_step, *params, 0.3, 1)
-        sim.addAgent(self.robot.get_position(), *params, self.robot.radius, self.robot.v_pref,
-                     self.robot.get_velocity())
-        for human in self.humans:
-            sim.addAgent(human.get_position(), *params, human.radius, human.v_pref, human.get_velocity())
-
-        max_time = 1000
-        while not all(self.human_times):
-            for i, agent in enumerate([self.robot] + self.humans):
-                vel_pref = np.array(agent.get_goal_position()) - np.array(agent.get_position())
-                if norm(vel_pref) > 1:
-                    vel_pref /= norm(vel_pref)
-                sim.setAgentPrefVelocity(i, tuple(vel_pref))
-            sim.doStep()
-            self.global_time += self.time_step
-            if self.global_time > max_time:
-                logging.warning('Simulation cannot terminate!')
-            for i, human in enumerate(self.humans):
-                if self.human_times[i] == 0 and human.reached_destination():
-                    self.human_times[i] = self.global_time
-
-            # for visualization
-            self.robot.set_position(sim.getAgentPosition(0))
-            for i, human in enumerate(self.humans):
-                human.set_position(sim.getAgentPosition(i + 1))
-            self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans]])
-
-        del sim
-        return self.human_times
 
     def reset(self, phase='test', test_case=None):
         """
         Set px, py, gx, gy, vx, vy, theta for robot and humans
         :return:
         """
-        if self.robot is None:
-            raise AttributeError('robot has to be set!')
         assert phase in ['train', 'val', 'test']
+        if self.robot is None:
+            raise AttributeError('Robot has to be set!')
+
         if test_case is not None:
             self.case_counter[phase] = test_case
         self.global_time = 0
-        if phase == 'test':
-            self.human_times = [0] * self.human_num
-        else:
-            self.human_times = [0] * (self.human_num if self.robot.policy.multiagent_training else 1)
-        if not self.robot.policy.multiagent_training:
-            self.train_val_sim = 'circle_crossing'
-
-        if self.config.get('humans', 'policy') == 'trajnet':
-            raise NotImplementedError
-        else:
+        if self.config.get('humans', 'policy') == 'orca':
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
             self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
-                if phase in ['train', 'val']:
-                    human_num = self.human_num if self.robot.policy.multiagent_training else 1
-                    self.generate_human_position(human_num=human_num, rule=self.train_val_sim)
+                if not self.robot.policy.multiagent_training and phase in ['train', 'val']:
+                    # only CADRL trains in circle crossing simulation
+                    human_num = 1
+                    self.rule = 'circle_crossing'
                 else:
-                    self.generate_human_position(human_num=self.human_num, rule=self.test_sim)
+                    human_num = self.human_num
+                    self.rule = self.test_sim
+                self.humans = []
+                for _ in range(human_num):
+                    self.humans.append(self.generate_human())
                 # case_counter is always between 0 and case_size[phase]
                 self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
             else:
@@ -297,6 +203,8 @@ class CrowdSim(gym.Env):
                     self.humans[2].set(5, -5, 5, 5, 0, 0, np.pi / 2)
                 else:
                     raise NotImplementedError
+        else:
+            raise NotImplementedError
 
         for agent in [self.robot] + self.humans:
             agent.time_step = self.time_step
@@ -400,13 +308,11 @@ class CrowdSim(gym.Env):
 
             # update all agents
             self.robot.step(action)
-            for i, human_action in enumerate(human_actions):
-                self.humans[i].step(human_action)
+            for human, action in zip(self.humans, human_actions):
+                human.step(action)
+                if human.reached_destination():
+                    self.generate_human(human)
             self.global_time += self.time_step
-            for i, human in enumerate(self.humans):
-                # only record the first time the human reaches the goal
-                if self.human_times[i] == 0 and human.reached_destination():
-                    self.human_times[i] = self.global_time
 
             # compute the observation
             if self.robot.sensor == 'coordinates':
@@ -498,39 +404,41 @@ class CrowdSim(gym.Env):
             plt.show()
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
-            ax.tick_params(labelsize=16)
-            ax.set_xlim(-6, 6)
-            ax.set_ylim(-6, 6)
-            ax.set_xlabel('x(m)', fontsize=16)
-            ax.set_ylabel('y(m)', fontsize=16)
+            ax.tick_params(labelsize=12)
+            ax.set_xlim(-11, 11)
+            ax.set_ylim(-11, 11)
+            ax.set_xlabel('x(m)', fontsize=14)
+            ax.set_ylabel('y(m)', fontsize=14)
 
             # add robot and its goal
             robot_positions = [state[0].position for state in self.states]
             goal = mlines.Line2D([0], [4], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
+            sensor_range = plt.Circle(robot_positions[0], self.robot_sensor_range, fill=False, ls='dashed')
             ax.add_artist(robot)
+            ax.add_artist(sensor_range)
             ax.add_artist(goal)
-            plt.legend([robot, goal], ['Robot', 'Goal'], fontsize=16)
+            plt.legend([robot, sensor_range, goal], ['Robot', 'Range', 'Goal'], fontsize=14)
 
             # add humans and their numbers
             human_positions = [[state[1][j].position for j in range(len(self.humans))] for state in self.states]
-            humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False,
-                                 color=(self.attention_weights[0][i], 0, 0)) for i in range(len(self.humans))]
-            human_numbers = [plt.text(humans[i].center[0] - x_offset, humans[i].center[1] - y_offset, str(i),
-                                      color='black', fontsize=12) for i in range(len(self.humans))]
+            humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False)
+                      for i in range(len(self.humans))]
+            # human_numbers = [plt.text(humans[i].center[0] - x_offset, humans[i].center[1] - y_offset, str(i),
+            #                           color='black') for i in range(len(self.humans))]
             for i, human in enumerate(humans):
                 ax.add_artist(human)
-                ax.add_artist(human_numbers[i])
+                # ax.add_artist(human_numbers[i])
 
             # add time annotation
-            time = plt.text(-1, 5, 'Time: {}'.format(0), fontsize=16)
+            time = plt.text(0.4, 0.9, 'Time: {}'.format(0), fontsize=16, transform = ax.transAxes)
             ax.add_artist(time)
 
-            # compute attention scores
-            if self.attention_weights is not None:
-                attention_scores = [
-                    plt.text(-5.5, 5 - 0.5 * i, 'Human {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
-                             fontsize=16) for i in range(len(self.humans))]
+            # visualize attention scores
+            # if hasattr(self.robot.policy, 'get_attention_weights'):
+            #     attention_scores = [
+            #         plt.text(-5.5, 5 - 0.5 * i, 'Human {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
+            #                  fontsize=16) for i in range(len(self.humans))]
 
             # compute orientation in each step and use arrow to show the direction
             radius = self.robot.radius
@@ -563,18 +471,18 @@ class CrowdSim(gym.Env):
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
+                sensor_range.center = robot_positions[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
-                    human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
+                    # human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
                     for arrow in arrows:
                         arrow.remove()
                     arrows = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
                                                       arrowstyle=arrow_style) for orientation in orientations]
                     for arrow in arrows:
                         ax.add_artist(arrow)
-                    if self.attention_weights is not None:
-                        human.set_color(str(self.attention_weights[frame_num][i]))
-                        attention_scores[i].set_text('human {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
+                    # if hasattr(self.robot.policy, 'get_attention_weights'):
+                    #     attention_scores[i].set_text('human {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
 
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
@@ -605,8 +513,8 @@ class CrowdSim(gym.Env):
                 anim.running ^= True
                 if anim.running:
                     anim.event_source.stop()
-                    if hasattr(self.robot.policy, 'action_values'):
-                        plot_value_heatmap()
+                    # if hasattr(self.robot.policy, 'action_values'):
+                    #     plot_value_heatmap()
                 else:
                     anim.event_source.start()
 

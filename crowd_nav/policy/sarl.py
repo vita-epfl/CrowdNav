@@ -49,8 +49,13 @@ class ValueNetwork(nn.Module):
 
         # masked softmax
         # weights = softmax(scores, dim=1).unsqueeze(2)
-        scores_exp = torch.exp(scores) * (scores != 0).float()
-        weights = (scores_exp / torch.sum(scores_exp, dim=1, keepdim=True)).unsqueeze(2)
+        mask = scores != 0
+        masked_scores = scores * mask.float()
+        max_scores = torch.max(masked_scores, dim=1, keepdim=True)[0]
+        exps = torch.exp(masked_scores - max_scores)
+        masked_exps = exps * mask.float()
+        masked_sums = masked_exps.sum(1, keepdim=True)
+        weights = (masked_exps / masked_sums).unsqueeze(2)
         self.attention_weights = weights[0, :, 0].data.cpu().numpy()
 
         # output feature is a linear combination of input features

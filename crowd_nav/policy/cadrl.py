@@ -25,7 +25,8 @@ class ValueNetwork(nn.Module):
         self.value_network = mlp(input_dim, mlp_dims)
 
     def forward(self, state):
-        value = self.value_network(state)
+        # input size: (batch_size, # of humans, state_length)
+        value = self.value_network(state.squeeze(dim=1))
         return value
 
 
@@ -88,7 +89,7 @@ class CADRL(Policy):
         if holonomic:
             rotations = np.linspace(0, 2 * np.pi, self.rotation_samples, endpoint=False)
         else:
-            rotations = np.linspace(-np.pi / 4, np.pi / 4, self.rotation_samples)
+            rotations = np.linspace(-np.pi / 3, np.pi / 3, self.rotation_samples)
 
         action_space = [ActionXY(0, 0) if holonomic else ActionRot(0, 0)]
         for rotation, speed in itertools.product(rotations, speeds):
@@ -155,9 +156,18 @@ class CADRL(Policy):
             max_action = None
             for action in self.action_space:
                 next_self_state = self.propagate(state.self_state, action)
-                ob, reward, done, info = self.env.onestep_lookahead(action)
-                batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
-                                              for next_human_state in ob], dim=0)
+                if self.query_env:
+                    next_human_states, reward, done, info = self.env.onestep_lookahead(action)
+                else:
+                    next_human_states = [self.propagate(human_state, ActionXY(human_state.vx, human_state.vy))
+                                         for human_state in state.human_states]
+                    reward = self.compute_reward(next_self_state, next_human_states)
+                if next_human_states:
+                    batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
+                                                  for next_human_state in next_human_states], dim=0)
+                else:
+                    batch_next_states = torch.Tensor([next_self_state]).to(self.device).unsqueeze(0)
+
                 # VALUE UPDATE
                 outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)
@@ -179,9 +189,12 @@ class CADRL(Policy):
         :param state:
         :return: tensor of shape (len(state), )
         """
-        assert len(state.human_states) == 1
-        state = torch.Tensor(state.self_state + state.human_states[0]).to(self.device)
-        state = self.rotate(state.unsqueeze(0)).squeeze(dim=0)
+        assert len(state.human_states) <= 1
+        if state.human_states:
+            state = torch.Tensor([state.self_state + state.human_states[0]]).to(self.device)
+        else:
+            state = torch.Tensor([state.self_state.to_tuple()]).to(self.device)
+        state = self.rotate(state)
         return state
 
     def rotate(self, state):
