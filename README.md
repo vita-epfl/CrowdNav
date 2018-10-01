@@ -70,5 +70,6 @@ SARL             |  OM-SARL
 
 
 ## Learning Curve
-Learning curve comparison between different methods.
-<img src="https://i.imgur.com/l5UC3qa.png" width="800" />
+Learning curve comparison between different methods in invisible setting.
+
+<img src="https://i.imgur.com/l5UC3qa.png" width="600" />
