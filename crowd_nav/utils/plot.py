@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--window_size', type=int, default=200)
     args = parser.parse_args()
 
+    # define the names of the models you want to plot and the longest episodes you want to show
     models = ['LSTM-RL', 'SARL', 'OM-SARL']
     max_episodes = 10000
 
@@ -86,6 +87,11 @@ def main():
                 ax1.plot(val_episode, val_sr)
                 ax1_legends.append(models[i])
 
+            ax1.legend(ax1_legends)
+            ax1.set_xlabel('Episodes')
+            ax1.set_ylabel('Success Rate')
+            ax1.set_title('Success rate')
+
         # plot time
         if args.plot_time:
             if ax2 is None:
@@ -96,6 +102,11 @@ def main():
             if args.plot_val:
                 ax2.plot(val_episode, val_time)
                 ax2_legends.append(models[i])
+
+            ax2.legend(ax2_legends)
+            ax2.set_xlabel('Episodes')
+            ax2.set_ylabel('Time(s)')
+            ax2.set_title("Robot's Time to Reach Goal")
 
         # plot cr
         if args.plot_cr:
@@ -108,6 +119,11 @@ def main():
                 ax3.plot(val_episode, val_cr)
                 ax3_legends.append(models[i])
 
+            ax3.legend(ax3_legends)
+            ax3.set_xlabel('Episodes')
+            ax3.set_ylabel('Collision Rate')
+            ax3.set_title('Collision Rate')
+
         # plot reward
         if args.plot_reward:
             if ax4 is None:
@@ -119,27 +135,10 @@ def main():
                 ax4.plot(val_episode, val_reward)
                 ax4_legends.append(models[i])
 
-        if args.plot_sr:
-            ax1.legend(ax1_legends)
-            ax1.set_title('Success rate')
-
-        if args.plot_time:
-            ax2.legend(ax2_legends)
-            ax2.set_title("robot's Time to Reach Goal")
-
-        if args.plot_cr:
-            ax3.legend(ax3_legends)
-            ax3.set_title('Collision Rate')
-
-        if args.plot_reward:
-            ax4.legend(ax4_legends, fontsize=20)
-            ax4.set_xlabel('Episodes', fontsize=18)
-            ax4.set_ylabel('Reward', fontsize=18)
-            plt.tick_params(axis='both', which='major', labelsize=18)
-            plt.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.125)
-            # ax4.set_xlabel('xlabel', fontsize=18)
-            # ax4.set_ylabel('ylabel', fontsize=16)
-            # ax4.set_title('Cumulative Discounted Reward')
+            ax4.legend(ax4_legends)
+            ax4.set_xlabel('Episodes')
+            ax4.set_ylabel('Reward')
+            ax4.set_title('Cumulative Discounted Reward')
 
     plt.show()
 

@@ -69,3 +69,6 @@ SARL             |  OM-SARL
 <img src="https://i.imgur.com/rUtAGVP.gif" width="400" />|<img src="https://i.imgur.com/UXhcvZL.gif" width="400" />
 
 
+## Learning Curve
+Learning curve comparison between different methods.
+<img src="https://i.imgur.com/l5UC3qa.png" width="800" />
