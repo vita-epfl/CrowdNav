@@ -2,7 +2,6 @@ import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 
@@ -46,11 +45,9 @@ class Trainer(object):
         if self.optimizer is None:
             raise ValueError('Learning rate is not set!')
         losses = 0
-        for _ in range(num_batches):
-            inputs, values = next(iter(self.data_loader))
-            inputs = Variable(inputs)
-            values = Variable(values)
-
+        batch_count = 0
+        for data in self.data_loader:
+            inputs, values = data
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = self.criterion(outputs, values)
@@ -58,28 +55,14 @@ class Trainer(object):
             self.optimizer.step()
             losses += loss.data.item()
 
+            batch_count += 1
+            if batch_count > num_batches:
+                break
+
         average_loss = losses / num_batches
         logging.debug('Average loss : %.2E', average_loss)
 
         return average_loss
-
-
-def pad_tensor(vec, pad, dim):
-    """
-    args:
-        vec - tensor to pad
-        pad - the size to pad to
-        dim - dimension to pad
-
-    return:
-        a new tensor padded to 'pad' in dimension 'dim'
-    """
-    pad_size = list(vec.shape)
-    pad_size[dim] = pad - vec.size(dim)
-    if pad_size[dim] == 0:
-        return vec
-    else:
-        return torch.cat([vec, torch.zeros(pad_size)], dim=dim)
 
 
 def pad_batch(batch):

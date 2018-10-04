@@ -44,7 +44,7 @@ class MultiHumanRL(CADRL):
                     batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
                                                   for next_human_state in next_human_states], dim=0)
                 else:
-                    batch_next_states = torch.Tensor([next_self_state]).to(self.device).unsqueeze(0)
+                    batch_next_states = torch.Tensor([next_self_state.to_tuple()]).to(self.device)
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
                 if self.with_om:
                     if occupancy_maps is None:

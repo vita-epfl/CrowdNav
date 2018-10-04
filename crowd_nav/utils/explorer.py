@@ -112,12 +112,6 @@ class Explorer(object):
                     gamma_bar = pow(self.gamma, self.robot.time_step * self.robot.v_pref)
                     value = reward + gamma_bar * self.target_model(next_state.unsqueeze(0)).data.item()
             value = torch.Tensor([value]).to(self.device)
-
-            # transform state of different human_num into fixed-size tensor
-            human_num, feature_size = state.size()
-            # if self.robot.policy.multiagent_training and human_num != self.env.human_num:
-            #     padding = torch.zeros((self.env.human_num - human_num, feature_size))
-            #     state = torch.cat([state, padding])
             self.memory.push((state, value))
 
 
