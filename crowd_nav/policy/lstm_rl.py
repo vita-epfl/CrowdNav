@@ -14,19 +14,19 @@ class ValueNetwork1(nn.Module):
         self.mlp = mlp(self_state_dim + lstm_hidden_dim, mlp_dims)
         self.lstm = nn.LSTM(input_dim, lstm_hidden_dim, batch_first=True)
 
-    def forward(self, state):
+    def forward(self, state_input):
         """
         First transform the world coordinates to self-centric coordinates and then do forward computation
 
-        :param state: tensor of shape (batch_size, # of humans, length of a joint state)
-        :return:
         """
-        size = state.shape
+        if isinstance(state_input, tuple):
+            state, lengths = state_input
+        else:
+            state = state_input
+            lengths = torch.IntTensor([state.size()[1]])
         self_state = state[:, 0, :self.self_state_dim]
-        # human_state = state[:, :, self.self_state_dim:]
-        h0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        c0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        output, (hn, cn) = self.lstm(state, (h0, c0))
+        packed_sequence = torch.nn.utils.rnn.pack_padded_sequence(state, lengths, batch_first=True)
+        _, (hn, cn) = self.lstm(packed_sequence)
         hn = hn.squeeze(0)
         joint_state = torch.cat([self_state, hn], dim=1)
         value = self.mlp(joint_state)
@@ -42,23 +42,27 @@ class ValueNetwork2(nn.Module):
         self.lstm = nn.LSTM(mlp1_dims[-1], lstm_hidden_dim, batch_first=True)
         self.mlp = mlp(self_state_dim + lstm_hidden_dim, mlp_dims)
 
-    def forward(self, state):
+    def forward(self, state_input):
         """
         First transform the world coordinates to self-centric coordinates and then do forward computation
 
-        :param state: tensor of shape (batch_size, # of humans, length of a joint state)
         :return:
         """
+        if isinstance(state_input, tuple):
+            state, lengths = state_input
+        else:
+            state = state_input
+            lengths = torch.IntTensor([state.size()[1]])
+
         size = state.shape
         self_state = state[:, 0, :self.self_state_dim]
 
         state = torch.reshape(state, (-1, size[2]))
         mlp1_output = self.mlp1(state)
         mlp1_output = torch.reshape(mlp1_output, (size[0], size[1], -1))
+        packed_mlp1_output = torch.nn.utils.rnn.pack_padded_sequence(mlp1_output, lengths, batch_first=True)
 
-        h0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        c0 = torch.zeros(1, size[0], self.lstm_hidden_dim)
-        output, (hn, cn) = self.lstm(mlp1_output, (h0, c0))
+        output, (hn, cn) = self.lstm(packed_mlp1_output)
         hn = hn.squeeze(0)
         joint_state = torch.cat([self_state, hn], dim=1)
         value = self.mlp(joint_state)

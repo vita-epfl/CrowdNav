@@ -24,8 +24,13 @@ class ValueNetwork(nn.Module):
         super().__init__()
         self.value_network = mlp(input_dim, mlp_dims)
 
-    def forward(self, state):
+    def forward(self, state_input):
         # input size: (batch_size, # of humans, state_length)
+        if isinstance(state_input, tuple):
+            state = state_input[0]
+        else:
+            state = state_input
+
         value = self.value_network(state.squeeze(dim=1))
         return value
 

@@ -106,6 +106,7 @@ class MultiHumanRL(CADRL):
         if self.with_om:
             occupancy_maps = self.build_occupancy_maps(state.human_states)
             rotated_state_tensor = torch.cat([rotated_state_tensor, occupancy_maps], dim=1)
+
         return rotated_state_tensor
 
     def input_dim(self):
@@ -117,6 +118,9 @@ class MultiHumanRL(CADRL):
         :param human_states:
         :return: tensor of shape (# human - 1, self.cell_num ** 2)
         """
+        if len(human_states) <= 1:
+            return torch.zeros((1, self.cell_num ** 2 * self.om_channel_size))
+
         occupancy_maps = []
         for human in human_states:
             other_humans = np.concatenate([np.array([(other_human.px, other_human.py, other_human.vx, other_human.vy)])

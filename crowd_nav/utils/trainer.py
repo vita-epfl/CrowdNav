@@ -1,4 +1,5 @@
 import logging
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
@@ -14,7 +15,7 @@ class Trainer(object):
         self.device = device
         self.criterion = nn.MSELoss().to(device)
         self.memory = memory
-        self.data_loader = DataLoader(memory, batch_size, shuffle=True)
+        self.data_loader = DataLoader(memory, batch_size, shuffle=True, collate_fn=pad_batch)
         self.optimizer = None
 
     def set_learning_rate(self, learning_rate):
@@ -29,9 +30,6 @@ class Trainer(object):
             epoch_loss = 0
             for data in self.data_loader:
                 inputs, values = data
-                inputs = Variable(inputs)
-                values = Variable(values)
-
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
                 loss = self.criterion(outputs, values)
@@ -64,3 +62,39 @@ class Trainer(object):
         logging.debug('Average loss : %.2E', average_loss)
 
         return average_loss
+
+
+def pad_tensor(vec, pad, dim):
+    """
+    args:
+        vec - tensor to pad
+        pad - the size to pad to
+        dim - dimension to pad
+
+    return:
+        a new tensor padded to 'pad' in dimension 'dim'
+    """
+    pad_size = list(vec.shape)
+    pad_size[dim] = pad - vec.size(dim)
+    if pad_size[dim] == 0:
+        return vec
+    else:
+        return torch.cat([vec, torch.zeros(pad_size)], dim=dim)
+
+
+def pad_batch(batch):
+    """
+    args:
+        batch - list of (tensor, label)
+
+    reutrn:
+        xs - a tensor of all examples in 'batch' after padding
+        ys - a LongTensor of all labels in batch
+    """
+    # sort the sequences in the decreasing order of length
+    sequences = sorted([x for x, y in batch], reverse=True, key=lambda x: x.size()[0])
+    packed_sequences = torch.nn.utils.rnn.pack_sequence(sequences)
+    xs = torch.nn.utils.rnn.pad_packed_sequence(packed_sequences, batch_first=True)
+    ys = torch.Tensor([y for x, y in batch]).unsqueeze(1)
+
+    return xs, ys

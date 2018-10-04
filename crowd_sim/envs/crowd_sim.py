@@ -171,11 +171,11 @@ class CrowdSim(gym.Env):
         if test_case is not None:
             self.case_counter[phase] = test_case
         self.global_time = 0
-        counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
-                          'val': 0, 'test': self.case_capacity['val']}
+        base_seed = {'train': self.case_capacity['val'] + self.case_capacity['test'],
+                     'val': 0, 'test': self.case_capacity['val']}
         self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
         if self.case_counter[phase] >= 0:
-            np.random.seed(counter_offset[phase] + self.case_counter[phase])
+            np.random.seed(base_seed[phase] + self.case_counter[phase])
             if not self.robot.policy.multiagent_training and phase in ['train', 'val']:
                 # only CADRL trains in circle crossing simulation
                 human_num = 1
@@ -282,7 +282,6 @@ class CrowdSim(gym.Env):
             done = True
             info = ReachGoal()
         elif dmin < self.discomfort_dist:
-            # only penalize agent for getting too close if it's visible
             # adjust the reward based on FPS
             reward = (dmin - self.discomfort_dist) * self.discomfort_penalty_factor * self.time_step
             done = False
@@ -304,8 +303,8 @@ class CrowdSim(gym.Env):
             self.robot.step(action)
             for human, action in zip(self.humans, human_actions):
                 human.step(action)
-                if human.reached_destination():
-                    self.generate_human(human)
+                # if human.reached_destination():
+                #     self.generate_human(human)
             self.global_time += self.time_step
 
             # compute the observation

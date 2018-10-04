@@ -115,9 +115,9 @@ class Explorer(object):
 
             # transform state of different human_num into fixed-size tensor
             human_num, feature_size = state.size()
-            if self.robot.policy.multiagent_training and human_num != self.env.human_num:
-                padding = torch.zeros((self.env.human_num - human_num, feature_size))
-                state = torch.cat([state, padding])
+            # if self.robot.policy.multiagent_training and human_num != self.env.human_num:
+            #     padding = torch.zeros((self.env.human_num - human_num, feature_size))
+            #     state = torch.cat([state, padding])
             self.memory.push((state, value))
 
 
