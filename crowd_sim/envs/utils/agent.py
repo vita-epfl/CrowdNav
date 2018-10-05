@@ -1,7 +1,7 @@
-import numpy as np
-from numpy.linalg import norm
 import abc
 import logging
+import numpy as np
+from numpy.linalg import norm
 from crowd_sim.envs.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.action import ActionXY, ActionRot
 from crowd_sim.envs.utils.state import ObservableState, FullState

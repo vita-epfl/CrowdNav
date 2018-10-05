@@ -40,11 +40,8 @@ class MultiHumanRL(CADRL):
                     next_human_states = [self.propagate(human_state, ActionXY(human_state.vx, human_state.vy))
                                          for human_state in state.human_states]
                     reward = self.compute_reward(next_self_state, next_human_states)
-                if next_human_states:
-                    batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
-                                                  for next_human_state in next_human_states], dim=0)
-                else:
-                    batch_next_states = torch.Tensor([next_self_state.to_tuple()]).to(self.device)
+                batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
+                                              for next_human_state in next_human_states], dim=0)
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
                 if self.with_om:
                     if occupancy_maps is None:
@@ -97,11 +94,8 @@ class MultiHumanRL(CADRL):
         :param state:
         :return: tensor of shape (# of humans, len(state))
         """
-        if state.human_states:
-            state_tensor = torch.cat([torch.Tensor([state.self_state + human_state]).to(self.device)
-                                      for human_state in state.human_states], dim=0)
-        else:
-            state_tensor = torch.Tensor([state.self_state.to_tuple()]).to(self.device)
+        state_tensor = torch.cat([torch.Tensor([state.self_state + human_state]).to(self.device)
+                                  for human_state in state.human_states], dim=0)
         rotated_state_tensor = self.rotate(state_tensor)
         if self.with_om:
             occupancy_maps = self.build_occupancy_maps(state.human_states)
@@ -118,9 +112,6 @@ class MultiHumanRL(CADRL):
         :param human_states:
         :return: tensor of shape (# human - 1, self.cell_num ** 2)
         """
-        if len(human_states) <= 1:
-            return torch.zeros((1, self.cell_num ** 2 * self.om_channel_size))
-
         occupancy_maps = []
         for human in human_states:
             other_humans = np.concatenate([np.array([(other_human.px, other_human.py, other_human.vx, other_human.vy)])

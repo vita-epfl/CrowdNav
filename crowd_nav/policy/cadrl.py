@@ -167,11 +167,8 @@ class CADRL(Policy):
                     next_human_states = [self.propagate(human_state, ActionXY(human_state.vx, human_state.vy))
                                          for human_state in state.human_states]
                     reward = self.compute_reward(next_self_state, next_human_states)
-                if next_human_states:
-                    batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
-                                                  for next_human_state in next_human_states], dim=0)
-                else:
-                    batch_next_states = torch.Tensor([next_self_state]).to(self.device).unsqueeze(0)
+                batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
+                                              for next_human_state in next_human_states], dim=0)
 
                 # VALUE UPDATE
                 outputs = self.model(self.rotate(batch_next_states))
@@ -194,11 +191,7 @@ class CADRL(Policy):
         :param state:
         :return: tensor of shape (len(state), )
         """
-        assert len(state.human_states) <= 1
-        if state.human_states:
-            state = torch.Tensor([state.self_state + state.human_states[0]]).to(self.device)
-        else:
-            state = torch.Tensor([state.self_state.to_tuple()]).to(self.device)
+        state = torch.Tensor([state.self_state + state.human_states[0]]).to(self.device)
         state = self.rotate(state)
         return state
 
@@ -226,20 +219,15 @@ class CADRL(Policy):
         else:
             theta = torch.zeros_like(v_pref)
 
-        if state.shape[1] == 9:
-            # if state does not contain any human, fill it with zeros
-            zeros = [torch.zeros_like(dg) for _ in range(7)]
-            new_state = torch.cat([dg, v_pref, theta, radius, vx, vy, *zeros], dim=1)
-        else:
-            vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
-            vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
-            px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
-            px1 = px1.reshape((batch, -1))
-            py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
-            py1 = py1.reshape((batch, -1))
-            radius1 = state[:, 13].reshape((batch, -1))
-            radius_sum = radius + radius1
-            da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
-                                      reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-            new_state = torch.cat([dg, v_pref, theta, radius, vx, vy, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
+        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
+        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
+        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
+        px1 = px1.reshape((batch, -1))
+        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
+        py1 = py1.reshape((batch, -1))
+        radius1 = state[:, 13].reshape((batch, -1))
+        radius_sum = radius + radius1
+        da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
+                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
+        new_state = torch.cat([dg, v_pref, theta, radius, vx, vy, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
         return new_state
