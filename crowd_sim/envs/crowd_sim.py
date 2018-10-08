@@ -224,6 +224,13 @@ class CrowdSim(gym.Env):
                 ob = self.compute_observation_for(human)
                 human_actions.append(human.act(ob))
 
+        # debug socialforce
+        # for a1, a2 in zip(human_actions, human_actions1):
+        #     if not np.allclose(a1, a2):
+        #         print(a1, a2)
+        #     else:
+        #         print('equal')
+
         # collision detection
         dmin = float('inf')
         collision = False

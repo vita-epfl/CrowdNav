@@ -11,8 +11,9 @@ class SocialForce(Policy):
         self.trainable = False
         self.multiagent_training = None
         self.kinematics = 'holonomic'
-        self.radius = 0.3
-        self.max_speed = 1
+        self.initial_speed = 1
+        self.v0 = 10
+        self.sigma = 0.3
         self.sim = None
 
     def configure(self, config):
@@ -29,15 +30,11 @@ class SocialForce(Policy):
         """
         sf_state = []
         self_state = state.self_state
-
-        velocity = np.array((self_state.gx - self_state.px, self_state.gy - self_state.py))
-        speed = np.linalg.norm(velocity)
-        pref_vel = velocity / speed if speed > 1 else velocity
-
-        sf_state.append((self_state.px, self_state.py, pref_vel[0], pref_vel[1], self_state.gx, self_state.gy))
+        sf_state.append((self_state.px, self_state.py, self_state.vx, self_state.vy, self_state.gx, self_state.gy))
         for human_state in state.human_states:
             sf_state.append((human_state.px, human_state.py, human_state.vx, human_state.vy, 0, 0))
-        sim = socialforce.Simulator(np.array(sf_state), delta_t=self.time_step)
+        sim = socialforce.Simulator(np.array(sf_state), delta_t=self.time_step, initial_speed=self.initial_speed,
+                                    v0=self.v0, sigma=self.sigma)
         sim.step()
         action = ActionXY(sim.state[0, 2], sim.state[0, 3])
 
@@ -47,19 +44,23 @@ class SocialForce(Policy):
 
 
 class CentralizedSocialForce(SocialForce):
+    """
+    Centralized socialforce, a bit different from decentralized socialforce, where the goal position of other agents is
+    set to be (0, 0)
+    """
     def __init__(self):
         super().__init__()
 
     def predict(self, state):
         sf_state = []
         for agent_state in state:
-            velocity = np.array((agent_state.gx - agent_state.px, agent_state.gy - agent_state.py))
-            speed = np.linalg.norm(velocity)
-            pref_vel = velocity / speed if speed > 1 else velocity
-            sf_state.append((agent_state.px, agent_state.py, pref_vel[0], pref_vel[1], agent_state.gx, agent_state.py))
+            sf_state.append((agent_state.px, agent_state.py, agent_state.vx, agent_state.vy,
+                             agent_state.gx, agent_state.gy))
 
-        sim = socialforce.Simulator(np.array(sf_state), delta_t=self.time_step)
+        sim = socialforce.Simulator(np.array(sf_state), delta_t=self.time_step, initial_speed=self.initial_speed,
+                                    v0=self.v0, sigma=self.sigma)
         sim.step()
         actions = [ActionXY(sim.state[i, 2], sim.state[i, 3]) for i in range(len(state))]
+        del sim
 
         return actions
