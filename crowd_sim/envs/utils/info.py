@@ -14,12 +14,12 @@ class ReachGoal(object):
         return 'Reaching goal'
 
 
-class Danger(object):
+class Discomfort(object):
     def __init__(self, min_dist):
         self.min_dist = min_dist
 
     def __str__(self):
-        return 'Too close'
+        return 'Discomfort'
 
 
 class Collision(object):

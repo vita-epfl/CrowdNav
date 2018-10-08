@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
 
     models = ['LSTM-RL', 'SARL', 'OM-SARL']
-    max_episodes = 10000
+    max_episodes = None
 
     ax1 = ax2 = ax3 = ax4 = None
     ax1_legends = []
@@ -63,11 +63,12 @@ def main():
             train_cr.append(float(r[2]))
             train_time.append(float(r[3]))
             train_reward.append(float(r[4]))
-        train_episode = train_episode[:max_episodes]
-        train_sr = train_sr[:max_episodes]
-        train_cr = train_cr[:max_episodes]
-        train_time = train_time[:max_episodes]
-        train_reward = train_reward[:max_episodes]
+        if max_episodes is not None:
+            train_episode = train_episode[:max_episodes]
+            train_sr = train_sr[:max_episodes]
+            train_cr = train_cr[:max_episodes]
+            train_time = train_time[:max_episodes]
+            train_reward = train_reward[:max_episodes]
 
         # smooth training plot
         train_sr_smooth = running_mean(train_sr, args.window_size)

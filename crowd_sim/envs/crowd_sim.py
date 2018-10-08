@@ -259,7 +259,7 @@ class CrowdSim(gym.Env):
             # adjust the reward based on FPS
             reward = (dmin - self.discomfort_dist) * self.discomfort_penalty_factor * self.time_step
             done = False
-            info = Danger(dmin)
+            info = Discomfort(dmin)
         else:
             reward = 0
             done = False
