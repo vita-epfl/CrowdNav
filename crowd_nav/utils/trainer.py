@@ -70,7 +70,7 @@ def pad_batch(batch):
     args:
         batch - list of (tensor, label)
 
-    reutrn:
+    return:
         xs - a tensor of all examples in 'batch' after padding
         ys - a LongTensor of all labels in batch
     """

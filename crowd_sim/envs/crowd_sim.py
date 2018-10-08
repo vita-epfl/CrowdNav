@@ -4,6 +4,7 @@ import matplotlib.lines as mlines
 import numpy as np
 from matplotlib import patches
 from numpy.linalg import norm
+from crowd_sim.envs.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.human import Human
 from crowd_sim.envs.utils.info import *
 from crowd_sim.envs.utils.utils import point_to_segment_dist
@@ -37,12 +38,14 @@ class CrowdSim(gym.Env):
         self.case_size = None
         self.case_counter = None
         self.randomize_attributes = None
-        self.train_val_sim = None
-        self.test_sim = None
-        self.rule = None
+        self.train_val_scenario = None
+        self.test_scenario = None
+        self.current_scenario = None
         self.square_width = None
         self.circle_radius = None
         self.human_num = None
+        self.centralized_planning = None
+        self.centralized_planner = None
         # for visualization
         self.states = None
         self.action_values = None
@@ -61,19 +64,24 @@ class CrowdSim(gym.Env):
         self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
         self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
                           'test': config.getint('env', 'test_size')}
-        self.train_val_sim = config.get('sim', 'train_val_sim')
-        self.test_sim = config.get('sim', 'test_sim')
+        self.train_val_scenario = config.get('sim', 'train_val_scenario')
+        self.test_scenario = config.get('sim', 'test_scenario')
         self.square_width = config.getfloat('sim', 'square_width')
         self.circle_radius = config.getfloat('sim', 'circle_radius')
         self.human_num = config.getint('sim', 'human_num')
+        self.centralized_planning = config.getboolean('sim', 'centralized_planning')
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
+
+        human_policy = config.get('humans', 'policy')
+        if self.centralized_planning:
+            self.centralized_planner = policy_factory['centralized_' + human_policy]()
 
         logging.info('human number: {}'.format(self.human_num))
         if self.randomize_attributes:
             logging.info("Randomize human's radius and preferred speed")
         else:
             logging.info("Not randomize human's radius and preferred speed")
-        logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
+        logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_scenario, self.test_scenario))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
 
     def set_robot(self, robot):
@@ -85,7 +93,7 @@ class CrowdSim(gym.Env):
         if self.randomize_attributes:
             human.sample_random_attributes()
 
-        if self.rule == 'circle_crossing':
+        if self.current_scenario == 'circle_crossing':
             while True:
                 angle = np.random.random() * np.pi * 2
                 # add some noise to simulate all the possible cases robot could meet with human
@@ -103,7 +111,7 @@ class CrowdSim(gym.Env):
                 if not collide:
                     break
             human.set(px, py, -px, -py, 0, 0, 0)
-        elif self.rule == 'square_crossing':
+        elif self.current_scenario == 'square_crossing':
             if np.random.random() > 0.5:
                 sign = -1
             else:
@@ -153,10 +161,10 @@ class CrowdSim(gym.Env):
             if not self.robot.policy.multiagent_training and phase in ['train', 'val']:
                 # only CADRL trains in circle crossing simulation
                 human_num = 1
-                self.rule = 'circle_crossing'
+                self.current_scenario = 'circle_crossing'
             else:
                 human_num = self.human_num
-                self.rule = self.test_sim
+                self.current_scenario = self.test_scenario
             self.humans = []
             for _ in range(human_num):
                 self.humans.append(self.generate_human())
@@ -177,6 +185,9 @@ class CrowdSim(gym.Env):
         for agent in [self.robot] + self.humans:
             agent.time_step = self.time_step
             agent.policy.time_step = self.time_step
+
+        if self.centralized_planning:
+            self.centralized_planner.time_step = self.time_step
 
         self.states = list()
         if hasattr(self.robot.policy, 'action_values'):
@@ -200,10 +211,18 @@ class CrowdSim(gym.Env):
         Compute actions for all agents, detect collision, update environment and return (ob, reward, done, info)
 
         """
-        human_actions = []
-        for human in self.humans:
-            ob = self.compute_observation_for(human)
-            human_actions.append(human.act(ob))
+        if self.centralized_planning:
+            agent_states = [human.get_full_state() for human in self.humans]
+            if self.robot.visible:
+                agent_states.append(self.robot.get_full_state())
+                human_actions = self.centralized_planner.predict(agent_states)[:-1]
+            else:
+                human_actions = self.centralized_planner.predict(agent_states)
+        else:
+            human_actions = []
+            for human in self.humans:
+                ob = self.compute_observation_for(human)
+                human_actions.append(human.act(ob))
 
         # collision detection
         dmin = float('inf')

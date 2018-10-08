@@ -44,3 +44,22 @@ class SocialForce(Policy):
         self.last_state = state
 
         return action
+
+
+class CentralizedSocialForce(SocialForce):
+    def __init__(self):
+        super().__init__()
+
+    def predict(self, state):
+        sf_state = []
+        for agent_state in state:
+            velocity = np.array((agent_state.gx - agent_state.px, agent_state.gy - agent_state.py))
+            speed = np.linalg.norm(velocity)
+            pref_vel = velocity / speed if speed > 1 else velocity
+            sf_state.append((agent_state.px, agent_state.py, pref_vel[0], pref_vel[1], agent_state.gx, agent_state.py))
+
+        sim = socialforce.Simulator(np.array(sf_state), delta_t=self.time_step)
+        sim.step()
+        actions = [ActionXY(sim.state[i, 2], sim.state[i, 3]) for i in range(len(state))]
+
+        return actions

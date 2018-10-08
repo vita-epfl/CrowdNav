@@ -130,3 +130,37 @@ class ORCA(Policy):
         self.last_state = state
 
         return action
+
+
+class CentralizedORCA(ORCA):
+    def __init__(self):
+        super().__init__()
+
+    def predict(self, state):
+        """ Centralized planning for all agents """
+        params = self.neighbor_dist, self.max_neighbors, self.time_horizon, self.time_horizon_obst
+        if self.sim is not None and self.sim.getNumAgents() != len(state):
+            del self.sim
+            self.sim = None
+
+        if self.sim is None:
+            self.sim = rvo2.PyRVOSimulator(self.time_step, *params, self.radius, self.max_speed)
+            for agent_state in state:
+                self.sim.addAgent(agent_state.position, *params, agent_state.radius + 0.01 + self.safety_space,
+                                  self.max_speed, agent_state.velocity)
+        else:
+            for i, agent_state in enumerate(state):
+                self.sim.setAgentPosition(i, agent_state.position)
+                self.sim.setAgentVelocity(i, agent_state.velocity)
+
+        # Set the preferred velocity to be a vector of unit magnitude (speed) in the direction of the goal.
+        for i, agent_state in enumerate(state):
+            velocity = np.array((agent_state.gx - agent_state.px, agent_state.gy - agent_state.py))
+            speed = np.linalg.norm(velocity)
+            pref_vel = velocity / speed if speed > 1 else velocity
+            self.sim.setAgentPrefVelocity(i, (pref_vel[0], pref_vel[1]))
+
+        self.sim.doStep()
+        actions = [ActionXY(*self.sim.getAgentVelocity(i)) for i in range(len(state))]
+
+        return actions
