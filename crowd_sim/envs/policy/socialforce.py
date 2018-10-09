@@ -32,7 +32,14 @@ class SocialForce(Policy):
         self_state = state.self_state
         sf_state.append((self_state.px, self_state.py, self_state.vx, self_state.vy, self_state.gx, self_state.gy))
         for human_state in state.human_states:
-            sf_state.append((human_state.px, human_state.py, human_state.vx, human_state.vy, 0, 0))
+            # approximate desired direction with current velocity
+            if human_state.vx == 0 and human_state.vy == 0:
+                gx = np.random.random()
+                gy = np.random.random()
+            else:
+                gx = human_state.px + human_state.vx
+                gy = human_state.py + human_state.vy
+            sf_state.append((human_state.px, human_state.py, human_state.vx, human_state.vy, gx, gy))
         sim = socialforce.Simulator(np.array(sf_state), delta_t=self.time_step, initial_speed=self.initial_speed,
                                     v0=self.v0, sigma=self.sigma)
         sim.step()

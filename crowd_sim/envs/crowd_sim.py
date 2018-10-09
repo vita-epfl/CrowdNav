@@ -74,6 +74,8 @@ class CrowdSim(gym.Env):
 
         human_policy = config.get('humans', 'policy')
         if self.centralized_planning:
+            if self.robot.visible and human_policy == 'socialforce':
+                raise ValueError('Socialforce policy works in decentralized version!')
             self.centralized_planner = policy_factory['centralized_' + human_policy]()
 
         logging.info('human number: {}'.format(self.human_num))
@@ -223,13 +225,6 @@ class CrowdSim(gym.Env):
             for human in self.humans:
                 ob = self.compute_observation_for(human)
                 human_actions.append(human.act(ob))
-
-        # debug socialforce
-        # for a1, a2 in zip(human_actions, human_actions1):
-        #     if not np.allclose(a1, a2):
-        #         print(a1, a2)
-        #     else:
-        #         print('equal')
 
         # collision detection
         dmin = float('inf')
@@ -539,7 +534,7 @@ class CrowdSim(gym.Env):
                     anim.event_source.start()
 
             fig.canvas.mpl_connect('key_press_event', on_click)
-            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step * 1000)
+            anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step * 500)
             anim.running = True
 
             if output_file is not None:
