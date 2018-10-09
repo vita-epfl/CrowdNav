@@ -500,8 +500,8 @@ class CrowdSim(gym.Env):
 
             # add humans and their numbers
             human_positions = [[state[1][j].position for j in range(len(self.humans))] for state in self.states]
-            humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False,
-                                 color=(self.attention_weights[0][i], 0, 0)) for i in range(len(self.humans))]
+            humans = [plt.Circle(human_positions[0][i], self.humans[i].radius, fill=False)
+                      for i in range(len(self.humans))]
             human_numbers = [plt.text(humans[i].center[0] - x_offset, humans[i].center[1] - y_offset, str(i),
                                       color='black', fontsize=12) for i in range(len(self.humans))]
             for i, human in enumerate(humans):
