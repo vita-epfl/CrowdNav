@@ -74,8 +74,8 @@ class CrowdSim(gym.Env):
 
         human_policy = config.get('humans', 'policy')
         if self.centralized_planning:
-            if self.robot.visible and human_policy == 'socialforce':
-                raise ValueError('Socialforce policy works in decentralized version!')
+            if human_policy == 'socialforce':
+                logging.warning('Current socialforce policy only works in decentralized way with visible robot!')
             self.centralized_planner = policy_factory['centralized_' + human_policy]()
 
         logging.info('human number: {}'.format(self.human_num))
@@ -429,11 +429,10 @@ class CrowdSim(gym.Env):
             goal = mlines.Line2D([0], [self.circle_radius], color=goal_color, marker='*', linestyle='None',
                                  markersize=15, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
-            sensor_range = plt.Circle(robot_positions[0], self.robot_sensor_range, fill=False, ls='dashed')
+            # sensor_range = plt.Circle(robot_positions[0], self.robot_sensor_range, fill=False, ls='dashed')
             ax.add_artist(robot)
-            ax.add_artist(sensor_range)
             ax.add_artist(goal)
-            plt.legend([robot, sensor_range, goal], ['Robot', 'Range', 'Goal'], fontsize=14)
+            plt.legend([robot, goal], ['Robot', 'Goal'], fontsize=14)
 
             # add humans and their numbers
             human_positions = [[state[1][j].position for j in range(len(self.humans))] for state in self.states]
@@ -457,24 +456,20 @@ class CrowdSim(gym.Env):
 
             # compute orientation in each step and use arrow to show the direction
             radius = self.robot.radius
-            if self.robot.kinematics == 'unicycle':
-                orientation = [((state[0].px, state[0].py), (state[0].px + radius * np.cos(state[0].theta),
-                                                             state[0].py + radius * np.sin(state[0].theta))) for state
-                               in self.states]
-                orientations = [orientation]
-            else:
-                orientations = []
-                for i in range(self.human_num + 1):
-                    orientation = []
-                    for state in self.states:
-                        if i == 0:
-                            agent_state = state[0]
-                        else:
-                            agent_state = state[1][i - 1]
+            orientations = []
+            for i in range(self.human_num + 1):
+                orientation = []
+                for state in self.states:
+                    agent_state = state[0] if i == 0 else state[1][i - 1]
+                    if self.robot.kinematics == 'unicycle' and i == 0:
+                        direction = ((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(agent_state.theta),
+                                                                        agent_state.py + radius * np.sin(agent_state.theta)))
+                    else:
                         theta = np.arctan2(agent_state.vy, agent_state.vx)
-                        orientation.append(((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
-                                             agent_state.py + radius * np.sin(theta))))
-                    orientations.append(orientation)
+                        direction = ((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
+                                             agent_state.py + radius * np.sin(theta)))
+                    orientation.append(direction)
+                orientations.append(orientation)
             arrows = [patches.FancyArrowPatch(*orientation[0], color=arrow_color, arrowstyle=arrow_style)
                       for orientation in orientations]
             for arrow in arrows:
@@ -486,7 +481,6 @@ class CrowdSim(gym.Env):
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
-                sensor_range.center = robot_positions[frame_num]
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     # human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
@@ -538,9 +532,13 @@ class CrowdSim(gym.Env):
             anim.running = True
 
             if output_file is not None:
+                # save as video
                 ffmpeg_writer = animation.writers['ffmpeg']
-                writer = ffmpeg_writer(fps=8, metadata=dict(artist='Me'), bitrate=1800)
+                writer = ffmpeg_writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
                 anim.save(output_file, writer=writer)
+
+                # save output file as gif if imagemagic is installed
+                # anim.save(output_file, writer='imagemagic', fps=12)
             else:
                 plt.show()
         else:

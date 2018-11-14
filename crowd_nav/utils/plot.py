@@ -1,5 +1,6 @@
 import re
 import argparse
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -18,10 +19,11 @@ def main():
     parser.add_argument('--plot_reward', default=True, action='store_true')
     parser.add_argument('--plot_train', default=True, action='store_true')
     parser.add_argument('--plot_val', default=False, action='store_true')
+    parser.add_argument('--plot_all', default=False, action='store_true')
     parser.add_argument('--window_size', type=int, default=200)
     args = parser.parse_args()
 
-    models = ['LSTM-RL', 'SARL', 'OM-SARL']
+    models = []
     max_episodes = None
 
     ax1 = ax2 = ax3 = ax4 = None
@@ -30,6 +32,15 @@ def main():
     ax3_legends = []
     ax4_legends = []
 
+    if args.plot_all:
+        log_dir = args.log_files[0]
+        if not os.path.isdir(log_dir):
+            parser.error('Input argument should be the directory containing all experiment folders')
+        args.log_files = [os.path.join(log_dir, exp_dir, 'output.log') for exp_dir in os.listdir(log_dir)]
+
+    args.log_files = sorted(args.log_files)
+    if not models:
+        models = [os.path.basename(log_file[:-11]) for log_file in args.log_files]
     for i, log_file in enumerate(args.log_files):
         with open(log_file, 'r') as file:
             log = file.read()
@@ -133,10 +144,11 @@ def main():
             ax3.set_title('Collision Rate')
 
         if args.plot_reward:
-            ax4.legend(ax4_legends, fontsize=20)
-            ax4.set_xlabel('Episodes', fontsize=18)
-            ax4.set_ylabel('Reward', fontsize=18)
-            plt.tick_params(axis='both', which='major', labelsize=18)
+            # ax4.legend(ax4_legends, loc='center left', bbox_to_anchor=(1, 0.5))
+            ax4.legend(ax4_legends)
+            ax4.set_xlabel('Episodes')
+            ax4.set_ylabel('Reward')
+            plt.tick_params(axis='both', which='major')
             plt.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.125)
             # ax4.set_xlabel('xlabel', fontsize=18)
             # ax4.set_ylabel('ylabel', fontsize=16)
