@@ -44,7 +44,6 @@ def main():
     config = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(config)
 
-
     # configure logging
     mode = 'a' if args.resume else 'w'
     file_handler = logging.FileHandler(log_file, mode=mode)

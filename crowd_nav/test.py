@@ -44,7 +44,8 @@ def main():
     spec.loader.exec_module(config)
 
     # configure logging and device
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
+    level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(level=level, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
     logging.info('Using device: %s', device)

@@ -1,4 +1,5 @@
 import torch
+import logging
 import numpy as np
 from crowd_sim.envs.utils.action import ActionRot, ActionXY
 from crowd_nav.policy.cadrl import CADRL
@@ -23,6 +24,10 @@ class MultiHumanRL(CADRL):
             return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
         if self.action_space is None:
             self.build_action_space(state.self_state.v_pref)
+        if not state.human_states:
+            assert self.phase != 'train'
+            logging.debug('No human in FOV')
+            return self.head_straight(state.self_state)
 
         occupancy_maps = None
         probability = np.random.random()

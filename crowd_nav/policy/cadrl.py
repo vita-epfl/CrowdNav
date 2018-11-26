@@ -150,6 +150,9 @@ class CADRL(Policy):
             return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
         if self.action_space is None:
             self.build_action_space(state.self_state.v_pref)
+        if not state.human_states:
+            assert self.phase != 'train'
+            return self.head_straight(state.self_state)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
@@ -182,6 +185,43 @@ class CADRL(Policy):
             self.last_state = self.transform(state)
 
         return max_action
+
+    def head_straight(self, self_state):
+        # find the greedy action given kinematic constraints and return the closest action in the action space
+        direction = np.arctan2(self_state.gy - self_state.py, self_state.gx - self_state.px)
+        distance = np.linalg.norm((self_state.gy - self_state.py, self_state.gx - self_state.px))
+        if self.kinematics == 'holonomic':
+            speed = min(distance / self.time_step, self_state.v_pref)
+            vx = np.cos(direction) * speed
+            vy = np.sin(direction) * speed
+
+            min_diff = float('inf')
+            closest_action = None
+            for action in self.action_space:
+                diff = np.linalg.norm(np.array(action) - np.array((vx, vy)))
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_action = action
+        else:
+            rotation = direction - self_state.theta
+            # if goal is not in the field of view, always rotate first
+            if rotation < self.rotations[0]:
+                closest_action = ActionRot(0, self.rotations[0])
+            elif rotation > self.rotations[-1]:
+                closest_action = ActionRot(0, self.rotations[-1])
+            else:
+                speed = min(distance / self.time_step, self_state.v_pref)
+
+                min_diff = float('inf')
+                closest_action = None
+                for action in self.action_space:
+                    diff = np.linalg.norm(np.array((np.cos(action.r) * action.v, np.sin(action.r) * action.v)) -
+                                          np.array((np.cos(rotation) * speed), np.sin(rotation) * action.v))
+                    if diff < min_diff:
+                        min_diff = diff
+                        closest_action = action
+
+        return closest_action
 
     def transform(self, state):
         """
