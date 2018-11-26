@@ -67,13 +67,6 @@ class ORCA(Policy):
         self.sim = None
 
     def configure(self, config):
-        # self.time_step = config.getfloat('orca', 'time_step')
-        # self.neighbor_dist = config.getfloat('orca', 'neighbor_dist')
-        # self.max_neighbors = config.getint('orca', 'max_neighbors')
-        # self.time_horizon = config.getfloat('orca', 'time_horizon')
-        # self.time_horizon_obst = config.getfloat('orca', 'time_horizon_obst')
-        # self.radius = config.getfloat('orca', 'radius')
-        # self.max_speed = config.getfloat('orca', 'max_speed')
         return
 
     def set_phase(self, phase):

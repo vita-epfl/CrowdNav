@@ -80,15 +80,16 @@ class SARL(MultiHumanRL):
 
     def configure(self, config):
         self.set_common_parameters(config)
-        mlp1_dims = [int(x) for x in config.get('sarl', 'mlp1_dims').split(', ')]
-        mlp2_dims = [int(x) for x in config.get('sarl', 'mlp2_dims').split(', ')]
-        mlp3_dims = [int(x) for x in config.get('sarl', 'mlp3_dims').split(', ')]
-        attention_dims = [int(x) for x in config.get('sarl', 'attention_dims').split(', ')]
-        self.with_om = config.getboolean('sarl', 'with_om')
-        with_global_state = config.getboolean('sarl', 'with_global_state')
+        self.with_om = config.sarl.with_om
+        self.multiagent_training = config.sarl.multiagent_training
+
+        mlp1_dims = config.sarl.mlp1_dims
+        mlp2_dims = config.sarl.mlp2_dims
+        mlp3_dims = config.sarl.mlp3_dims
+        attention_dims = config.sarl.attention_dims
+        with_global_state = config.sarl.with_global_state
         self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims,
                                   attention_dims, with_global_state, self.cell_size, self.cell_num)
-        self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
         if self.with_om:
             self.name = 'OM-SARL'
         logging.info('Policy: {} {} global state'.format(self.name, 'w/' if with_global_state else 'w/o'))

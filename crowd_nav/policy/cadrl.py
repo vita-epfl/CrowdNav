@@ -62,21 +62,20 @@ class CADRL(Policy):
 
     def configure(self, config):
         self.set_common_parameters(config)
-        mlp_dims = [int(x) for x in config.get('cadrl', 'mlp_dims').split(', ')]
-        self.model = ValueNetwork(self.joint_state_dim, mlp_dims)
-        self.multiagent_training = config.getboolean('cadrl', 'multiagent_training')
+        self.model = ValueNetwork(self.joint_state_dim, config.cadrl.mlp_dims)
+        self.multiagent_training = config.cadrl.multiagent_training
         logging.info('Policy: CADRL without occupancy map')
 
     def set_common_parameters(self, config):
-        self.gamma = config.getfloat('rl', 'gamma')
-        self.kinematics = config.get('action_space', 'kinematics')
-        self.sampling = config.get('action_space', 'sampling')
-        self.speed_samples = config.getint('action_space', 'speed_samples')
-        self.rotation_samples = config.getint('action_space', 'rotation_samples')
-        self.query_env = config.getboolean('action_space', 'query_env')
-        self.cell_num = config.getint('om', 'cell_num')
-        self.cell_size = config.getfloat('om', 'cell_size')
-        self.om_channel_size = config.getint('om', 'om_channel_size')
+        self.gamma = config.rl.gamma
+        self.kinematics = config.action_space.kinematics
+        self.sampling = config.action_space.sampling
+        self.speed_samples = config.action_space.speed_samples
+        self.rotation_samples = config.action_space.rotation_samples
+        self.query_env = config.action_space.query_env
+        self.cell_num = config.om.cell_num
+        self.cell_size = config.om.cell_size
+        self.om_channel_size = config.om.om_channel_size
 
     def set_device(self, device):
         self.device = device

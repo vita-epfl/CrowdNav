@@ -1,9 +1,9 @@
 import sys
 import logging
 import argparse
-import configparser
 import os
 import shutil
+import importlib.util
 import torch
 import gym
 import git
@@ -16,10 +16,8 @@ from crowd_nav.policy.policy_factory import policy_factory
 
 def main():
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
     parser.add_argument('--policy', type=str, default='cadrl')
-    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
-    parser.add_argument('--train_config', type=str, default='configs/train.config')
+    parser.add_argument('--config', type=str, default='config.py')
     parser.add_argument('--output_dir', type=str, default='data/output')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--resume', default=False, action='store_true')
@@ -35,17 +33,17 @@ def main():
             shutil.rmtree(args.output_dir)
         else:
             make_new_dir = False
-            args.env_config = os.path.join(args.output_dir, os.path.basename(args.env_config))
-            args.policy_config = os.path.join(args.output_dir, os.path.basename(args.policy_config))
-            args.train_config = os.path.join(args.output_dir, os.path.basename(args.train_config))
+            args.config = os.path.join(args.output_dir, args.config)
     if make_new_dir:
         os.makedirs(args.output_dir)
-        shutil.copy(args.env_config, args.output_dir)
-        shutil.copy(args.policy_config, args.output_dir)
-        shutil.copy(args.train_config, args.output_dir)
+        shutil.copy(args.config, args.output_dir)
     log_file = os.path.join(args.output_dir, 'output.log')
     il_weight_file = os.path.join(args.output_dir, 'il_model.pth')
     rl_weight_file = os.path.join(args.output_dir, 'rl_model.pth')
+    spec = importlib.util.spec_from_file_location('config', args.config)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+
 
     # configure logging
     mode = 'a' if args.resume else 'w'
@@ -63,42 +61,35 @@ def main():
     policy = policy_factory[args.policy]()
     if not policy.trainable:
         parser.error('Policy has to be trainable')
-    if args.policy_config is None:
-        parser.error('Policy config has to be specified for a trainable network')
-    policy_config = configparser.RawConfigParser()
-    policy_config.read(args.policy_config)
+    policy_config = config.PolicyConfig()
     policy.configure(policy_config)
     policy.set_device(device)
 
     # configure environment
-    env_config = configparser.RawConfigParser()
-    env_config.read(args.env_config)
+    env_config = config.EnvConfig(args.debug)
     env = gym.make('CrowdSim-v0')
     env.configure(env_config)
     robot = Robot(env_config, 'robot')
     env.set_robot(robot)
 
     # read training parameters
-    if args.train_config is None:
-        parser.error('Train config has to be specified for a trainable network')
-    train_config = configparser.RawConfigParser()
-    train_config.read(args.train_config)
-    rl_learning_rate = train_config.getfloat('train', 'rl_learning_rate')
-    train_batches = train_config.getint('train', 'train_batches')
-    train_episodes = train_config.getint('train', 'train_episodes')
-    sample_episodes = train_config.getint('train', 'sample_episodes')
-    target_update_interval = train_config.getint('train', 'target_update_interval')
-    evaluation_interval = train_config.getint('train', 'evaluation_interval')
-    capacity = train_config.getint('train', 'capacity')
-    epsilon_start = train_config.getfloat('train', 'epsilon_start')
-    epsilon_end = train_config.getfloat('train', 'epsilon_end')
-    epsilon_decay = train_config.getfloat('train', 'epsilon_decay')
-    checkpoint_interval = train_config.getint('train', 'checkpoint_interval')
+    train_config = config.TrainConfig(args.debug)
+    rl_learning_rate = train_config.train.rl_learning_rate
+    train_batches = train_config.train.train_batches
+    train_episodes = train_config.train.train_episodes
+    sample_episodes = train_config.train.sample_episodes
+    target_update_interval = train_config.train.target_update_interval
+    evaluation_interval = train_config.train.evaluation_interval
+    capacity = train_config.train.capacity
+    epsilon_start = train_config.train.epsilon_start
+    epsilon_end = train_config.train.epsilon_end
+    epsilon_decay = train_config.train.epsilon_decay
+    checkpoint_interval = train_config.train.checkpoint_interval
 
     # configure trainer and explorer
     memory = ReplayMemory(capacity)
     model = policy.get_model()
-    batch_size = train_config.getint('trainer', 'batch_size')
+    batch_size = train_config.trainer.batch_size
     trainer = Trainer(model, memory, device, batch_size)
     explorer = Explorer(env, robot, device, memory, policy.gamma, target_policy=policy)
 
@@ -113,15 +104,15 @@ def main():
         model.load_state_dict(torch.load(il_weight_file))
         logging.info('Load imitation learning trained weights.')
     else:
-        il_episodes = train_config.getint('imitation_learning', 'il_episodes')
-        il_policy = train_config.get('imitation_learning', 'il_policy')
-        il_epochs = train_config.getint('imitation_learning', 'il_epochs')
-        il_learning_rate = train_config.getfloat('imitation_learning', 'il_learning_rate')
+        il_episodes = train_config.imitation_learning.il_episodes
+        il_policy = train_config.imitation_learning.il_policy
+        il_epochs = train_config.imitation_learning.il_epochs
+        il_learning_rate = train_config.imitation_learning.il_learning_rate
         trainer.set_learning_rate(il_learning_rate)
         if robot.visible:
             safety_space = 0
         else:
-            safety_space = train_config.getfloat('imitation_learning', 'safety_space')
+            safety_space = train_config.imitation_learning.safety_space
         il_policy = policy_factory[il_policy]()
         il_policy.multiagent_training = policy.multiagent_training
         il_policy.safety_space = safety_space

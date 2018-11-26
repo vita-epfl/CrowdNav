@@ -53,26 +53,26 @@ class CrowdSim(gym.Env):
 
     def configure(self, config):
         self.config = config
-        self.time_limit = config.getint('env', 'time_limit')
-        self.time_step = config.getfloat('env', 'time_step')
-        self.randomize_attributes = config.getboolean('env', 'randomize_attributes')
-        self.robot_sensor_range = config.getfloat('env', 'robot_sensor_range')
-        self.success_reward = config.getfloat('reward', 'success_reward')
-        self.collision_penalty = config.getfloat('reward', 'collision_penalty')
-        self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
-        self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
+        self.time_limit = config.env.time_limit
+        self.time_step = config.env.time_step
+        self.randomize_attributes = config.env.randomize_attributes
+        self.robot_sensor_range = config.env.robot_sensor_range
+        self.success_reward = config.reward.success_reward
+        self.collision_penalty = config.reward.collision_penalty
+        self.discomfort_dist = config.reward.discomfort_dist
+        self.discomfort_penalty_factor = config.reward.discomfort_penalty_factor
         self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
-        self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
-                          'test': config.getint('env', 'test_size')}
-        self.train_val_scenario = config.get('sim', 'train_val_scenario')
-        self.test_scenario = config.get('sim', 'test_scenario')
-        self.square_width = config.getfloat('sim', 'square_width')
-        self.circle_radius = config.getfloat('sim', 'circle_radius')
-        self.human_num = config.getint('sim', 'human_num')
-        self.centralized_planning = config.getboolean('sim', 'centralized_planning')
+        self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.env.val_size,
+                          'test': config.env.test_size}
+        self.train_val_scenario = config.sim.train_val_scenario
+        self.test_scenario = config.sim.test_scenario
+        self.square_width = config.sim.square_width
+        self.circle_radius = config.sim.circle_radius
+        self.human_num = config.sim.human_num
+        self.centralized_planning = config.sim.centralized_planning
         self.case_counter = {'train': 0, 'test': 0, 'val': 0}
 
-        human_policy = config.get('humans', 'policy')
+        human_policy = config.humans.policy
         if self.centralized_planning:
             if human_policy == 'socialforce':
                 logging.warning('Current socialforce policy only works in decentralized way with visible robot!')
