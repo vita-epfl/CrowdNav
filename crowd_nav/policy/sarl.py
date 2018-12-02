@@ -77,6 +77,7 @@ class SARL(MultiHumanRL):
     def __init__(self):
         super().__init__()
         self.name = 'SARL'
+        self.attention_weights = None
 
     def configure(self, config):
         self.set_common_parameters(config)
@@ -95,4 +96,4 @@ class SARL(MultiHumanRL):
         logging.info('Policy: {} {} global state'.format(self.name, 'w/' if with_global_state else 'w/o'))
 
     def get_attention_weights(self):
-        return self.model.attention_weights
+        return self.attention_weights

@@ -152,7 +152,7 @@ class CADRL(Policy):
             self.build_action_space(state.self_state.v_pref)
         if not state.human_states:
             assert self.phase != 'train'
-            return self.head_straight(state.self_state)
+            return self.select_greedy_action(state.self_state)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
@@ -186,7 +186,7 @@ class CADRL(Policy):
 
         return max_action
 
-    def head_straight(self, self_state):
+    def select_greedy_action(self, self_state):
         # find the greedy action given kinematic constraints and return the closest action in the action space
         direction = np.arctan2(self_state.gy - self_state.py, self_state.gx - self_state.px)
         distance = np.linalg.norm((self_state.gy - self_state.py, self_state.gx - self_state.px))
@@ -206,9 +206,9 @@ class CADRL(Policy):
             rotation = direction - self_state.theta
             # if goal is not in the field of view, always rotate first
             if rotation < self.rotations[0]:
-                closest_action = ActionRot(0, self.rotations[0])
+                closest_action = ActionRot(self.speeds[0], self.rotations[0])
             elif rotation > self.rotations[-1]:
-                closest_action = ActionRot(0, self.rotations[-1])
+                closest_action = ActionRot(self.speeds[0], self.rotations[-1])
             else:
                 speed = min(distance / self.time_step, self_state.v_pref)
 

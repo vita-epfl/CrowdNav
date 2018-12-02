@@ -26,8 +26,9 @@ class MultiHumanRL(CADRL):
             self.build_action_space(state.self_state.v_pref)
         if not state.human_states:
             assert self.phase != 'train'
-            logging.debug('No human in FOV')
-            return self.head_straight(state.self_state)
+            if hasattr(self, 'attention_weights'):
+                self.attention_weights = list()
+            return self.select_greedy_action(state.self_state)
 
         occupancy_maps = None
         probability = np.random.random()
@@ -59,6 +60,8 @@ class MultiHumanRL(CADRL):
                 if value > max_value:
                     max_value = value
                     max_action = action
+                    if hasattr(self, 'attention_weights'):
+                        self.attention_weights = self.model.attention_weights
             if max_action is None:
                 raise ValueError('Value network is not well trained. ')
 
