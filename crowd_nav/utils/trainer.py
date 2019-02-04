@@ -14,7 +14,8 @@ class Trainer(object):
         self.device = device
         self.criterion = nn.MSELoss().to(device)
         self.memory = memory
-        self.data_loader = DataLoader(memory, batch_size, shuffle=True)
+        self.data_loader = None
+        self.batch_size = batch_size
         self.optimizer = None
 
     def set_learning_rate(self, learning_rate):
@@ -24,6 +25,8 @@ class Trainer(object):
     def optimize_epoch(self, num_epochs):
         if self.optimizer is None:
             raise ValueError('Learning rate is not set!')
+        if self.data_loader is None:
+            self.data_loader = DataLoader(self.memory, self.batch_size, shuffle=True)
         average_epoch_loss = 0
         for epoch in range(num_epochs):
             epoch_loss = 0
@@ -47,6 +50,8 @@ class Trainer(object):
     def optimize_batch(self, num_batches):
         if self.optimizer is None:
             raise ValueError('Learning rate is not set!')
+        if self.data_loader is None:
+            self.data_loader = DataLoader(self.memory, self.batch_size, shuffle=True)
         losses = 0
         for _ in range(num_batches):
             inputs, values = next(iter(self.data_loader))
