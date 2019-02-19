@@ -23,7 +23,8 @@ def main():
 
     # define the names of the models you want to plot and the longest episodes you want to show
     models = ['LSTM-RL', 'SARL', 'OM-SARL']
-    max_episodes = 10000
+    models = ['GCN']
+    max_episodes = 100000
 
     ax1 = ax2 = ax3 = ax4 = None
     ax1_legends = []
