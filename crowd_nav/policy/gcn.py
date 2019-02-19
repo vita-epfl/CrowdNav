@@ -12,17 +12,28 @@ class ValueNetwork(nn.Module):
         self.self_state_dim = self_state_dim
         self.human_state_dim = human_state_dim
         self.num_layer = num_layer
-        self.t = nn.Sequential(nn.Linear(self_state_dim, 50), nn.ReLU(), nn.Linear(50, human_state_dim))
+        # self.t = nn.Sequential(nn.Linear(self_state_dim, 50, bias=False),
+        #                        nn.ReLU(),
+        #                        nn.Linear(50, human_state_dim, bias=False))
+        self.t = torch.randn(self_state_dim, human_state_dim)
+        # self.t.requires_grad = False
         self.w_a = torch.randn(human_state_dim, human_state_dim)
+        # self.w_a.requires_grad = False
         if num_layer == 0:
             self.value_net = nn.Linear(human_state_dim, 1)
         elif num_layer == 1:
             self.w1 = torch.randn(human_state_dim, 64)
-            self.value_net = nn.Linear(64, 1)
+            self.value_net = nn.Sequential(nn.Linear(64, 64),
+                                           nn.ReLU(),
+                                           nn.Linear(64, 1))
+            # self.value_net = nn.Linear(64, 1)
         elif num_layer == 2:
             self.w1 = torch.randn(human_state_dim, 64)
             self.w2 = torch.randn(64, 64)
-            self.value_net = nn.Linear(64, 1)
+            # self.value_net = nn.Linear(64, 1)
+            self.value_net = nn.Sequential(nn.Linear(64, 64),
+                                           nn.ReLU(),
+                                           nn.Linear(64, 1))
         else:
             raise NotImplementedError
 
@@ -32,7 +43,8 @@ class ValueNetwork(nn.Module):
         human_states = state[:, :, self.self_state_dim:]
 
         # compute feature matrix X
-        new_self_state = relu(self.t(self_state).unsqueeze(1))
+        # new_self_state = relu(self.t(self_state).unsqueeze(1))
+        new_self_state = torch.matmul(self_state, self.t).unsqueeze(1)
         X = torch.cat([new_self_state, human_states], dim=1)
 
         # compute matrix A
