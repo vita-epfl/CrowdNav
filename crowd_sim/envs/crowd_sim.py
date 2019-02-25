@@ -47,6 +47,7 @@ class CrowdSim(gym.Env):
         self.states = None
         self.action_values = None
         self.attention_weights = None
+        self.As = None
 
     def configure(self, config):
         self.config = config
@@ -302,6 +303,8 @@ class CrowdSim(gym.Env):
             self.action_values = list()
         if hasattr(self.robot.policy, 'get_attention_weights'):
             self.attention_weights = list()
+        if hasattr(self.robot.policy, 'get_matrix_A'):
+            self.As = list()
 
         # get current observation
         if self.robot.sensor == 'coordinates':
@@ -395,6 +398,8 @@ class CrowdSim(gym.Env):
                 self.action_values.append(self.robot.policy.action_values)
             if hasattr(self.robot.policy, 'get_attention_weights'):
                 self.attention_weights.append(self.robot.policy.get_attention_weights())
+            if hasattr(self.robot.policy, 'get_matrix_A'):
+                self.As.append(self.robot.policy.get_matrix_A())
 
             # update all agents
             self.robot.step(action)
@@ -565,7 +570,9 @@ class CrowdSim(gym.Env):
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             def plot_value_heatmap():
-                assert self.robot.kinematics == 'holonomic'
+                if self.robot.kinematics != 'holonomic':
+                    print('Kinematics is not holonomic')
+                    return
                 for agent in [self.states[global_step][0]] + self.states[global_step][1]:
                     print(('{:.4f}, ' * 6 + '{:.4f}').format(agent.px, agent.py, agent.gx, agent.gy,
                                                              agent.vx, agent.vy, agent.theta))
@@ -587,10 +594,16 @@ class CrowdSim(gym.Env):
                 cbar.ax.tick_params(labelsize=16)
                 plt.show()
 
+            def print_matrix_A():
+                with np.printoptions(precision=3, suppress=True):
+                    print(self.As[global_step])
+
             def on_click(event):
                 anim.running ^= True
                 if anim.running:
                     anim.event_source.stop()
+                    if hasattr(self.robot.policy, 'get_matrix_A'):
+                        print_matrix_A()
                     if hasattr(self.robot.policy, 'action_values'):
                         plot_value_heatmap()
                 else:
