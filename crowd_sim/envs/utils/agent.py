@@ -68,8 +68,9 @@ class Agent(object):
             next_vx = action.vx
             next_vy = action.vy
         else:
-            next_vx = action.v * np.cos(self.theta)
-            next_vy = action.v * np.sin(self.theta)
+            next_theta = self.theta + action.r
+            next_vx = action.v * np.cos(next_theta)
+            next_vy = action.v * np.sin(next_theta)
         return ObservableState(next_px, next_py, next_vx, next_vy, self.radius)
 
     def get_full_state(self):
