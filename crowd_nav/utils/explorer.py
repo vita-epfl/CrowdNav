@@ -102,7 +102,7 @@ class Explorer(object):
                 state = self.target_policy.transform(state)
                 # value = pow(self.gamma, (len(states) - 1 - i) * self.robot.time_step * self.robot.v_pref)
                 value = sum([pow(self.gamma, max(t - i, 0) * self.robot.time_step * self.robot.v_pref) * reward
-                             for t, reward in enumerate(rewards)])
+                             * (1 if t >= i else 0) for t, reward in enumerate(rewards)])
             else:
                 if i == len(states) - 1:
                     # terminal state
