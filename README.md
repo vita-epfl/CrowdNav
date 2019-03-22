@@ -2,15 +2,6 @@
 This repository contains the codes for our ICRA 2018 submission. For more details, please refer to the paper
 [Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
 
-If you find the codes or paper useful for your research, please cite our paper:
-```
-@misc{1809.08835,
-Author = {Changan Chen and Yuejiang Liu and Sven Kreiss and Alexandre Alahi},
-Title = {Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning},
-Year = {2018},
-Eprint = {arXiv:1809.08835},
-}
-```
 
 ## Abstract
 Mobility in an effective and socially-compliant manner is an essential yet challenging task for robots operating in crowded spaces.
@@ -36,7 +27,7 @@ pip install -e .
 ```
 
 ## Getting started
-This repository are organized in two parts: gym_crowd/ folder contains the simulation environment and
+This repository is organized in two parts: gym_crowd/ folder contains the simulation environment and
 crowd_nav/ folder contains codes for training and testing the policies. Details of the simulation framework can be found
 [here](crowd_sim/README.md). Below are the instructions for training and testing policies, and they should be executed
 inside the crowd_nav/ folder.
@@ -56,10 +47,15 @@ python test.py --policy sarl --model_dir data/output --phase test
 python test.py --policy orca --phase test --visualize --test_case 0
 python test.py --policy sarl --model_dir data/output --phase test --visualize --test_case 0
 ```
-4. Plot training curve
+4. Visualize a test case.
+```
+python test.py --policy sarl --model_dir data/output --phase test --visualize --test_case 0
+```
+5. Plot training curve.
 ```
 python utils/plot.py data/output/output.log
 ```
+
 
 ## Simulation Videos
 CADRL             | LSTM-RL
@@ -70,6 +66,17 @@ SARL             |  OM-SARL
 
 
 ## Learning Curve
-Learning curve comparison between different methods in invisible setting.
+Learning curve comparison between different methods in an invisible setting.
 
 <img src="https://i.imgur.com/l5UC3qa.png" width="600" />
+
+## Citation
+If you find the codes or paper useful for your research, please cite our paper:
+```
+@misc{1809.08835,
+Author = {Changan Chen and Yuejiang Liu and Sven Kreiss and Alexandre Alahi},
+Title = {Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning},
+Year = {2018},
+Eprint = {arXiv:1809.08835},
+}
+```
