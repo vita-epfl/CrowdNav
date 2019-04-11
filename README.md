@@ -1,5 +1,5 @@
 # CrowdNav
-This repository contains the codes for our ICRA 2018 submission. For more details, please refer to the paper
+This repository contains the codes for our ICRA 2018 paper. For more details, please refer to the paper
 [Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
 
 
