@@ -1,6 +1,8 @@
 # CrowdNav
-This repository contains the codes for our ICRA 2018 paper. For more details, please refer to the paper
+This repository contains the codes for our ICRA 2019 paper. For more details, please refer to the paper
 [Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
+
+Please find our recent follow-up work on [relational graph learning for crowd navigation](https://github.com/ChanganVR/RelationalGraphLearning).
 
 
 ## Abstract
@@ -26,7 +28,7 @@ outperforming state-of-the-art methods.
 pip install -e .
 ```
 
-## Getting started
+## Getting Started
 This repository is organized in two parts: gym_crowd/ folder contains the simulation environment and
 crowd_nav/ folder contains codes for training and testing the policies. Details of the simulation framework can be found
 [here](crowd_sim/README.md). Below are the instructions for training and testing policies, and they should be executed
