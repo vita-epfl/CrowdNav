@@ -79,6 +79,8 @@ def main():
         if robot.visible:
             robot.policy.safety_space = 0
         else:
+            # because invisible case breaks the reciprocal assumption
+            # adding some safety space improves ORCA performance. Tune this value based on your need.
             robot.policy.safety_space = 0
         logging.info('ORCA agent buffer: %f', robot.policy.safety_space)
 
