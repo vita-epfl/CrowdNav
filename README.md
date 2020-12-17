@@ -2,8 +2,9 @@
 This repository contains the codes for our ICRA 2019 paper. For more details, please refer to the paper
 [Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
 
-Please find our recent follow-up work on [relational graph learning for crowd navigation](https://github.com/ChanganVR/RelationalGraphLearning).
-
+Please find our more recent work on 
+- [Relational Graph Learning for Crowd Navigation](https://github.com/ChanganVR/RelationalGraphLearning).
+- [Social NCE: Contrastive Learning of Socially-aware Motion Representations](https://github.com/vita-epfl/social-nce).
 
 ## Abstract
 Mobility in an effective and socially-compliant manner is an essential yet challenging task for robots operating in crowded spaces.
@@ -74,11 +75,13 @@ Learning curve comparison between different methods in an invisible setting.
 
 ## Citation
 If you find the codes or paper useful for your research, please cite our paper:
-```
-@misc{1809.08835,
-Author = {Changan Chen and Yuejiang Liu and Sven Kreiss and Alexandre Alahi},
-Title = {Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning},
-Year = {2018},
-Eprint = {arXiv:1809.08835},
+```bibtex
+@inproceedings{chen2019crowd,
+  title={Crowd-robot interaction: Crowd-aware robot navigation with attention-based deep reinforcement learning},
+  author={Chen, Changan and Liu, Yuejiang and Kreiss, Sven and Alahi, Alexandre},
+  booktitle={2019 International Conference on Robotics and Automation (ICRA)},
+  pages={6015--6022},
+  year={2019},
+  organization={IEEE}
 }
 ```
