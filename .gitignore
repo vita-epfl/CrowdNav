@@ -1,10 +1,10 @@
 # editors
-.idea/
-.vscode/
+.idea/*
 
 # Python
-*.egg-info/
-.pytest_cache/
+*.egg-info/*
+.pytest_cache/*
+*.pylintrc
 __pycache__
 .cache/
 venv*/
