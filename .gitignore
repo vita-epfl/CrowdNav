@@ -1,15 +1,14 @@
 # editors
-.idea/*
+.idea/
 
 # Python
-*.egg-info/*
-.pytest_cache/*
-*.pylintrc
+.egg-info/
+.pytest_cache/
+.pylintrc
 __pycache__
 .cache/
 venv*/
 
 # data
-data/
 *.mp4
 videos/
