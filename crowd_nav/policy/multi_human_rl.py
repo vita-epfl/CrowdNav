@@ -46,7 +46,7 @@ class MultiHumanRL(CADRL):
 
                 # # CALCULATE RUNTIME
                 # propagate_start = time.time()
-                # next_self_state = self.propagate(state.self_state, action)
+                next_self_state = self.propagate(state.self_state, action)
                 # total_propagate_runtime += (time.time() - propagate_start)
 
                 if self.query_env:
