@@ -5,6 +5,7 @@
 *.egg-info/
 .pytest_cache/
 .pylintrc
+*.pyc
 __pycache__
 .cache/
 venv*/
