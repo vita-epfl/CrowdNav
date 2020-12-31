@@ -2,7 +2,7 @@
 .idea/
 
 # Python
-.egg-info/
+*.egg-info/
 .pytest_cache/
 .pylintrc
 __pycache__
