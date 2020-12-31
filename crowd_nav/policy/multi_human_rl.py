@@ -15,7 +15,7 @@ class MultiHumanRL(CADRL):
         The input to the value network is always of shape (batch_size, # humans, rotated joint state length)
 
         """
-        start_time = time.time()
+        # start_time = time.time()
         if self.phase is None or self.device is None:
             raise AttributeError('Phase, device attributes have to be set!')
         if self.phase == 'train' and self.epsilon is None:
@@ -26,8 +26,6 @@ class MultiHumanRL(CADRL):
         if self.action_space is None:
             self.build_action_space(state.self_state.v_pref)
 
-
-
         occupancy_maps = None
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
@@ -37,49 +35,49 @@ class MultiHumanRL(CADRL):
             max_value = float('-inf')
             max_action = None
 
-            # CALCULATE RUNTIME
-            for_loop_start_time = time.time()
-            total_propagate_runtime = 0
-            total_nhs_runtime = 0
-            rotate_runtimes = []
-            total_value_runtime = 0
+            # # CALCULATE RUNTIME
+            # for_loop_start_time = time.time()
+            # total_propagate_runtime = 0
+            # total_nhs_runtime = 0
+            # rotate_runtimes = []
+            # total_value_runtime = 0
 
             for action in self.action_space:
 
-                # CALCULATE RUNTIME
-                propagate_start = time.time()
-                next_self_state = self.propagate(state.self_state, action)
-                total_propagate_runtime += (time.time() - propagate_start)
+                # # CALCULATE RUNTIME
+                # propagate_start = time.time()
+                # next_self_state = self.propagate(state.self_state, action)
+                # total_propagate_runtime += (time.time() - propagate_start)
 
                 if self.query_env:
                     next_human_states, reward, done, info = self.env.onestep_lookahead(action)
                 else:
-                    # CALCULATE RUNTIME
-                    nhs_start = time.time()
+                    # # CALCULATE RUNTIME
+                    # nhs_start = time.time()
                     next_human_states = [self.propagate(human_state, ActionXY(human_state.vx, human_state.vy))
                                        for human_state in state.human_states]
-                    total_nhs_runtime += (time.time() - nhs_start)
-                    #print "\nNEXT HUMAN STATES: ", len(next_human_states), "\n"
+                    # total_nhs_runtime += (time.time() - nhs_start)
+                    # print "\nNEXT HUMAN STATES: ", len(next_human_states), "\n"
                     reward = self.compute_reward(next_self_state, next_human_states)
                 batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
                                               for next_human_state in next_human_states], dim=0)
-                #print "\nBATCH NEXT STATES: ", batch_next_states
-                # CALCULATE ROTATE RUNTIME
-                rotate_start = time.time()
+                # print "\nBATCH NEXT STATES: ", batch_next_states
+                # # CALCULATE ROTATE RUNTIME
+                # rotate_start = time.time()
                 rotated_batch_input = self.rotate(batch_next_states).unsqueeze(0)
-                rotate_runtimes.append((time.time() - rotate_start))
+                # rotate_runtimes.append((time.time() - rotate_start))
 
                 if self.with_om:
                     if occupancy_maps is None:
                         occupancy_maps = self.build_occupancy_maps(next_human_states).unsqueeze(0)
                     rotated_batch_input = torch.cat([rotated_batch_input, occupancy_maps.to(self.device)], dim=2)
 
-                # CALCULATE VALUE RUNTIME
-                value_start = time.time()
+                # # CALCULATE VALUE RUNTIME
+                # value_start = time.time()
                 # VALUE UPDATE
                 next_state_value = self.model(rotated_batch_input).data.item()
                 value = reward + pow(self.gamma, self.time_step * state.self_state.v_pref) * next_state_value
-                total_value_runtime += time.time() - value_start
+                # total_value_runtime += time.time() - value_start
                 self.action_values.append(value)
                 if value > max_value:
                     max_value = value
@@ -88,22 +86,22 @@ class MultiHumanRL(CADRL):
             if max_action is None:
                 raise ValueError('Value network is not well trained. ')
 
-        # CALCULATE RUNTIME
-        for_loop_run_runtime = time.time() - for_loop_start_time
+        # # CALCULATE RUNTIME
+        # for_loop_run_runtime = time.time() - for_loop_start_time
 
         if self.phase == 'train':
             self.last_state = self.transform(state)
-        print "\nDevice Info: ", self.device
-        print "\n===============================\n"
-        print "multi_human_rl.predict runtime: ", time.time() - start_time
-        print "\n---> propagate total runtime: ", total_propagate_runtime
-        print "\n---> nhs total runtime: ", total_nhs_runtime
-        print "\n---> rotate total runtime: ", sum(rotate_runtimes)
-        print "\n---> rotate avg runtime: ", np.mean(rotate_runtimes)
-        print "\n---> num of rotates: ", len(rotate_runtimes)
-        print "\n---> value total runtime: ", total_value_runtime
-        print "\n---> predict for loop runtime: ", for_loop_run_runtime
-        #print "\n===============================\n"
+        # print "\nDevice Info: ", self.device
+        # print "\n===============================\n"
+        # print "multi_human_rl.predict runtime: ", time.time() - start_time
+        # print "\n---> propagate total runtime: ", total_propagate_runtime
+        # print "\n---> nhs total runtime: ", total_nhs_runtime
+        # print "\n---> rotate total runtime: ", sum(rotate_runtimes)
+        # print "\n---> rotate avg runtime: ", np.mean(rotate_runtimes)
+        # print "\n---> num of rotates: ", len(rotate_runtimes)
+        # print "\n---> value total runtime: ", total_value_runtime
+        # print "\n---> predict for loop runtime: ", for_loop_run_runtime
+        # print "\n===============================\n"
 
         return max_action
 

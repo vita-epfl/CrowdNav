@@ -42,7 +42,7 @@ def main():
         env_config_file = args.env_config
         policy_config_file = args.env_config
 
-    print("Policy Config File: ", policy_config_file)
+    # print("Policy Config File: ", policy_config_file)
     # configure logging and device
     logging.basicConfig(level=logging.INFO, format='%(asctime)s, %(levelname)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
@@ -101,11 +101,6 @@ def main():
         ob = env.reset(args.phase, args.test_case)
         done = False
         last_pos = np.array(robot.get_position())
-        #print "====================="
-        #print "ENV STEP LOOP"
-        #print "====================="
-        #print "--> ob[0] pos: ", ob[0].position
-        #print "--> ob[0] vel: ", ob[0].velocity
         while not done:
             action = robot.act(ob)
             ob, _, done, info = env.step(action)
@@ -123,7 +118,6 @@ def main():
             logging.info('Average time for humans to reach goal: %.2f', sum(human_times) / len(human_times))
     else:
         explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
-
 
 
 if __name__ == '__main__':

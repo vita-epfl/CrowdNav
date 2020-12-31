@@ -197,7 +197,7 @@ class CADRL(Policy):
         """
         # 'px', 'py', 'vx', 'vy', 'radius', 'gx', 'gy', 'v_pref', 'theta', 'px1', 'py1', 'vx1', 'vy1', 'radius1'
         #  0     1      2     3      4        5     6      7         8       9     10      11     12       13
-        start_time = time.time()
+        # start_time = time.time()
         batch = state.shape[0]
         dx = (state[:, 5] - state[:, 0]).reshape((batch, -1))
         dy = (state[:, 6] - state[:, 1]).reshape((batch, -1))
@@ -214,7 +214,7 @@ class CADRL(Policy):
         else:
             # set theta to be zero since it's not used
             theta = torch.zeros_like(v_pref)
-        half_way_time = time.time() - start_time
+        # half_way_time = time.time() - start_time
         vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
         vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
         px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
