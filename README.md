@@ -1,9 +1,10 @@
 # CrowdNav
-This repository contains the codes for our ICRA 2019 paper. For more details, please refer to the paper
+This repository contains the codes from the ICRA 2019 paper, **Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning**. For more details, please refer to the paper
 [Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
 
-Please find our recent follow-up work on [relational graph learning for crowd navigation](https://github.com/ChanganVR/RelationalGraphLearning).
+Please find their recent follow-up work on [relational graph learning for crowd navigation](https://github.com/ChanganVR/RelationalGraphLearning).
 
+This fork has modified the original code to work with ROS Kinetic (Python 2.7.x) and interface with our hardware system, a ballbot.
 
 ## Abstract
 Mobility in an effective and socially-compliant manner is an essential yet challenging task for robots operating in crowded spaces.
