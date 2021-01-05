@@ -42,7 +42,20 @@ class CrowdSim(gym.Env):
         self.test_sim = None
         self.square_width = None
         self.circle_radius = None
+        self.lab_y = None
+        self.lab_x = None
         self.human_num = None
+        self.humans_set = None
+        self.flipped = None
+        # Noise for humans in lab_base_case scenarios
+        self.px_noise_dev = {'0': [0.5], '1': [0.5, 0.5], '2': [0.5], '3': [0.25], '4': [0.25], '5': [0.5, 0.25],
+                             '6': [0.5, 0.25, 0.25], 'random': [0, 0, 0, 0, 0]}
+        self.py_noise_dev = {'0': [0.25], '1': [0.25, 0.25], '2': [0.25], '3': [0.25], '4': [0.5], '5': [0.25, 0.5],
+                             '6': [0.5, 0.25, 0.25], 'random': [0, 0, 0, 0, 0]}
+        self.gx_noise_dev = {'0': [0], '1': [0, 0], '2': [0.5], '3': [0.25], '4': [0.25], '5': [0.5, 0.25],
+                             '6': [0.5, 0.25, 0.25], 'random': [0, 0, 0, 0, 0]}
+        self.gy_noise_dev = {'0': [0], '1': [0, 0], '2': [0.25], '3': [0.25], '4': [0.5], '5': [0.25, 0.5],
+                             '6': [0.5, 0.25, 0.25], 'random': [0, 0, 0, 0, 0]}
         # for visualization
         self.states = None
         self.action_values = None
@@ -65,6 +78,8 @@ class CrowdSim(gym.Env):
             self.test_sim = config.get('sim', 'test_sim')
             self.square_width = config.getfloat('sim', 'square_width')
             self.circle_radius = config.getfloat('sim', 'circle_radius')
+            self.lab_x = config.getfloat('sim', 'lab_x')
+            self.lab_y = config.getfloat('sim', 'lab_y')
             self.human_num = config.getint('sim', 'human_num')
         else:
             raise NotImplementedError
@@ -80,6 +95,70 @@ class CrowdSim(gym.Env):
 
     def set_robot(self, robot):
         self.robot = robot
+
+    def generate_random_robot_position(self, rule):
+        """
+        Generate robot position according to certain rule
+        Rule lab_base_case: generate start/goal position
+        :param rule:
+        :return:
+        """
+        case = rule[14:]
+
+        # Randomly flip scenario for symmetry using certain base_cases
+        if np.random.randint(0, 2) is 0:
+            self.flipped = False
+        else:
+            self.flipped = True
+
+        if case == 'random':
+            px, py, gx, gy = self.sample_pos(self.lab_x, self.lab_y)
+            dx = gx - px
+            dy = gy - py
+            dist = norm([dx, dy])
+            min_dist = self.lab_x
+            while dist < min_dist:  # ensure robot travels nontrivial distance
+                px, py, gx, gy = self.sample_pos(self.lab_x, self.lab_y)
+                dx = gx - px
+                dy = gy - py
+                dist = norm([dx, dy])
+            heading = self.get_heading([px, py], [gx, gy])
+        elif case == '3':
+            # hallway2plus aka 'lab_base_case_3'
+            if self.flipped:
+                px = self.lab_x * 0.75
+                gx = px
+            else:
+                px = self.lab_x * 0.25
+                gx = px
+
+            px_noise = (np.random.random() - 0.5) * (self.lab_x * 0.25)
+            py_noise = (np.random.random() - 0.5) * (self.lab_y * 0.25)
+            gx_noise = (np.random.random() - 0.5) * (self.lab_x * 0.25)
+            gy_noise = (np.random.random() - 0.5) * (self.lab_y * 0.25)
+
+            px += px_noise
+            py = 0 + py_noise
+            gx += gx_noise
+            gy = self.lab_y + gy_noise
+            heading = self.get_heading([px, py], [gx, gy])
+
+        else:
+            # rule in ['lab_base_case_0', 'lab_base_case_1', 'lab_base_case_2', 'lab_base_case_4',
+            # 'lab_base_case_5', 'lab_base_case_6']
+            # robot configuration for static1, static2, hallway2minus, cross2, cross3, cross4
+            px_noise = (np.random.random() - 0.5) * (self.lab_x * 0.5)
+            py_noise = (np.random.random() - 0.5) * (self.lab_y * 0.25)
+            gx_noise = (np.random.random() - 0.5) * (self.lab_x * 0.5)
+            gy_noise = (np.random.random() - 0.5) * (self.lab_y * 0.25)
+
+            px = self.lab_x * 0.5 + px_noise
+            py = 0 + py_noise
+            gx = self.lab_x * 0.5 + gx_noise
+            gy = self.lab_y + gy_noise
+            heading = self.get_heading([px, py], [gx, gy])
+
+        self.robot.set(px, py, gx, gy, 0, 0, heading)
 
     def generate_random_human_position(self, human_num, rule):
         """
@@ -100,6 +179,10 @@ class CrowdSim(gym.Env):
             self.humans = []
             for i in range(human_num):
                 self.humans.append(self.generate_circle_crossing_human())
+        elif rule[:13] == 'lab_base_case':
+            self.humans = []
+            for i in range(human_num):
+                self.humans.append(self.generate_lab_case_human(rule=rule))
         elif rule == 'mixed':
             # mix different raining simulation with certain distribution
             static_human_num = {0: 0.05, 1: 0.2, 2: 0.2, 3: 0.3, 4: 0.1, 5: 0.15}
@@ -133,7 +216,8 @@ class CrowdSim(gym.Env):
                         py = (np.random.random() - 0.5) * height
                         collide = False
                         for agent in [self.robot] + self.humans:
-                            if norm((px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
+                            if norm((
+                                    px - agent.px, py - agent.py)) < human.radius + agent.radius + self.discomfort_dist:
                                 collide = True
                                 break
                         if not collide:
@@ -151,6 +235,145 @@ class CrowdSim(gym.Env):
                     self.humans.append(human)
         else:
             raise ValueError("Rule doesn't exist")
+
+    def generate_lab_case_human(self, rule='lab_base_case_random'):
+        """
+        Generate a human for the lab specific base cases
+        :return: Human obj
+        """
+        human = Human(self.config, 'humans')
+
+        if len(rule) < 14 or rule[:13] != 'lab_base_case' or \
+                rule[14:] not in ['0', '1', '2', '3', '4', '5', '6', 'random']:
+            raise ValueError('Rule not recognized.')
+
+        case = rule[14:]
+
+        if case == '0':
+            px = self.lab_y * 0.5
+            py = self.lab_x * 0.5
+            gx = px
+            gy = py
+        elif case == '1':
+            if self.humans_set == 0:
+                px = self.lab_y * 0.25
+                py = self.lab_x * 0.5
+            else:
+                px = self.lab_y * 0.75
+                py = self.lab_x * 0.5
+            gx = px
+            gy = py
+        elif case == '2':
+            px = self.lab_x * 0.5
+            py = self.lab_y
+            gx = self.lab_x * 0.5
+            gy = 0
+        elif case == '3':
+            if self.flipped:
+                px = (self.lab_x * 0.25)
+                gx = (self.lab_x * 0.25)
+            else:
+                px = (self.lab_x * 0.75)
+                gx = (self.lab_x * 0.75)
+            py = 0
+            gy = self.lab_y
+        elif case == '4':
+            if self.flipped:
+                px = self.lab_x
+                gx = 0
+            else:
+                px = 0
+                gx = self.lab_x
+            py = (self.lab_y * 0.5)
+            gy = (self.lab_y * 0.5)
+        elif case == '5':
+            if self.humans_set == 0 and self.flipped:
+                px = self.lab_x
+                py = self.lab_y * 0.5
+                gx = 0
+                gy = py
+            elif self.humans_set == 0 and not self.flipped:
+                px = 0
+                py = self.lab_y * 0.5
+                gx = self.lab_x
+                gy = py
+            else:
+                px = self.lab_x * 0.5
+                py = self.lab_y
+                gx = px
+                gy = 0
+        elif case == '6':
+            if self.humans_set == 0:
+                px = 0
+                py = self.lab_y * 0.5
+                gx = self.lab_x
+                gy = py
+            elif self.humans_set == 1:
+                px = self.lab_x
+                py = self.lab_y * 0.5
+                gx = 0
+                gy = self.lab_y * 0.5
+            else:
+                px = self.lab_x * 0.5
+                py = self.lab_y
+                gx = px
+                gy = 0
+
+        # check that scenario doesn't have collision at start/goal for any agent
+        while True:
+            collide = False
+            if case == 'random':
+                px, py, gx, gy = self.sample_pos(self.lab_x, self.lab_y)
+            px_noise, py_noise, gx_noise, gy_noise = self.sample_noise(self.px_noise_dev[case],
+                                                                       self.py_noise_dev[case],
+                                                                       self.gx_noise_dev[case],
+                                                                       self.gy_noise_dev[case])
+            px_ = px + px_noise[self.humans_set]
+            py_ = py + py_noise[self.humans_set]
+            gx_ = gx + gx_noise[self.humans_set]
+            gy_ = gy + gy_noise[self.humans_set]
+            if case in ['0', '1']:  # Static obstacles need to have their goal set to the start position
+                gx_ = px_
+                gy_ = py_
+
+            for agent in [self.robot] + self.humans:
+                if norm((px_ - agent.px, py_ - agent.py)) < (human.radius + agent.radius + self.discomfort_dist):
+                    collide = True
+                    break
+                if norm((gx_ - agent.gx, gy_ - agent.gy)) < (human.radius + agent.radius + self.discomfort_dist):
+                    collide = True
+                    break
+
+            if not collide:
+                px = px_
+                py = py_
+                gx = gx_
+                gy = gy_
+                break
+
+        heading = self.get_heading([px, py], [gx, gy])
+        human.set(px, py, gx, gy, 0, 0, heading)
+        self.humans_set += 1
+        return human
+
+    def sample_noise(self, px_dev, py_dev, gx_dev, gy_dev):
+        px_noise = [(np.random.random() - 0.5) * self.lab_x * dev for dev in px_dev]
+        py_noise = [(np.random.random() - 0.5) * self.lab_y * dev for dev in py_dev]
+        gx_noise = [(np.random.random() - 0.5) * self.lab_x * dev for dev in gx_dev]
+        gy_noise = [(np.random.random() - 0.5) * self.lab_y * dev for dev in gy_dev]
+        return px_noise, py_noise, gx_noise, gy_noise
+
+    def sample_pos(self, x, y):
+        px = np.random.random() * x
+        py = np.random.random() * y
+        gx = np.random.random() * x
+        gy = np.random.random() * y
+        return px, py, gx, gy
+
+    def get_heading(self, start, goal):
+        vec_to_goal = np.array(goal) - np.array(start)
+        heading = np.arctan2(vec_to_goal[1], vec_to_goal[0])
+        return heading
 
     def generate_circle_crossing_human(self):
         human = Human(self.config, 'humans')
@@ -271,14 +494,37 @@ class CrowdSim(gym.Env):
         else:
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
-            self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
+                probability = np.random.rand()
+                if probability > 0.5:
+                    rule = 'lab_base_case_random'
+                else:
+                    case = np.random.randint(0, 7)
+                    rule = 'lab_base_case_' + str(case)
+
+                # Set Robot
+                self.generate_random_robot_position(rule)
+                self.humans_set = 0 # reset humans counter
+
                 if phase in ['train', 'val']:
-                    human_num = self.human_num if self.robot.policy.multiagent_training else 1
-                    self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
+                    # Set num_humans based on base_case
+                    if len(rule) > 14:
+                        if rule[14] == '0' or rule[14] == '2' or rule[14] == '3' or rule[14] == '4':
+                            human_num = 1
+                        elif rule[14] == '1' or rule[14] == '5':
+                            human_num = 2
+                        elif rule[14] == '6':
+                            human_num = 3
+                        else:
+                            human_num = self.human_num if self.robot.policy.multiagent_training else 1
+                    else: # rule != one of the lab base cases
+                        human_num = self.human_num if self.robot.policy.multiagent_training else 1
+                    # Generate Humans
+                    self.generate_random_human_position(human_num=human_num, rule=rule)
                 else:
                     self.generate_random_human_position(human_num=self.human_num, rule=self.test_sim)
+
                 # case_counter is always between 0 and case_size[phase]
                 self.case_counter[phase] = (self.case_counter[phase] + 1) % self.case_size[phase]
             else:
@@ -536,13 +782,14 @@ class CrowdSim(gym.Env):
                             agent_state = state[1][i - 1]
                         theta = np.arctan2(agent_state.vy, agent_state.vx)
                         orientation.append(((agent_state.px, agent_state.py), (agent_state.px + radius * np.cos(theta),
-                                             agent_state.py + radius * np.sin(theta))))
+                                                                               agent_state.py + radius * np.sin(
+                                                                                   theta))))
                     orientations.append(orientation)
             arrows = [patches.FancyArrowPatch(*orientation[0], color=arrow_color, arrowstyle=arrow_style)
                       for orientation in orientations]
             for arrow in arrows:
                 ax.add_artist(arrow)
-            d = {'global_step':0, 'arrows':arrows}
+            d = {'global_step': 0, 'arrows': arrows}
 
             def update(frame_num):
                 # nonlocal global_step
@@ -555,7 +802,7 @@ class CrowdSim(gym.Env):
                     for arrow in d['arrows']:
                         arrow.remove()
                     d['arrows'] = [patches.FancyArrowPatch(*orientation[frame_num], color=arrow_color,
-                                                      arrowstyle=arrow_style) for orientation in orientations]
+                                                           arrowstyle=arrow_style) for orientation in orientations]
                     for arrow in d['arrows']:
                         ax.add_artist(arrow)
                     if self.attention_weights is not None:
