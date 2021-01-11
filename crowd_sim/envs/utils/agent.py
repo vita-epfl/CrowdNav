@@ -42,7 +42,7 @@ class Agent(object):
         :return:
         """
         self.v_pref = np.random.uniform(0.5, 1.5)
-        self.radius = np.random.uniform(0.3, 0.5)
+        #self.radius = np.random.uniform(0.3, 0.5)
 
     def set(self, px, py, gx, gy, vx, vy, theta, radius=None, v_pref=None):
         self.px = px
