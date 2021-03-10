@@ -81,9 +81,9 @@ class Explorer(object):
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time,
                             average(cumulative_rewards)))
         if phase in ['val', 'test']:
-            total_time = sum(success_times + collision_times + timeout_times) * self.robot.time_step
+            num_step = sum(success_times + collision_times + timeout_times) / self.robot.time_step
             logging.info('Frequency of being in danger: %.2f and average min separate distance in danger: %.2f',
-                         too_close / total_time, average(min_dist))
+                         too_close / num_step, average(min_dist))
 
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
