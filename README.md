@@ -1,10 +1,13 @@
 # CrowdNav
+
+**[`Website`](https://www.epfl.ch/labs/vita/research/planning/crowd-robot-interaction/) | [`Paper`](https://arxiv.org/abs/1809.08835) | [`Video`](https://youtu.be/0sNVtQ9eqjA)**
+
 This repository contains the codes for our ICRA 2019 paper. For more details, please refer to the paper
 [Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
 
-Please find our more recent work on 
-- [Relational Graph Learning for Crowd Navigation](https://github.com/ChanganVR/RelationalGraphLearning).
-- [Social NCE: Contrastive Learning of Socially-aware Motion Representations](https://github.com/vita-epfl/social-nce).
+Please find our more recent work in the following links 
+- [Relational Graph Learning for Crowd Navigation, IROS, 2020](https://github.com/ChanganVR/RelationalGraphLearning).
+- [Social NCE: Contrastive Learning of Socially-aware Motion Representations, ICCV, 2021](https://github.com/vita-epfl/social-nce).
 
 ## Abstract
 Mobility in an effective and socially-compliant manner is an essential yet challenging task for robots operating in crowded spaces.
