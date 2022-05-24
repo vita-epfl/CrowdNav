@@ -54,8 +54,8 @@ def main():
     level = logging.INFO if not args.debug else logging.DEBUG
     logging.basicConfig(level=level, handlers=[stdout_handler, file_handler],
                         format='%(asctime)s, %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
-    repo = git.Repo(search_parent_directories=True)
-    logging.info('Current git head hash code: %s'.format(repo.head.object.hexsha))
+    # repo = git.Repo(search_parent_directories=True)
+    # logging.info('Current git head hash code: %s'.format(repo.head.object.hexsha))
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.gpu else "cpu")
     logging.info('Using device: %s', device)
 
