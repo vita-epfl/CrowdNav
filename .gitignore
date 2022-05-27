@@ -13,3 +13,6 @@ venv*/
 data/
 *.mp4
 videos/
+
+# mac
+.DS_Store
