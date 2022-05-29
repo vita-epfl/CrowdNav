@@ -59,7 +59,7 @@ class CrowdSim(gym.Env):
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
         self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
-        self.out_boundary_panalty = config.getfloat('reward', 'out_boundary_panalty')
+        self.out_boundary_penalty = config.getfloat('reward', 'out_boundary_penalty')
         if self.config.get('humans', 'policy') == 'orca':
             self.case_capacity = {'train': np.iinfo(np.uint32).max - 2000, 'val': 1000, 'test': 1000}
             self.case_size = {'train': np.iinfo(np.uint32).max - 2000, 'val': config.getint('env', 'val_size'),
@@ -500,7 +500,7 @@ class CrowdSim(gym.Env):
             done = True
             info = Timeout()
         elif out:
-            reward = self.out_boundary_panalty
+            reward = self.out_boundary_penalty
             done = True
             info = Boundary()
         elif collision:
