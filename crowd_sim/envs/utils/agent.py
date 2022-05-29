@@ -28,6 +28,14 @@ class Agent(object):
         self.theta = None
         self.time_step = None
 
+        # Uncertainty for out of sight
+        self.uncertainty = 0
+        self.last_px = self.px
+        self.last_py = self.py
+        self.last_vx = self.vx
+        self.last_vy = self.vy
+        self.last_theta = self.theta
+
     def print_info(self):
         logging.info('Agent is {} and has {} kinematic constraint'.format(
             'visible' if self.visible else 'invisible', self.kinematics))
@@ -44,7 +52,7 @@ class Agent(object):
         self.v_pref = np.random.uniform(0.5, 1.5)
         self.radius = np.random.uniform(0.3, 0.5)
 
-    def set(self, px, py, gx, gy, vx, vy, theta, radius=None, v_pref=None):
+    def set(self, px, py, gx, gy, vx, vy, theta, radius=None, v_pref=None, uncertainty=None):
         self.px = px
         self.py = py
         self.gx = gx
@@ -56,9 +64,49 @@ class Agent(object):
             self.radius = radius
         if v_pref is not None:
             self.v_pref = v_pref
+        if uncertainty is not None:
+            self.uncertainty = uncertainty
+        else:
+            # Robot knows the initial position of each human
+            # todo: make more realistic
+            self.last_px = self.px
+            self.last_py = self.py
+            self.last_vx = self.vx
+            self.last_vy = self.vy
+            self.last_theta = self.theta
 
-    def get_observable_state(self):
-        return ObservableState(self.px, self.py, self.vx, self.vy, self.radius)
+    def get_observable_state(self, mode='slowing_down'):
+        if mode == 'gt':
+            # always return the real position of agent
+            return ObservableState(self.px, self.py, self.vx, self.vy, self.radius, self.uncertainty)
+        if mode == 'stone':
+            # always return the last seen position and velocity of the agent
+            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
+        if mode == 'continuing':
+            # assume that the agent keeps its trajectory with the same speed
+            if self.uncertainty:
+                self.last_px += self.last_vx*self.time_step
+                self.last_py += self.last_vy*self.time_step
+            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
+        if mode == 'slowing_down':
+            # assume that the agent slows down as it stays out of view
+            if self.uncertainty:
+                self.last_vx *= 0.9
+                self.last_vy *= 0.9
+                self.last_px += self.last_vx*self.time_step
+                self.last_py += self.last_vy*self.time_step
+            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
+        if mode == 'expanding_bubble':
+            # assume that the agent cover an increasing area as it stays out of sight
+            if self.uncertainty:
+                self.last_px += self.last_vx*self.time_step
+                self.last_py += self.last_vy*self.time_step
+            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius*(1+0.1*self.uncertainty), self.uncertainty)
+
+
+        if mode == 'enchanced':
+            # todo: save last 2 two steps. also add curvature to the assumed path by calculating angular speed.
+            raise NotImplementedError
 
     def get_next_observable_state(self, action):
         self.check_validity(action)
@@ -71,7 +119,7 @@ class Agent(object):
             next_theta = self.theta + action.r
             next_vx = action.v * np.cos(next_theta)
             next_vy = action.v * np.sin(next_theta)
-        return ObservableState(next_px, next_py, next_vx, next_vy, self.radius)
+        return ObservableState(next_px, next_py, next_vx, next_vy, self.radius, self.uncertainty)
 
     def get_full_state(self):
         return FullState(self.px, self.py, self.vx, self.vy, self.radius, self.gx, self.gy, self.v_pref, self.theta)
@@ -92,6 +140,23 @@ class Agent(object):
     def set_velocity(self, velocity):
         self.vx = velocity[0]
         self.vy = velocity[1]
+
+    def get_uncertainty(self):
+        return self.uncertainty
+
+    def increment_uncertainty(self,mode='logarithmic',incrementation=1):
+        if mode == 'reset':
+            self.uncertainty = 0
+            return
+        if mode == 'linear':
+            self.uncertainty += incrementation
+            return
+        if mode == 'exponential':
+            self.uncertainty += incrementation + 2*np.sqrt(self.uncertainty)
+            return
+        if mode == 'logarithmic':
+            self.uncertainty = np.log(incrementation+np.exp(self.uncertainty))
+            return
 
     @abc.abstractmethod
     def act(self, ob):
@@ -133,6 +198,12 @@ class Agent(object):
             self.theta = (self.theta + action.r) % (2 * np.pi)
             self.vx = action.v * np.cos(self.theta)
             self.vy = action.v * np.sin(self.theta)
+        if not self.uncertainty:
+            self.last_px = self.px
+            self.last_py = self.py
+            self.last_vx = self.vx
+            self.last_vy = self.vy
+            self.last_theta = self.theta
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
