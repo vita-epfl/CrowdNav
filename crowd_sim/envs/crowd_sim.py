@@ -328,11 +328,16 @@ class CrowdSim(gym.Env):
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
             # we should make the goal position more diverse
+            ## The random seed should also be added here, otherwise the 
+            ## generated environment would be totally different
+            np.random.seed(counter_offset[phase] + self.case_counter[phase])
             self.generate_robot_goal()
             # self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             self.robot.set(-self.robot_gx, -self.robot_gy, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
+                print("counter_offset[phase] = {}\n".format(counter_offset[phase]))
+                print("case.counter[phase] = {}".format(self.case_counter[phase]))
                 if phase in ['train', 'val']:
                     human_num = self.human_num if self.robot.policy.multiagent_training else 1
                     self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
