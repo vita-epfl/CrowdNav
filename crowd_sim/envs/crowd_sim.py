@@ -99,7 +99,7 @@ class CrowdSim(gym.Env):
         max_radius = self.obstacle_max_radius - self.obstacle_min_radius
         min_radius = self.obstacle_min_radius
         self.obs = []
-        
+
         for i in range(obs_num):
             human = Human(self.config, 'humans') ## we model the static obstacles as static humans
             while True:
@@ -554,8 +554,6 @@ class CrowdSim(gym.Env):
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
 
-        # print((np.array(ob).shape))
-        # print((np.array(ob).dtype))
         return ob, reward, done, info
 
     def render(self, mode='human', output_file=None):
