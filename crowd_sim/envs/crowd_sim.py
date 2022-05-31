@@ -326,7 +326,7 @@ class CrowdSim(gym.Env):
             ## The random seed should also be added here, otherwise the 
             ## generated environment would be totally different
             np.random.seed(counter_offset[phase] + self.case_counter[phase])
-            self.generate_robot_goal()
+            self.robot_gx, self.robot_gy = self.generate_agent_goal()
             # self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
             self.robot.set(-self.robot_gx, -self.robot_gy, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
