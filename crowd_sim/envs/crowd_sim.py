@@ -401,9 +401,7 @@ class CrowdSim(gym.Env):
         #     still = True
         
         if human.reached_destination():
-            # new_goalx = (np.random.random() - 0.5) * self.square_width
-            # new_goaly = (np.random.random() - 0.5) * self.square_width
-            # new_goalx, new_goaly = self.generate_valid_goal(new_goalx, new_goaly, human.radius)
+            gx, gy = self.generate_agent_goal()
             human.set(px, py, -gx, -gy, 0, 0, 0)
         # elif still:
         #     human.set(px, py, -human.gx, -human.gy, 0, 0, 0)
