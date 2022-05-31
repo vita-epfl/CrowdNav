@@ -98,10 +98,7 @@ class CrowdSim(gym.Env):
         max_radius = self.obstacle_max_radius - self.obstacle_min_radius
         min_radius = self.obstacle_min_radius
         self.obs = []
-        # if obs_num == 0:
-        #     human = Human(self.config, 'humans')
-        #     human.set(0, -10, 0, -10, 0, 0, 0)
-        #     self.obs.append(human)
+        
         for i in range(obs_num):
             human = Human(self.config, 'humans') ## we model the static obstacles as static humans
             while True:
