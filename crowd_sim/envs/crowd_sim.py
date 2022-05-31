@@ -126,8 +126,6 @@ class CrowdSim(gym.Env):
         :param rule:
         :return:
         """
-        ## Geneate static obstacles first
-        self.generate_random_obstacles(self.static_obstacle_num)
         # initial min separation distance to avoid danger penalty at beginning
         if rule == 'square_crossing':
             self.humans = []
@@ -332,8 +330,8 @@ class CrowdSim(gym.Env):
             self.robot.set(-self.robot_gx, -self.robot_gy, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
-                # print("counter_offset[phase] = {}\n".format(counter_offset[phase]))
-                # print("case.counter[phase] = {}".format(self.case_counter[phase]))
+                ## Geneate static obstacles first
+                self.generate_random_obstacles(self.static_obstacle_num)
                 if phase in ['train', 'val']:
                     human_num = self.human_num if self.robot.policy.multiagent_training else 1
                     self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
