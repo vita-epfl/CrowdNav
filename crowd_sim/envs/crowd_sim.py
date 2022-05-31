@@ -1,4 +1,3 @@
-from cmath import pi
 import logging
 from turtle import color
 import gym
@@ -300,7 +299,7 @@ class CrowdSim(gym.Env):
     def generate_robot_goal(self, goal_range = 8):
         # self.robot_gx = (np.random.random() - 0.5) * goal_range
         # self.robot_gy = (np.random.random() - 0.5) * goal_range
-        angle = np.random.random() *  2 * pi
+        angle = np.random.random() *  2 * np.pi
         self.robot_gx = goal_range * np.cos(angle)
         self.robot_gy = goal_range * np.sin(angle)
 
