@@ -26,6 +26,7 @@ class CrowdSim(gym.Env):
         self.time_step = None
         self.robot = None
         self.humans = None
+        self.obs = None
         self.global_time = None
         self.human_times = None
         # reward function
