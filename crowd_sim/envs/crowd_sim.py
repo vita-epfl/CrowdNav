@@ -292,12 +292,17 @@ class CrowdSim(gym.Env):
         del sim
         return self.human_times
 
-    def generate_robot_goal(self, goal_range = 8):
-        # self.robot_gx = (np.random.random() - 0.5) * goal_range
-        # self.robot_gy = (np.random.random() - 0.5) * goal_range
-        angle = np.random.random() *  2 * np.pi
-        self.robot_gx = goal_range * np.cos(angle)
-        self.robot_gy = goal_range * np.sin(angle)
+    def generate_agent_goal(self, goal_range = 8, perturb = False, perturb_range = 1):
+        if perturb:
+            px = (np.random.random() - 0.5) * perturb_range
+            py = (np.random.random() - 0.5) * perturb_range
+        else:
+            px = 0
+            py = 0
+        angle = np.random.random() * 2 * np.pi
+        gx = goal_range * np.cos(angle) + px
+        gy = goal_range * np.sin(angle) + py
+        return gx, gy
 
     def reset(self, phase='test', test_case=None):
         """
