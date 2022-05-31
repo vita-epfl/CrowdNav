@@ -184,7 +184,7 @@ class CrowdSim(gym.Env):
                     else:
                         human = self.generate_square_crossing_human()
                     self.humans.append(human)
-        elif rule == 'static': ## Only test for generating static obstacles 
+        elif rule == 'test': ## Only test for generating static obstacles 
             self.generate_random_obstacles(human_num)
             self.humans = []
             for i in range(human_num):
