@@ -70,7 +70,7 @@ class CrowdSim(gym.Env):
             self.circle_radius = config.getfloat('sim', 'circle_radius')
             self.human_num = config.getint('sim', 'human_num')
             ## Parameter for static obstacles
-            self.obstacle_width = config.getfloat('sim', 'obstacle_width')
+            self.min_obst_offset = config.getfloat('sim', 'min_obst_offset')
             self.static_obstacle_num = config.getint('sim', 'static_obstacle_num')
             self.obstacle_max_radius = config.getfloat('sim', 'obstacle_max_radius')
             self.obstacle_min_radius = config.getfloat('sim', 'obstacle_min_radius')
@@ -108,7 +108,7 @@ class CrowdSim(gym.Env):
                 r = (np.random.random()) * max_radius + min_radius
                 collide = False
                 for agent in [self.robot] + self.obs:
-                    if norm((px - agent.px, py - agent.py)) < r + agent.radius + self.discomfort_dist + self.obstacle_width or norm((px - self.robot_gx, py - self.robot_gy)) < r + self.discomfort_dist:
+                    if norm((px - agent.px, py - agent.py)) < r + agent.radius + self.discomfort_dist + self.min_obst_offset or norm((px - self.robot_gx, py - self.robot_gy)) < r + self.discomfort_dist:
                         collide = True
                         break
                 if not collide:
