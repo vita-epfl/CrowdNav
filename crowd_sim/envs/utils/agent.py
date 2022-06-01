@@ -36,6 +36,8 @@ class Agent(object):
         self.last_vy = self.vy
         self.last_theta = self.theta
 
+        self.unseen_mode = config.get(section,'unseen_mode')
+
     def print_info(self):
         logging.info('Agent is {} and has {} kinematic constraint'.format(
             'visible' if self.visible else 'invisible', self.kinematics))
@@ -74,37 +76,44 @@ class Agent(object):
             self.last_vx = self.vx
             self.last_vy = self.vy
             self.last_theta = self.theta
-
-    def get_observable_state(self, mode='slowing_down'):
-        if mode == 'gt':
+    # todo: visualize all these
+    def get_observable_state(self):
+        if self.unseen_mode == 'ground_truth':
             # always return the real position of agent
             return ObservableState(self.px, self.py, self.vx, self.vy, self.radius, self.uncertainty)
-        if mode == 'stone':
+        if self.unseen_mode == 'stationary':
             # always return the last seen position and velocity of the agent
             return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
-        if mode == 'continuing':
+        if self.unseen_mode == 'continuing':
             # assume that the agent keeps its trajectory with the same speed
             if self.uncertainty:
                 self.last_px += self.last_vx*self.time_step
                 self.last_py += self.last_vy*self.time_step
             return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
-        if mode == 'slowing_down':
+        if self.unseen_mode == 'slowing_down':
             # assume that the agent slows down as it stays out of view
             if self.uncertainty:
-                self.last_vx *= 0.9
-                self.last_vy *= 0.9
+                decay_rate = 0.9
+                self.last_vx *= decay_rate
+                self.last_vy *= decay_rate
                 self.last_px += self.last_vx*self.time_step
                 self.last_py += self.last_vy*self.time_step
             return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
-        if mode == 'expanding_bubble':
+        if self.unseen_mode == 'expanding_stationary_bubble':
             # assume that the agent cover an increasing area as it stays out of sight
+            expansion_rate = 0.5
+            radius = self.radius*(1+expansion_rate*self.uncertainty)
+            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, radius, self.uncertainty)
+        if self.unseen_mode == 'expanding_moving_bubble':
+            # assume that the agent is an ever-growing bubble, moving in the same direction
+            expansion_rate = 0.5
+            radius = self.radius
             if self.uncertainty:
                 self.last_px += self.last_vx*self.time_step
                 self.last_py += self.last_vy*self.time_step
-            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius*(1+0.1*self.uncertainty), self.uncertainty)
-
-
-        if mode == 'enchanced':
+                radius = self.radius*(1+expansion_rate*self.uncertainty)
+            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, radius, self.uncertainty)
+        if self.unseen_mode == 'enchanced':
             # todo: save last 2 two steps. also add curvature to the assumed path by calculating angular speed.
             raise NotImplementedError
 
@@ -152,7 +161,7 @@ class Agent(object):
             self.uncertainty += incrementation
             return
         if mode == 'exponential':
-            self.uncertainty += incrementation + 2*np.sqrt(self.uncertainty)
+            self.uncertainty += incrementation**2 + 2*np.sqrt(self.uncertainty)
             return
         if mode == 'logarithmic':
             self.uncertainty = np.log(incrementation+np.exp(self.uncertainty))
