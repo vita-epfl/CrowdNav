@@ -76,46 +76,11 @@ class Agent(object):
             self.last_vx = self.vx
             self.last_vy = self.vy
             self.last_theta = self.theta
+            self.last_radius = self.radius
+
     # todo: visualize all these
     def get_observable_state(self):
-        if self.unseen_mode == 'ground_truth':
-            # always return the real position of agent
-            return ObservableState(self.px, self.py, self.vx, self.vy, self.radius, self.uncertainty)
-        if self.unseen_mode == 'stationary':
-            # always return the last seen position and velocity of the agent
-            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
-        if self.unseen_mode == 'continuing':
-            # assume that the agent keeps its trajectory with the same speed
-            if self.uncertainty:
-                self.last_px += self.last_vx*self.time_step
-                self.last_py += self.last_vy*self.time_step
-            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
-        if self.unseen_mode == 'slowing_down':
-            # assume that the agent slows down as it stays out of view
-            if self.uncertainty:
-                decay_rate = 0.9
-                self.last_vx *= decay_rate
-                self.last_vy *= decay_rate
-                self.last_px += self.last_vx*self.time_step
-                self.last_py += self.last_vy*self.time_step
-            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.radius, self.uncertainty)
-        if self.unseen_mode == 'expanding_stationary_bubble':
-            # assume that the agent cover an increasing area as it stays out of sight
-            expansion_rate = 0.5
-            radius = self.radius*(1+expansion_rate*self.uncertainty)
-            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, radius, self.uncertainty)
-        if self.unseen_mode == 'expanding_moving_bubble':
-            # assume that the agent is an ever-growing bubble, moving in the same direction
-            expansion_rate = 0.5
-            radius = self.radius
-            if self.uncertainty:
-                self.last_px += self.last_vx*self.time_step
-                self.last_py += self.last_vy*self.time_step
-                radius = self.radius*(1+expansion_rate*self.uncertainty)
-            return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, radius, self.uncertainty)
-        if self.unseen_mode == 'enchanced':
-            # todo: save last 2 two steps. also add curvature to the assumed path by calculating angular speed.
-            raise NotImplementedError
+        return ObservableState(self.last_px, self.last_py, self.last_vx, self.last_vy, self.last_radius, self.uncertainty)
 
     def get_next_observable_state(self, action):
         self.check_validity(action)
@@ -153,19 +118,54 @@ class Agent(object):
     def get_uncertainty(self):
         return self.uncertainty
 
+    def update_states(self,mode='ground_truth'):
+        if mode == 'ground_truth':
+            # observation is the real position of agent
+            self.last_px = self.px
+            self.last_py = self.py
+            self.last_vx = self.vx
+            self.last_vy = self.vy
+            self.last_radius = self.radius
+        elif mode == 'stationary':
+            # last seen position and velocity of the agent is returned as observation, do nothing
+            pass
+        elif mode == 'continuing':
+            # assume that the agent keeps its trajectory with the same speed
+            self.last_px += self.last_vx*self.time_step
+            self.last_py += self.last_vy*self.time_step
+        elif mode == 'slowing_down':
+            # assume that the agent slows down as it stays out of view
+            decay_rate = 0.9
+            self.last_vx *= decay_rate
+            self.last_vy *= decay_rate
+            self.last_px += self.last_vx*self.time_step
+            self.last_py += self.last_vy*self.time_step
+        elif mode == 'expanding_stationary_bubble':
+            # assume that the agent cover an increasing area as it stays out of sight
+            expansion_rate = 0.1
+            self.last_radius += expansion_rate*self.uncertainty
+        elif mode == 'expanding_moving_bubble':
+            # assume that the agent is an ever-growing bubble, moving in the same direction
+            expansion_rate = 0.1
+            self.last_px += self.last_vx*self.time_step
+            self.last_py += self.last_vy*self.time_step
+            self.last_radius += expansion_rate*self.uncertainty
+        elif mode == 'enhanced':
+            # todo: save last 2 two steps. also add curvature to the assumed path by calculating angular speed.
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+
+
     def increment_uncertainty(self,mode='logarithmic',incrementation=1):
         if mode == 'reset':
             self.uncertainty = 0
-            return
-        if mode == 'linear':
+        elif mode == 'linear':
             self.uncertainty += incrementation
-            return
-        if mode == 'exponential':
+        elif mode == 'exponential':
             self.uncertainty += incrementation**2 + 2*np.sqrt(self.uncertainty)
-            return
-        if mode == 'logarithmic':
+        elif mode == 'logarithmic':
             self.uncertainty = np.log(incrementation+np.exp(self.uncertainty))
-            return
 
     @abc.abstractmethod
     def act(self, ob):
@@ -207,12 +207,10 @@ class Agent(object):
             self.theta = (self.theta + action.r) % (2 * np.pi)
             self.vx = action.v * np.cos(self.theta)
             self.vy = action.v * np.sin(self.theta)
-        if not self.uncertainty:
-            self.last_px = self.px
-            self.last_py = self.py
-            self.last_vx = self.vx
-            self.last_vy = self.vy
-            self.last_theta = self.theta
+        if self.uncertainty:
+            self.update_states(self.unseen_mode)
+        else:
+            self.update_states('ground_truth')
 
     def reached_destination(self):
         return norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.radius
