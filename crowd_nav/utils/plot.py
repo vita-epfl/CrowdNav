@@ -1,7 +1,7 @@
 import re
-import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+from crowd_nav.args import Parser
 
 
 def running_mean(x, n):
@@ -10,16 +10,8 @@ def running_mean(x, n):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('log_files', type=str, nargs='+')
-    parser.add_argument('--plot_sr', default=False, action='store_true')
-    parser.add_argument('--plot_cr', default=False, action='store_true')
-    parser.add_argument('--plot_time', default=False, action='store_true')
-    parser.add_argument('--plot_reward', default=True, action='store_true')
-    parser.add_argument('--plot_train', default=True, action='store_true')
-    parser.add_argument('--plot_val', default=False, action='store_true')
-    parser.add_argument('--window_size', type=int, default=200)
-    args = parser.parse_args()
+    parser = Parser(mode='plot')
+    args = parser.parse()
 
     # define the names of the models you want to plot and the longest episodes you want to show
     #models = ['LSTM-RL', 'SARL', 'OM-SARL']
