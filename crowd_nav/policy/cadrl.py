@@ -185,6 +185,7 @@ class CADRL(Policy):
         return state
 
     def rotate(self, state):
+        #TODO: Fix
         """
         Transform the coordinate to agent-centric.
         Input state tensor is of size (batch_size, state_length)

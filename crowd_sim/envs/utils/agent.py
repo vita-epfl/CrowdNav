@@ -143,15 +143,15 @@ class Agent(object):
         elif mode == 'expanding_stationary_bubble':
             # assume that the agent cover an increasing area as it stays out of sight
             expansion_rate = 0.1
-            self.last_radius += expansion_rate*self.uncertainty
+            self.last_radius = self.radius + expansion_rate*self.uncertainty
         elif mode == 'expanding_moving_bubble':
             # assume that the agent is an ever-growing bubble, moving in the same direction
             expansion_rate = 0.1
             self.last_px += self.last_vx*self.time_step
             self.last_py += self.last_vy*self.time_step
-            self.last_radius += expansion_rate*self.uncertainty
+            self.last_radius = self.radius + expansion_rate*self.uncertainty
         elif mode == 'enhanced':
-            # todo: save last 2 two steps. also add curvature to the assumed path by calculating angular speed.
+            # todo: save last 2 steps. also add curvature to the assumed path by calculating angular speed.
             raise NotImplementedError
         else:
             raise NotImplementedError
