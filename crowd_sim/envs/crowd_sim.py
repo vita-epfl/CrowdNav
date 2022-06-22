@@ -799,38 +799,39 @@ class CrowdSim(gym.Env):
                 ax.add_artist(human_numbers[i])
 
             # add human observable positions
-            human_observations = []
-            observed_human_numbers = []
-            human_uncertainties = []
-            if debug:
-                observed_vels = []
-            for i in range(len(self.observable_states[0])):
-                human_observations.append(plt.Circle((self.observable_states[0][i].px,
-                                                    self.observable_states[0][i].py),
-                                                   radius=self.observable_states[0][i].radius,
-                                                   alpha = 0.3,
-                                                     color='blue'))
-                observed_human_numbers.append(plt.text(self.observable_states[0][i].px - x_offset,
-                                                        self.observable_states[0][i].py - y_offset,
-                                                       str(i),
-                                                       color = 'blue',
-                                                       fontsize=12))
-                human_uncertainties.append(plt.text(-5.5,
-                                                    -4 - 0.4 * i,
-                                                    'Uncertainty {}: {:.2f}'.format(i, self.observable_states[0][i].uncertainty),
-                                                    fontsize=12))
+            if self.robot.sensor == 'RGB':
+                human_observations = []
+                observed_human_numbers = []
+                human_uncertainties = []
                 if debug:
-                    observed_vels.append(plt.text(  3,
-                                                    -4 - 0.4 * i,
-                                                    'Vel. {}: {:.1f},{:.1f}'.format(i,
-                                                                                    self.observable_states[0][i].vx,
-                                                                                    self.observable_states[0][i].vy),
-                                                    fontsize=12))
+                    observed_vels = []
+                for i in range(len(self.observable_states[0])):
+                    human_observations.append(plt.Circle((self.observable_states[0][i].px,
+                                                        self.observable_states[0][i].py),
+                                                       radius=self.observable_states[0][i].radius,
+                                                       alpha = 0.3,
+                                                         color='blue'))
+                    observed_human_numbers.append(plt.text(self.observable_states[0][i].px - x_offset,
+                                                            self.observable_states[0][i].py - y_offset,
+                                                           str(i),
+                                                           color = 'blue',
+                                                           fontsize=12))
+                    human_uncertainties.append(plt.text(-5.5,
+                                                        -4 - 0.4 * i,
+                                                        'Uncertainty {}: {:.2f}'.format(i, self.observable_states[0][i].uncertainty),
+                                                        fontsize=12))
+                    if debug:
+                        observed_vels.append(plt.text(  3,
+                                                        -4 - 0.4 * i,
+                                                        'Vel. {}: {:.1f},{:.1f}'.format(i,
+                                                                                        self.observable_states[0][i].vx,
+                                                                                        self.observable_states[0][i].vy),
+                                                        fontsize=12))
 
-            for obs in human_observations:
-                ax.add_artist(obs)
-            for num in observed_human_numbers:
-                ax.add_artist(num)
+                for obs in human_observations:
+                    ax.add_artist(obs)
+                for num in observed_human_numbers:
+                    ax.add_artist(num)
 
             # add obs and their numbers
             obs_positions = [[state[2][j].position for j in range(len(self.obs))] for state in self.states]
@@ -890,7 +891,7 @@ class CrowdSim(gym.Env):
                 newPoint = [extendFactor * newPoint[0, 0], extendFactor * newPoint[1, 0], 1]
                 return newPoint
 
-            if self.robot_fov < np.pi * 2:
+            if self.robot.sensor == 'RGB':
                 FOVAng = self.robot_fov / 2
                 fov_line_1_x_data = []
                 fov_line_1_y_data = []
@@ -920,18 +921,19 @@ class CrowdSim(gym.Env):
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
-                FOVLine1.set_data(fov_line_1_x_data[frame_num],fov_line_1_y_data[frame_num])
-                FOVLine2.set_data(fov_line_2_x_data[frame_num],fov_line_2_y_data[frame_num])
-                for i, obs in enumerate(human_observations):
-                    obs.center = (self.observable_states[frame_num][i].px,self.observable_states[frame_num][i].py)
-                    obs.radius = self.observable_states[frame_num][i].radius
-                    observed_human_numbers[i].set_position((self.observable_states[frame_num][i].px - x_offset,
-                                                            self.observable_states[frame_num][i].py - y_offset))
-                    human_uncertainties[i].set_text('Uncertainty {}: {:.2f}'.format(i, self.observable_states[frame_num][i].uncertainty))
-                    if debug:
-                        observed_vels[i].set_text('Vel. {}: {:.1f},{:.1f}'.format(i,
-                                                                                  self.observable_states[frame_num][i].vx,
-                                                                                  self.observable_states[frame_num][i].vy))
+                if self.robot.sensor == 'RGB':
+                    FOVLine1.set_data(fov_line_1_x_data[frame_num],fov_line_1_y_data[frame_num])
+                    FOVLine2.set_data(fov_line_2_x_data[frame_num],fov_line_2_y_data[frame_num])
+                    for i, obs in enumerate(human_observations):
+                        obs.center = (self.observable_states[frame_num][i].px,self.observable_states[frame_num][i].py)
+                        obs.radius = self.observable_states[frame_num][i].radius
+                        observed_human_numbers[i].set_position((self.observable_states[frame_num][i].px - x_offset,
+                                                                self.observable_states[frame_num][i].py - y_offset))
+                        human_uncertainties[i].set_text('Uncertainty {}: {:.2f}'.format(i, self.observable_states[frame_num][i].uncertainty))
+                        if debug:
+                            observed_vels[i].set_text('Vel. {}: {:.1f},{:.1f}'.format(i,
+                                                                                      self.observable_states[frame_num][i].vx,
+                                                                                      self.observable_states[frame_num][i].vy))
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
