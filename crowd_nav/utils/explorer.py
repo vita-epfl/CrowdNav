@@ -60,6 +60,11 @@ class Explorer(object):
                 timeout += 1
                 timeout_cases.append(i)
                 timeout_times.append(self.env.time_limit)
+            elif isinstance(info, Boundary):
+                # dummy implementation, since current version is out of date
+                collision += 1
+                collision_cases.append(i)
+                collision_times.append(self.env.global_time)
             else:
                 raise ValueError('Invalid end signal from environment')
 

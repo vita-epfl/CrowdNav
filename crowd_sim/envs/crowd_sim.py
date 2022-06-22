@@ -104,9 +104,6 @@ class CrowdSim(gym.Env):
         self.robot_fov = np.pi * config.getfloat('robot' , 'FOV')
         self.human_fov = np.pi * config.getfloat('humans', 'FOV')
         self.uncertainty_growth = config.get('sim', 'uncertainty_growth')
-        logging.info('robot FOV %f', self.robot_fov)
-        logging.info('humans FOV %f', self.human_fov)
-        logging.info('uncertainty growth mode: %s', self.uncertainty_growth)
 
         # # set dummy human and dummy robot
         # # dummy humans, used if any human is not in view of other agents
@@ -123,6 +120,10 @@ class CrowdSim(gym.Env):
 
     def set_robot(self, robot):
         self.robot = robot
+        if self.robot.sensor == 'RGB':
+            logging.info('robot FOV %f', self.robot_fov)
+            logging.info('humans FOV %f', self.human_fov)
+            logging.info('uncertainty growth mode: %s', self.uncertainty_growth)
 
     def generate_random_obstacles(self, obs_num):
         width = self.square_width
