@@ -1,5 +1,4 @@
 import logging
-from turtle import color
 import gym
 import matplotlib.lines as mlines
 import numpy as np
@@ -18,7 +17,7 @@ class CrowdSim(gym.Env):
         """
         Movement simulation for n+1 agents
         Agent can either be human or robot.
-        humans are controlled by a unknown and fixed policy.
+        humans are controlled by an unknown and fixed policy.
         robot is controlled by a known and learnable policy.
 
         """
@@ -33,6 +32,7 @@ class CrowdSim(gym.Env):
         self.success_reward = None
         self.collision_penalty = None
         self.discomfort_dist = None
+        self.discomfort_dist_front = None
         self.discomfort_penalty_factor = None
         # simulation configuration
         self.config = None
@@ -50,6 +50,15 @@ class CrowdSim(gym.Env):
         self.action_values = None
         self.attention_weights = None
 
+        # limited FOV
+        self.robot_fov = None
+        self.human_fov = None
+        self.uncertainty_growth = None
+        # todo: i didnt like this idea of dummy human & robot.
+        #self.dummy_human = None
+        #self.dummy_robot = None
+
+
     def configure(self, config):
         self.config = config
         self.time_limit = config.getint('env', 'time_limit')
@@ -58,6 +67,7 @@ class CrowdSim(gym.Env):
         self.success_reward = config.getfloat('reward', 'success_reward')
         self.collision_penalty = config.getfloat('reward', 'collision_penalty')
         self.discomfort_dist = config.getfloat('reward', 'discomfort_dist')
+        self.discomfort_dist_front = config.getfloat('reward', 'discomfort_dist_front') #1
         self.discomfort_penalty_factor = config.getfloat('reward', 'discomfort_penalty_factor')
         self.out_boundary_penalty = config.getfloat('reward', 'out_boundary_penalty')
         if self.config.get('humans', 'policy') == 'orca':
@@ -90,8 +100,30 @@ class CrowdSim(gym.Env):
         logging.info("Number of static obstacles: {}".format(self.static_obstacle_num))
         logging.info("Static obstacles diameter range: {} - {}".format(2 * self.obstacle_min_radius, 2 * self.obstacle_max_radius))
 
+        #Fov Config
+        self.robot_fov = np.pi * config.getfloat('robot' , 'FOV')
+        self.human_fov = np.pi * config.getfloat('humans', 'FOV')
+        self.uncertainty_growth = config.get('sim', 'uncertainty_growth')
+
+        # # set dummy human and dummy robot
+        # # dummy humans, used if any human is not in view of other agents
+        # self.dummy_human = Human(self.config, 'humans')
+        # # if a human is not in view, set its state to (px = 100, py = 100, vx = 0, vy = 0, theta = 0, radius = 0)
+        # self.dummy_human.set(7, 7, 7, 7, 0, 0, 0) # (7, 7, 7, 7, 0, 0, 0)
+        # self.dummy_human.time_step = config.getfloat('env', 'time_step')
+        #
+        # self.dummy_robot = Robot(self.config, 'robot')
+        # self.dummy_robot.set(7, 7, 7, 7, 0, 0, 0)
+        # self.dummy_robot.time_step = config.getfloat('env', 'time_step')
+        # self.dummy_robot.kinematics = 'holonomic'
+        # self.dummy_robot.policy = ORCA(config)
+
     def set_robot(self, robot):
         self.robot = robot
+        if self.robot.sensor == 'RGB':
+            logging.info('robot FOV %f', self.robot_fov)
+            logging.info('humans FOV %f', self.human_fov)
+            logging.info('uncertainty growth mode: %s', self.uncertainty_growth)
 
     def generate_random_obstacles(self, obs_num):
         width = self.square_width
@@ -136,7 +168,7 @@ class CrowdSim(gym.Env):
             self.humans = []
             for i in range(human_num):
                 self.humans.append(self.generate_circle_crossing_human())
-        elif rule == 'mixed': 
+        elif rule == 'mixed':
             # mix different raining simulation with certain distribution
             static_human_num = {0: 0.05, 1: 0.2, 2: 0.2, 3: 0.3, 4: 0.1, 5: 0.15}
             dynamic_human_num = {1: 0.3, 2: 0.3, 3: 0.2, 4: 0.1, 5: 0.1}
@@ -185,14 +217,13 @@ class CrowdSim(gym.Env):
                     else:
                         human = self.generate_square_crossing_human()
                     self.humans.append(human)
-        elif rule == 'test': ## Only test for generating static obstacles 
+        elif rule == 'test': ## Only test for generating static obstacles
             self.generate_random_obstacles(human_num)
             self.humans = []
             for i in range(human_num):
                 self.humans.append(self.generate_square_crossing_human())
         else:
             raise ValueError("Rule doesn't exist")
-        
 
     def generate_circle_crossing_human(self):
         human = Human(self.config, 'humans')
@@ -250,6 +281,33 @@ class CrowdSim(gym.Env):
         human.set(px, py, gx, gy, 0, 0, 0)
         return human
 
+    # todo: add noise according to env.config to observation
+    # def apply_noise(self, ob):
+    #     if isinstance(ob[0], ObservableState):
+    #         for i in range(len(ob)):
+    #             if self.noise_type == 'uniform':
+    #                 noise = np.random.uniform(-self.noise_magnitude, self.noise_magnitude, 5)
+    #             elif self.noise_type == 'gaussian':
+    #                 noise = np.random.normal(size=5)
+    #             else:
+    #                 print('noise type not defined')
+    #             ob[i].px = ob[i].px + noise[0]
+    #             ob[i].py = ob[i].px + noise[1]
+    #             ob[i].vx = ob[i].px + noise[2]
+    #             ob[i].vy = ob[i].px + noise[3]
+    #             ob[i].radius = ob[i].px + noise[4]
+    #         return ob
+    #     else:
+    #         if self.noise_type == 'uniform':
+    #             noise = np.random.uniform(-self.noise_magnitude, self.noise_magnitude, len(ob))
+    #         elif self.noise_type == 'gaussian':
+    #             noise = np.random.normal(size = len(ob))
+    #         else:
+    #             print('noise type not defined')
+    #             noise = [0] * len(ob)
+    #
+    #         return ob + noise
+
     def get_human_times(self):
         """
         Run the whole simulation to the end and compute the average time for human to reach goal.
@@ -261,7 +319,7 @@ class CrowdSim(gym.Env):
         # centralized orca simulator for all humans
         if not self.robot.reached_destination():
             raise ValueError('Episode is not done yet')
-        params = (10, 10, 5, 5)
+        params = (10, 10, 5, 5) # kagan: i guess 10,10 is the box size of the environment and 5,5 is where the origin is
         sim = rvo2.PyRVOSimulator(self.time_step, *params, 0.3, 1)
         sim.addAgent(self.robot.get_position(), *params, self.robot.radius, self.robot.v_pref,
                      self.robot.get_velocity())
@@ -328,7 +386,7 @@ class CrowdSim(gym.Env):
             counter_offset = {'train': self.case_capacity['val'] + self.case_capacity['test'],
                               'val': 0, 'test': self.case_capacity['val']}
             # we should make the goal position more diverse
-            ## The random seed should also be added here, otherwise the 
+            ## The random seed should also be added here, otherwise the
             ## generated environment would be totally different
             np.random.seed(counter_offset[phase] + self.case_counter[phase])
             self.robot_gx, self.robot_gy = self.generate_agent_goal()
@@ -371,6 +429,7 @@ class CrowdSim(gym.Env):
             self.attention_weights = list()
 
         # get current observation
+        self.observable_states = list()
         if self.robot.sensor == 'coordinates':
             ## Let the static obstacles also generate their states
             # ob = [human.get_observable_state() for human in self.humans]
@@ -378,9 +437,79 @@ class CrowdSim(gym.Env):
             temp = [obstacle.get_observable_state() for obstacle in self.obs]
             ob += temp
         elif self.robot.sensor == 'RGB':
-            raise NotImplementedError
+            humans_in_view, num_humans_in_view, seen_human_ids, unseen_human_ids  = self.get_num_human_in_fov()
+            for human in humans_in_view:
+                human.increment_uncertainty('reset')
+            for id in unseen_human_ids:
+                self.humans[id].increment_uncertainty(self.uncertainty_growth)
+            ob = [human.get_observable_state() for human in self.humans]
 
         return ob
+
+    # Caculate whether agent2 is in agent1's FOV
+    # Not the same as whether agent1 is in agent2's FOV!!!!
+    # arguments:
+    # state1, state2: can be agent instance OR state instance
+    # robot1: is True if state1 is robot, else is False
+    # return value:
+    # return True if state2 is visible to state1, else return False
+    def detect_visible(self, state1, state2, robot1 = False, custom_fov=None):
+        #todo: add obstacle checking
+        if self.robot.kinematics == 'holonomic':
+            real_theta = np.arctan2(state1.vy, state1.vx)
+        else:
+            real_theta = state1.theta
+        # angle of center line of FOV of agent1
+        v_fov = [np.cos(real_theta), np.sin(real_theta)]
+
+        # angle between agent1 and agent2
+        v_12 = [state2.px - state1.px, state2.py - state1.py]
+        # angle between center of FOV and agent 2
+
+        v_fov = v_fov / np.linalg.norm(v_fov)
+        v_12 = v_12 / np.linalg.norm(v_12)
+
+        offset = np.arccos(np.clip(np.dot(v_fov, v_12), a_min=-1, a_max=1))
+        if custom_fov:
+            fov = custom_fov
+        else:
+            if robot1:
+                fov = self.robot_fov
+            else:
+                fov = self.human_fov
+
+        if np.abs(offset) <= fov / 2:
+            return True
+        else:
+            return False
+
+
+    # for robot:
+    # return only visible humans to robot and number of visible humans and visible humans' ids (0 to 4)
+    def get_num_human_in_fov(self):
+        seen_human_ids = []
+        unseen_human_ids = []
+        humans_in_view = []
+        num_humans_in_view = 0
+
+        for i in range(len(self.humans)):
+            visible = self.detect_visible(self.robot, self.humans[i], robot1=True)
+            if visible:
+                humans_in_view.append(self.humans[i])
+                num_humans_in_view += 1
+                seen_human_ids.append(i)
+            else:
+                unseen_human_ids.append(i)
+        # for i in range(self.human_num):
+        #     visible = self.detect_visible(self.robot, self.humans[i], robot1=True)
+        #     if visible:
+        #         humans_in_view.append(self.humans[i])
+        #         num_humans_in_view += 1
+        #         human_ids.append(True)
+        #     else:
+        #         human_ids.append(False)
+
+        return humans_in_view, num_humans_in_view, seen_human_ids, unseen_human_ids
 
     def onestep_lookahead(self, action):
         return self.step(action, update=False)
@@ -404,7 +533,7 @@ class CrowdSim(gym.Env):
         # still = False
         # if vx < eps and vy < eps:
         #     still = True
-        
+
         if human.reached_destination():
             gx, gy = self.generate_agent_goal()
             human.set(px, py, -gx, -gy, 0, 0, 0)
@@ -442,6 +571,8 @@ class CrowdSim(gym.Env):
             ey = py + vy * self.time_step
             # closest distance between boundaries of two agents
             closest_dist = point_to_segment_dist(px, py, ex, ey, 0, 0) - human.radius - self.robot.radius
+            # kagan: discomfort distance is added later as a penalty.
+            # adding it above would set it as collision and stop the episode.
             if closest_dist < 0:
                 collision = True
                 # logging.debug("Collision: distance between robot and p{} is {:.2E}".format(i, closest_dist))
@@ -511,7 +642,7 @@ class CrowdSim(gym.Env):
             info = ReachGoal()
         elif dmin < self.discomfort_dist:
             # only penalize agent for getting too close if it's visible
-            # adjust the reward based on FPS
+            # adjust the reward based on FPS # kagan: nice! time step weights penalty
             reward = (dmin - self.discomfort_dist) * self.discomfort_penalty_factor * self.time_step
             done = False
             info = Danger(dmin)
@@ -520,19 +651,21 @@ class CrowdSim(gym.Env):
             done = False
             info = Nothing()
 
-        if update:
+        if update: # kagan: update == false if doing one_step_look_ahead
             # store state, action value and attention weights
             # env_obs = [human.get_full_state() for human in self.humans]
             # temp = [obstacle.get_full_state() for obstacle in self.obs]
             # env_obs += temp
             for human in self.humans:
                 self.human_reset_goal(human) ## If human already reached its goal state, reset its goal
-                    
+
             self.states.append([self.robot.get_full_state(), [human.get_full_state() for human in self.humans], [obstacle.get_full_state() for obstacle in self.obs]])
             if hasattr(self.robot.policy, 'action_values'):
                 self.action_values.append(self.robot.policy.action_values)
             if hasattr(self.robot.policy, 'get_attention_weights'):
                 self.attention_weights.append(self.robot.policy.get_attention_weights())
+            # store observable states
+            self.observable_states.append([human.get_observable_state() for human in self.humans])
 
             # update all agents
             self.robot.step(action)
@@ -550,16 +683,28 @@ class CrowdSim(gym.Env):
                 temp = [obstacle.get_observable_state() for obstacle in self.obs]
                 ob += temp
             elif self.robot.sensor == 'RGB':
-                raise NotImplementedError
+                humans_in_view, num_humans_in_view, seen_human_ids, unseen_human_ids  = self.get_num_human_in_fov()
+                for human in humans_in_view:
+                    human.increment_uncertainty('reset')
+                for id in unseen_human_ids:
+                    self.humans[id].increment_uncertainty('logarithmic')
+                ob = [human.get_observable_state() for human in self.humans]
+
+
         else:
             if self.robot.sensor == 'coordinates':
                 ob = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
             elif self.robot.sensor == 'RGB':
-                raise NotImplementedError
+                humans_in_view, num_humans_in_view, seen_human_ids, unseen_human_ids  = self.get_num_human_in_fov()
+                for human in humans_in_view:
+                    human.increment_uncertainty('reset')
+                for id in unseen_human_ids:
+                    self.humans[id].increment_uncertainty('logarithmic')
+                ob = [human.get_observable_state() for human in self.humans]
 
         return ob, reward, done, info
 
-    def render(self, mode='human', output_file=None):
+    def render(self, mode='human', output_file=None, debug = False):
         from matplotlib import animation
         import matplotlib.pyplot as plt
         plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
@@ -654,16 +799,48 @@ class CrowdSim(gym.Env):
                 ax.add_artist(human)
                 ax.add_artist(human_numbers[i])
 
-            ## Add my me
+            # add human observable positions
+            if self.robot.sensor == 'RGB':
+                human_observations = []
+                observed_human_numbers = []
+                human_uncertainties = []
+                if debug:
+                    observed_vels = []
+                for i in range(len(self.observable_states[0])):
+                    human_observations.append(plt.Circle((self.observable_states[0][i].px,
+                                                        self.observable_states[0][i].py),
+                                                       radius=self.observable_states[0][i].radius,
+                                                       alpha = 0.3,
+                                                         color='blue'))
+                    observed_human_numbers.append(plt.text(self.observable_states[0][i].px - x_offset,
+                                                            self.observable_states[0][i].py - y_offset,
+                                                           str(i),
+                                                           color = 'blue',
+                                                           fontsize=12))
+                    human_uncertainties.append(plt.text(-5.5,
+                                                        -4 - 0.4 * i,
+                                                        'Uncertainty {}: {:.2f}'.format(i, self.observable_states[0][i].uncertainty),
+                                                        fontsize=12))
+                    if debug:
+                        observed_vels.append(plt.text(  3,
+                                                        -4 - 0.4 * i,
+                                                        'Vel. {}: {:.1f},{:.1f}'.format(i,
+                                                                                        self.observable_states[0][i].vx,
+                                                                                        self.observable_states[0][i].vy),
+                                                        fontsize=12))
+
+                for obs in human_observations:
+                    ax.add_artist(obs)
+                for num in observed_human_numbers:
+                    ax.add_artist(num)
+
             # add obs and their numbers
             obs_positions = [[state[2][j].position for j in range(len(self.obs))] for state in self.states]
             obs = [plt.Circle(obs_positions[0][i], self.obs[i].radius, fill=True, color='black')
                       for i in range(len(self.obs))]
-            
+
             for i, ob in enumerate(obs):
                 ax.add_artist(ob)
-                # ax.add_artist(human_numbers[i])
-
             # add time annotation
             time = plt.text(-1, 8.5, 'Time: {}'.format(0), fontsize=16)
             ax.add_artist(time)
@@ -700,11 +877,64 @@ class CrowdSim(gym.Env):
                 ax.add_artist(arrow)
             global_step = 0
 
+
+            ## SHOW FOV
+            def calcFOVLineEndPoint(ang, point, extendFactor):
+                # choose the extendFactor big enough
+                # so that the endPoints of the FOVLine is out of xlim and ylim of the figure
+                FOVLineRot = np.array([[np.cos(ang), -np.sin(ang), 0],
+                                       [np.sin(ang), np.cos(ang), 0],
+                                       [0, 0, 1]])
+                point.extend([1])
+                # apply rotation matrix
+                newPoint = np.matmul(FOVLineRot, np.reshape(point, [3, 1]))
+                # increase the distance between the line start point and the end point
+                newPoint = [extendFactor * newPoint[0, 0], extendFactor * newPoint[1, 0], 1]
+                return newPoint
+
+            if self.robot.sensor == 'RGB':
+                FOVAng = self.robot_fov / 2
+                fov_line_1_x_data = []
+                fov_line_1_y_data = []
+                fov_line_2_x_data = []
+                fov_line_2_y_data = []
+                for i in range(len(robot_positions)):
+                    startPointX = orientations[0][i][0][0]
+                    startPointY = orientations[0][i][0][1]
+                    endPointX   = orientations[0][i][1][0]
+                    endPointY   = orientations[0][i][1][1]
+                    # endPointX = startPointX + radius * np.cos(orientation[i])
+                    # endPointY = startPointY + radius * np.sin(orientation[i])
+                    end_points1 = calcFOVLineEndPoint(FOVAng, [endPointX - startPointX, endPointY - startPointY], 20. / self.robot.radius)
+                    end_points2 = calcFOVLineEndPoint(-FOVAng, [endPointX - startPointX, endPointY - startPointY], 20. / self.robot.radius)
+                    fov_line_1_x_data.append([startPointX,end_points1[0]])
+                    fov_line_1_y_data.append([startPointY,end_points1[1]])
+                    fov_line_2_x_data.append([startPointX,end_points2[0]])
+                    fov_line_2_y_data.append([startPointY,end_points2[1]])
+
+                FOVLine1 = plt.Line2D(fov_line_1_x_data[0], fov_line_1_y_data[0], linestyle='--')
+                FOVLine2 = plt.Line2D(fov_line_2_x_data[0], fov_line_2_y_data[0], linestyle='--')
+                ax.add_artist(FOVLine1)
+                ax.add_artist(FOVLine2)
+
             def update(frame_num):
                 nonlocal global_step
                 nonlocal arrows
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
+                if self.robot.sensor == 'RGB':
+                    FOVLine1.set_data(fov_line_1_x_data[frame_num],fov_line_1_y_data[frame_num])
+                    FOVLine2.set_data(fov_line_2_x_data[frame_num],fov_line_2_y_data[frame_num])
+                    for i, obs in enumerate(human_observations):
+                        obs.center = (self.observable_states[frame_num][i].px,self.observable_states[frame_num][i].py)
+                        obs.radius = self.observable_states[frame_num][i].radius
+                        observed_human_numbers[i].set_position((self.observable_states[frame_num][i].px - x_offset,
+                                                                self.observable_states[frame_num][i].py - y_offset))
+                        human_uncertainties[i].set_text('Uncertainty {}: {:.2f}'.format(i, self.observable_states[frame_num][i].uncertainty))
+                        if debug:
+                            observed_vels[i].set_text('Vel. {}: {:.1f},{:.1f}'.format(i,
+                                                                                      self.observable_states[frame_num][i].vx,
+                                                                                      self.observable_states[frame_num][i].vy))
                 for i, human in enumerate(humans):
                     human.center = human_positions[frame_num][i]
                     human_numbers[i].set_position((human.center[0] - x_offset, human.center[1] - y_offset))
@@ -755,6 +985,7 @@ class CrowdSim(gym.Env):
             fig.canvas.mpl_connect('key_press_event', on_click)
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step * 1000)
             anim.running = True
+
 
             if output_file is not None:
                 ffmpeg_writer = animation.writers['ffmpeg']

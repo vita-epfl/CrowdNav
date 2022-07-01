@@ -1,6 +1,5 @@
 import sys
 import logging
-import argparse
 import configparser
 import os
 import shutil
@@ -12,20 +11,12 @@ from crowd_nav.utils.trainer import Trainer
 from crowd_nav.utils.memory import ReplayMemory
 from crowd_nav.utils.explorer import Explorer
 from crowd_nav.policy.policy_factory import policy_factory
+from crowd_nav.args import Parser
 
 
 def main():
-    parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
-    parser.add_argument('--policy', type=str, default='cadrl')
-    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
-    parser.add_argument('--train_config', type=str, default='configs/train.config')
-    parser.add_argument('--output_dir', type=str, default='data/output')
-    parser.add_argument('--weights', type=str)
-    parser.add_argument('--resume', default=False, action='store_true')
-    parser.add_argument('--gpu', default=False, action='store_true')
-    parser.add_argument('--debug', default=False, action='store_true')
-    args = parser.parse_args()
+    parser = Parser(mode='train')
+    args = parser.parse()
 
     # configure paths
     make_new_dir = True
@@ -126,7 +117,10 @@ def main():
         il_policy.multiagent_training = policy.multiagent_training
         il_policy.safety_space = safety_space
         robot.set_policy(il_policy)
-        explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
+        if args.debug:
+            explorer.run_k_episodes(1, 'train', update_memory=True, imitation_learning=True)
+        else:
+            explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
         trainer.optimize_epoch(il_epochs)
         torch.save(model.state_dict(), il_weight_file)
         logging.info('Finish imitation learning. Weights saved.')
@@ -156,7 +150,10 @@ def main():
 
         # evaluate the model
         if episode % evaluation_interval == 0:
-            explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
+            if not args.debug: # validation takes too long
+                explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
+            else:
+                pass
 
         # sample k episodes into memory and optimize over the generated memory
         explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
@@ -165,9 +162,11 @@ def main():
 
         if episode % target_update_interval == 0:
             explorer.update_target_model(model)
-
-        if episode != 0 and episode % checkpoint_interval == 0:
-            torch.save(model.state_dict(), rl_weight_file)
+        if args.debug: # so that we can use the saved model to test visualization
+                torch.save(model.state_dict(), rl_weight_file)
+        else:
+            if episode != 0 and episode % checkpoint_interval == 0:
+                torch.save(model.state_dict(), rl_weight_file)
 
     # final test
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)

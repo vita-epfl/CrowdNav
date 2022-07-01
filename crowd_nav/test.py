@@ -1,5 +1,4 @@
 import logging
-import argparse
 import configparser
 import os
 import torch
@@ -9,24 +8,12 @@ from crowd_nav.utils.explorer import Explorer
 from crowd_nav.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.robot import Robot
 from crowd_sim.envs.policy.orca import ORCA
+from crowd_nav.args import Parser
 
 
 def main():
-    parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--env_config', type=str, default='configs/env.config')
-    parser.add_argument('--policy_config', type=str, default='configs/policy.config')
-    parser.add_argument('--policy', type=str, default='orca')
-    parser.add_argument('--model_dir', type=str, default=None)
-    parser.add_argument('--il', default=False, action='store_true')
-    parser.add_argument('--gpu', default=False, action='store_true')
-    parser.add_argument('--visualize', default=False, action='store_true')
-    parser.add_argument('--phase', type=str, default='test')
-    parser.add_argument('--test_case', type=int, default=None)
-    parser.add_argument('--square', default=False, action='store_true')
-    parser.add_argument('--circle', default=False, action='store_true')
-    parser.add_argument('--video_file', type=str, default=None)
-    parser.add_argument('--traj', default=False, action='store_true')
-    args = parser.parse_args()
+    parser = Parser(mode='test')
+    args = parser.parse()
 
     if args.model_dir is not None:
         env_config_file = os.path.join(args.model_dir, os.path.basename(args.env_config))
@@ -56,7 +43,7 @@ def main():
     if policy.trainable:
         if args.model_dir is None:
             parser.error('Trainable policy must be specified with a model weights directory')
-        policy.get_model().load_state_dict(torch.load(model_weights))
+        policy.get_model().load_state_dict(torch.load(model_weights,map_location=device))
 
     # configure environment
     env_config = configparser.RawConfigParser()
