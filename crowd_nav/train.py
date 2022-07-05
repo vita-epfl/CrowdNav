@@ -85,6 +85,17 @@ def main():
     epsilon_end = train_config.getfloat('train', 'epsilon_end')
     epsilon_decay = train_config.getfloat('train', 'epsilon_decay')
     checkpoint_interval = train_config.getint('train', 'checkpoint_interval')
+    # curriculum learning
+    mode = train_config.get('curriculum', 'increase_obst_radius') # 'increasing_obst_num','single obstacle in the middle
+    radius_start = train_config.getfloat('curriculum','radius_start')
+    radius_max = train_config.getfloat('curriculum','radius_max')
+    radius_increment = train_config.getfloat('curriculum','radius_increment')
+    largest_obst_ratio = train_config.getfloat('curriculum','largest_obst_ratio')
+    level_up_mode = train_config.get('curriculum', 'level_up_mode')
+    success_rate_milestone = train_config.getfloat('curriculum','success_rate_milestone')
+    p_handcrafted = train_config.getfloat('curriculum','p_handcrafted')
+    p_hard_deck = train_config.getfloat('curriculum','p_hard_deck')
+    hard_deck_cap = train_config.getint('curriculum','hard_deck_cap')
 
     # configure trainer and explorer
     memory = ReplayMemory(capacity)
@@ -127,6 +138,9 @@ def main():
         logging.info('Experience set size: %d/%d', len(memory), memory.capacity)
     explorer.update_target_model(model)
 
+    # trainer.activate_cl()
+    # explorer.activate_cl()
+
     # reinforcement learning
     policy.set_env(env)
     robot.set_policy(policy)
@@ -143,7 +157,7 @@ def main():
             epsilon = epsilon_end
         else:
             if episode < epsilon_decay:
-                epsilon = epsilon_start + (epsilon_end - epsilon_start) / epsilon_decay * episode
+                epsilon = epsilon_start + ( (epsilon_end - epsilon_start) / epsilon_decay ) * episode
             else:
                 epsilon = epsilon_end
         robot.policy.set_epsilon(epsilon)

@@ -147,6 +147,11 @@ class CADRL(Policy):
             self.build_action_space(state.self_state.v_pref)
 
         probability = np.random.random()
+        # pure exploitation after 5k episodes.
+        # with
+        # epsilon_start = 0.5
+        # epsilon_end = 0.1
+        # epsilon_decay = 4000
         if self.phase == 'train' and probability < self.epsilon:
             max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
