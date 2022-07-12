@@ -60,6 +60,12 @@ class CrowdSim(gym.Env):
         #self.dummy_human = None
         #self.dummy_robot = None
 
+        # curriculum learning
+        self.largest_obst_ratio = 0.0
+        self.cl_radius_start = None
+        self.cl_radius_max = None
+        self.radius_increment = None
+
 
     def configure(self, config):
         self.config = config
@@ -84,6 +90,7 @@ class CrowdSim(gym.Env):
             ## Parameter for static obstacles
             self.min_obst_offset = config.getfloat('sim', 'min_obst_offset')
             self.static_obstacle_num = config.getint('sim', 'static_obstacle_num')
+            # the following two will be overwritten in curriculum learning mode
             self.obstacle_max_radius = config.getfloat('sim', 'obstacle_max_radius')
             self.obstacle_min_radius = config.getfloat('sim', 'obstacle_min_radius')
 
@@ -120,6 +127,21 @@ class CrowdSim(gym.Env):
         # self.dummy_robot.kinematics = 'holonomic'
         # self.dummy_robot.policy = ORCA(config)
 
+    def configure_cl(self,train_config):
+        # curriculum learning
+        mode = train_config.get('curriculum', 'mode') # 'increasing_obst_num','single obstacle in the middle
+        self.cl_radius_start = train_config.getfloat('curriculum','radius_start')
+        self.obstacle_max_radius = self.obstacle_min_radius = self.cl_radius_start
+        self.cl_radius_max = train_config.getfloat('curriculum','radius_max')
+        self.radius_increment = train_config.getfloat('curriculum','radius_increment')
+        self.largest_obst_ratio = train_config.getfloat('curriculum','largest_obst_ratio')
+        level_up_mode = train_config.get('curriculum', 'level_up_mode')
+        success_rate_milestone = train_config.getfloat('curriculum','success_rate_milestone')
+        self.p_handcrafted = train_config.getfloat('curriculum','p_handcrafted')
+        p_hard_deck = train_config.getfloat('curriculum','p_hard_deck')
+        hard_deck_cap = train_config.getint('curriculum','hard_deck_cap')
+
+
     def set_robot(self, robot):
         self.robot = robot
         if self.robot.sensor == 'RGB':
@@ -127,19 +149,49 @@ class CrowdSim(gym.Env):
             logging.info('humans FOV %f', self.human_fov)
             logging.info('uncertainty growth mode: %s', self.uncertainty_growth)
 
-    def generate_random_obstacles(self, obs_num):
+    def set_max_obst_r(self,r_max):
+        self.obstacle_max_radius = r_max
+        if r_max > self.cl_radius_max:
+            self.obstacle_max_radius = self.cl_radius_max
+            return False
+        else:
+            self.obstacle_max_radius = r_max
+            return True
+
+    def increase_cl_level(self):
+        print('Level increase prompted: Setting max_obstacle_radius from {} to {}'.format(
+            self.obstacle_max_radius,
+            self.obstacle_max_radius+self.radius_increment
+        ))
+        success = self.set_max_obst_r(self.obstacle_max_radius+self.radius_increment)
+        if success:
+            print("Success: Obstacle radius increased successfully.")
+        else:
+            print("Fail: Max obstacle radius is reached. Setting max_radius to max radius given in curriculum learning config.")
+
+    def generate_random_obstacles(self, obs_num,phase):
         width = self.square_width
         height = self.square_width
-        max_radius = self.obstacle_max_radius - self.obstacle_min_radius
-        min_radius = self.obstacle_min_radius
+        if phase == 'train':
+            radius_offset = self.obstacle_max_radius - self.obstacle_min_radius
+            max_radius = self.obstacle_max_radius
+            min_radius = self.obstacle_min_radius
+        # Validation or test is on hardest level
+        else:
+            radius_offset = self.cl_radius_max - self.cl_radius_start
+            max_radius = self.cl_radius_max
+            min_radius = self.cl_radius_start
         self.obs = []
 
-        for i in range(obs_num):
+        large_obst_num = np.ceil(obs_num * self.largest_obst_ratio).astype(np.int64).item()
+        other_obst_num = obs_num - large_obst_num
+
+        for i in range(large_obst_num):
             human = Human(self.config, 'humans') ## we model the static obstacles as static humans
             while True:
                 px = (np.random.random() - 0.5) * width
                 py = (np.random.random() - 0.5) * height
-                r = (np.random.random()) * max_radius + min_radius
+                r = max_radius
                 collide = False
                 for agent in [self.robot] + self.obs:
                     if norm((px - agent.px, py - agent.py)) < r + agent.radius + self.discomfort_dist + self.min_obst_offset or norm((px - self.robot_gx, py - self.robot_gy)) < r + self.discomfort_dist:
@@ -147,6 +199,52 @@ class CrowdSim(gym.Env):
                         break
                 if not collide:
                     break
+            human.set(px, py, px, py, 0, 0, 0, radius=r)
+            # print("Generate obstacle!")
+            self.obs.append(human)
+
+        for i in range(other_obst_num):
+            human = Human(self.config, 'humans') ## we model the static obstacles as static humans
+            while True:
+                px = (np.random.random() - 0.5) * width
+                py = (np.random.random() - 0.5) * height
+                r = (np.random.random()) * radius_offset + min_radius
+                collide = False
+                for agent in [self.robot] + self.obs:
+                    if norm((px - agent.px, py - agent.py)) < r + agent.radius + self.discomfort_dist + self.min_obst_offset or norm((px - self.robot_gx, py - self.robot_gy)) < r + self.discomfort_dist:
+                        collide = True
+                        break
+                if not collide:
+                    break
+            human.set(px, py, px, py, 0, 0, 0, radius=r)
+            # print("Generate obstacle!")
+            self.obs.append(human)
+    # This function was written to generate handcrafted hard cases for robot to learn faster,
+    # but for this reason we set humans very far from the robot. This
+    # breaks the attention mechanism and network generates nan values. We are not using it anymore
+    def generate_obstacle_in_center(self, obs_num,phase):
+        width = self.square_width
+        height = self.square_width
+        self.obs = []
+        # generate single obstacle in center
+        human = Human(self.config, 'humans') ## we model the static obstacles as static humans
+        px = 0.0
+        py = 0.0
+        if phase == 'train':
+            r = self.obstacle_max_radius
+        # Validation or test is on hardest level
+        else:
+            r = self.cl_radius_max
+        human.set(px, py, px, py, 0, 0, 0, radius=r)
+        # print("Generate obstacle!")
+        self.obs.append(human)
+        # put rest of the obstacles outside the simulation
+        for i in range(obs_num-1):
+            human = Human(self.config, 'humans') ## we model the static obstacles as static humans
+            # hack: we can't input varius number of input, so we put other obstacles very far
+            px = 99 * width
+            py = 99 * height
+            r = 0.3
             human.set(px, py, px, py, 0, 0, 0, radius=r)
             # print("Generate obstacle!")
             self.obs.append(human)
@@ -403,7 +501,7 @@ class CrowdSim(gym.Env):
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 ## Geneate static obstacles first
-                self.generate_random_obstacles(self.static_obstacle_num)
+                self.generate_random_obstacles(self.static_obstacle_num, phase)
                 if phase in ['train', 'val']:
                     human_num = self.human_num if self.robot.policy.multiagent_training else 1
                     self.generate_random_human_position(human_num=human_num, rule=self.train_val_sim)
@@ -492,7 +590,6 @@ class CrowdSim(gym.Env):
             return True
         else:
             return False
-
 
     # for robot:
     # return only visible humans to robot and number of visible humans and visible humans' ids (0 to 4)
@@ -878,8 +975,8 @@ class CrowdSim(gym.Env):
             # add time annotation
             time = plt.text(-1, 8.5, 'Time: {}'.format(0), fontsize=16)
             ax.add_artist(time)
-            
-                
+
+
             # compute attention scores
             if self.attention_weights is not None:
                 attention_scores = [
@@ -968,7 +1065,7 @@ class CrowdSim(gym.Env):
             def update(frame_num):
                 nonlocal global_step
                 nonlocal arrows
-                
+
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
                 if self.robot.sensor == 'RGB':
@@ -996,12 +1093,12 @@ class CrowdSim(gym.Env):
                     if self.attention_weights is not None:
                         human.set_color(str(self.attention_weights[frame_num][i]))
                         attention_scores[i].set_text('human {}: {:.3f}'.format(i, self.attention_weights[frame_num][i]))
-                
+
                 for i, ob in enumerate(obstacles):
                     if self.attention_weights is not None:
                         ob.set_color(str(self.attention_weights[frame_num][i + len(self.humans)]))
                         attention_obstacle_scores[i].set_text('obstacle {}: {:.3f}'.format(i, self.attention_weights[frame_num][i + len(self.humans)]))
-                
+
                 if self.robot.policy.name == 'GAT4SN':
                     nonlocal edges
                     nonlocal edge_color
@@ -1009,12 +1106,12 @@ class CrowdSim(gym.Env):
                     nonlocal max_edge_width
                     for edge in edges:
                         edge.remove()
-                    
+
                     alpha = (self.attention_weights[frame_num] - np.min(self.attention_weights[frame_num])) / (np.max(self.attention_weights[frame_num]) - np.min(self.attention_weights[frame_num]))
                     edges_to_humans = [plt.Line2D([robot_positions[frame_num][0], human_positions[frame_num][i][0]], [robot_positions[frame_num][1], human_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i] * max_edge_width, color = edge_color, alpha = alpha[i]) for i in range (len(self.humans))]
                     edges_to_obstacles = [plt.Line2D([robot_positions[frame_num][0], obstacle_positions[frame_num][i][0]], [robot_positions[frame_num][1], obstacle_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i + len(humans)] * max_edge_width, color = edge_color, alpha = alpha[i + len(humans)]) for i in range (len(self.obs))]
                     edges = edges_to_humans + edges_to_obstacles
-                    
+
                     for i, edge in enumerate(edges):
                         ax.add_artist(edge)
 
@@ -1036,7 +1133,7 @@ class CrowdSim(gym.Env):
                 z = np.array(self.action_values[global_step % len(self.states)][1:])
                 z = (z - np.min(z)) / (np.max(z) - np.min(z))
                 z = np.reshape(z, (len(rotations) - 1, len(speeds) - 1))
-                
+
                 polar = plt.subplot(projection="polar")
                 polar.tick_params(labelsize=16)
                 mesh = plt.pcolormesh(th, r, z, vmin=0, vmax=1)

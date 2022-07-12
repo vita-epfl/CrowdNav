@@ -34,6 +34,7 @@ class Parser:
             self.parser.add_argument('--plot_reward', default=True, action='store_true')
             self.parser.add_argument('--plot_train', default=True, action='store_true')
             self.parser.add_argument('--plot_val', default=False, action='store_true')
+            self.parser.add_argument('--plot_epsilon', default=False, action='store_true')
             self.parser.add_argument('--window_size', type=int, default=200)
 
     def parse(self):

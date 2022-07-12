@@ -9,7 +9,7 @@ import git
 from crowd_sim.envs.utils.robot import Robot
 from crowd_nav.utils.trainer import Trainer
 from crowd_nav.utils.memory import ReplayMemory
-from crowd_nav.utils.explorer import Explorer
+from crowd_nav.utils.cl_explorer import Explorer
 from crowd_nav.policy.policy_factory import policy_factory
 from crowd_nav.args import Parser
 
@@ -85,13 +85,28 @@ def main():
     epsilon_end = train_config.getfloat('train', 'epsilon_end')
     epsilon_decay = train_config.getfloat('train', 'epsilon_decay')
     checkpoint_interval = train_config.getint('train', 'checkpoint_interval')
+    # curriculum learning
+    env.configure_cl(train_config)
+
+    # mode = train_config.get('curriculum', 'increase_obst_radius') # 'increasing_obst_num','single obstacle in the middle
+    # radius_start = train_config.getfloat('curriculum','radius_start')
+    # radius_max = train_config.getfloat('curriculum','radius_max')
+    # radius_increment = train_config.getfloat('curriculum','radius_increment')
+    # largest_obst_ratio = train_config.getfloat('curriculum','largest_obst_ratio')
+    # level_up_mode = train_config.get('curriculum', 'level_up_mode')
+    success_rate_milestone = train_config.getfloat('curriculum','success_rate_milestone')
+    success_rate_batch = train_config.getint('curriculum','success_rate_batch')
+    # p_handcrafted = train_config.getfloat('curriculum','p_handcrafted')
+    # p_hard_deck = train_config.getfloat('curriculum','p_hard_deck')
+    # hard_deck_cap = train_config.getint('curriculum','hard_deck_cap')
 
     # configure trainer and explorer
     memory = ReplayMemory(capacity)
     model = policy.get_model()
     batch_size = train_config.getint('trainer', 'batch_size')
     trainer = Trainer(model, memory, device, batch_size)
-    explorer = Explorer(env, robot, device, memory, policy.gamma, target_policy=policy)
+    explorer = Explorer(env, robot, device, memory, policy.gamma, target_policy=policy,
+                        success_rate_milestone=success_rate_milestone)
 
     # imitation learning
     if args.resume:
@@ -134,16 +149,30 @@ def main():
     trainer.set_learning_rate(rl_learning_rate)
     # fill the memory pool with some RL experience
     if args.resume:
-        robot.policy.set_epsilon(epsilon_end)
+        robot.policy.set_epsilon(epsilon_end) # todo: make curriculum learning resumable
+        # problem with this approach: epsilon_end is read from config. ideally, when the training is broken, we should
+        # save epsilon_end, current episode number and others in a separate file and read everything from there.
+        # until its implemented, we assume there is no "resume" option for curriculum learning
+        # todo: understand the motivation behind running 100 episodes like this
         explorer.run_k_episodes(100, 'train', update_memory=True, episode=0)
         logging.info('Experience set size: %d/%d', len(memory), memory.capacity)
+    # else: # this else statement is part of the above todo.
+
+
     episode = 0
+    last_level_up = 0
+    current_level = 0
+    successes = 0
+    fails = 0
+    # max_level = (radius_max - radius_start) / radius_increment
+    level_starts = {current_level:episode}
+    level_up = False
     while episode < train_episodes:
         if args.resume:
             epsilon = epsilon_end
         else:
             if episode < epsilon_decay:
-                epsilon = epsilon_start + ( (epsilon_end - epsilon_start) / epsilon_decay ) * episode
+                epsilon = epsilon_start + ( (epsilon_end - epsilon_start) / epsilon_decay ) * (episode - last_level_up)
             else:
                 epsilon = epsilon_end
         robot.policy.set_epsilon(epsilon)
@@ -151,12 +180,31 @@ def main():
         # evaluate the model
         if episode % evaluation_interval == 0:
             if not args.debug: # validation takes too long
-                explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode)
+                explorer.run_k_episodes(env.case_size['val'], 'val', episode=episode,epsilon=epsilon)
             else:
                 pass
 
         # sample k episodes into memory and optimize over the generated memory
-        explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode)
+        # hack: sample_episodes = 1 by default. so we calculate the success rate for level increase
+        # outside the run_k_episodes. reason: increasing sample_episodes lead to a nasty bug.
+
+        success = explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode, epsilon=epsilon)
+        # todo: the following is wrong
+        # if episode < success_rate_batch:
+        #     if success:
+        #         successes += 1
+        #     else:
+        #         fails += 1
+        # else:
+        #     if success:
+        #         fails -= 1
+        #         successes += 1
+        #     else:
+        #         fails += 1
+        #         successes -= 1
+        #     if successes / success_rate_batch > success_rate_milestone:
+        #         level_up = True
+
         trainer.optimize_batch(train_batches)
         episode += 1
 
@@ -168,8 +216,19 @@ def main():
             if episode != 0 and episode % checkpoint_interval == 0:
                 torch.save(model.state_dict(), rl_weight_file)
 
+        if level_up:
+            last_level_up = episode
+            current_level += 1
+            level_starts[current_level] = last_level_up
+            logging.info('Level %d starts at episode: %d Epsilon value: %f', current_level, last_level_up,epsilon)
+            explorer.increase_cl_level()
+            level_up = False
+
     # final test
-    explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode, print_failure = True)
+    explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
+    # log level ups:
+    for key, value in level_starts:
+        logging.info('Level %d started at episode: %d',key,value)
 
 
 if __name__ == '__main__':
