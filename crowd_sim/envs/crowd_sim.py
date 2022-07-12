@@ -443,6 +443,8 @@ class CrowdSim(gym.Env):
             for id in unseen_human_ids:
                 self.humans[id].increment_uncertainty(self.uncertainty_growth)
             ob = [human.get_observable_state() for human in self.humans]
+            temp = [obstacle.get_observable_state() for obstacle in self.obs]
+            ob += temp
 
         return ob
 
@@ -689,11 +691,16 @@ class CrowdSim(gym.Env):
                 for id in unseen_human_ids:
                     self.humans[id].increment_uncertainty('logarithmic')
                 ob = [human.get_observable_state() for human in self.humans]
+                temp = [obstacle.get_observable_state() for obstacle in self.obs]
+                ob += temp
 
 
         else:
             if self.robot.sensor == 'coordinates':
                 ob = [human.get_next_observable_state(action) for human, action in zip(self.humans, human_actions)]
+                # todo: check it with this version
+                temp = [obstacle.get_observable_state() for obstacle in self.obs]
+                ob += temp
             elif self.robot.sensor == 'RGB':
                 humans_in_view, num_humans_in_view, seen_human_ids, unseen_human_ids  = self.get_num_human_in_fov()
                 for human in humans_in_view:
@@ -701,6 +708,8 @@ class CrowdSim(gym.Env):
                 for id in unseen_human_ids:
                     self.humans[id].increment_uncertainty('logarithmic')
                 ob = [human.get_observable_state() for human in self.humans]
+                temp = [obstacle.get_observable_state() for obstacle in self.obs]
+                ob += temp
 
         return ob, reward, done, info
 
