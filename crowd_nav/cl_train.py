@@ -95,7 +95,7 @@ def main():
     # largest_obst_ratio = train_config.getfloat('curriculum','largest_obst_ratio')
     # level_up_mode = train_config.get('curriculum', 'level_up_mode')
     success_rate_milestone = train_config.getfloat('curriculum','success_rate_milestone')
-    success_rate_batch = train_config.getint('curriculum','success_rate_batch')
+    success_rate_window_size = train_config.getint('curriculum','success_rate_window_size')
     # p_handcrafted = train_config.getfloat('curriculum','p_handcrafted')
     # p_hard_deck = train_config.getfloat('curriculum','p_hard_deck')
     # hard_deck_cap = train_config.getint('curriculum','hard_deck_cap')
@@ -106,7 +106,8 @@ def main():
     batch_size = train_config.getint('trainer', 'batch_size')
     trainer = Trainer(model, memory, device, batch_size)
     explorer = Explorer(env, robot, device, memory, policy.gamma, target_policy=policy,
-                        success_rate_milestone=success_rate_milestone)
+                        success_rate_milestone=success_rate_milestone,
+                        success_rate_window_size=success_rate_window_size)
 
     # imitation learning
     if args.resume:
@@ -166,7 +167,6 @@ def main():
     fails = 0
     # max_level = (radius_max - radius_start) / radius_increment
     level_starts = {current_level:episode}
-    level_up = False
     while episode < train_episodes:
         if args.resume:
             epsilon = epsilon_end
@@ -188,22 +188,7 @@ def main():
         # hack: sample_episodes = 1 by default. so we calculate the success rate for level increase
         # outside the run_k_episodes. reason: increasing sample_episodes lead to a nasty bug.
 
-        success = explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode, epsilon=epsilon)
-        # todo: the following is wrong
-        # if episode < success_rate_batch:
-        #     if success:
-        #         successes += 1
-        #     else:
-        #         fails += 1
-        # else:
-        #     if success:
-        #         fails -= 1
-        #         successes += 1
-        #     else:
-        #         fails += 1
-        #         successes -= 1
-        #     if successes / success_rate_batch > success_rate_milestone:
-        #         level_up = True
+        level_up = explorer.run_k_episodes(sample_episodes, 'train', update_memory=True, episode=episode, epsilon=epsilon)
 
         trainer.optimize_batch(train_batches)
         episode += 1
@@ -222,7 +207,6 @@ def main():
             level_starts[current_level] = last_level_up
             logging.info('Level %d starts at episode: %d Epsilon value: %f', current_level, last_level_up,epsilon)
             explorer.increase_cl_level()
-            level_up = False
 
     # final test
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)

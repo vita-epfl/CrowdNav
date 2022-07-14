@@ -1,13 +1,47 @@
 import logging
 import copy
 import torch
+
+from numpy import sum
+
 from crowd_sim.envs.utils.info import *
+from crowd_nav.utils.plot import running_mean
+
+class SRHistory():
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = list()
+        self.position = 0
+
+    def push(self, item):
+        # replace old experience with new experience
+        if len(self.memory) < self.position + 1:
+            self.memory.append(item)
+        else:
+            self.memory[self.position] = item
+        self.position = (self.position + 1) % self.capacity
+
+    def get_mean(self):
+        return sum(self.memory) / float(self.capacity)
+
+    def is_full(self):
+        return len(self.memory) == self.capacity
+
+    def __getitem__(self, item):
+        return self.memory[item]
+
+    def __len__(self):
+        return len(self.memory)
+
+    def clear(self):
+        self.memory = list()
 
 
 class Explorer(object):
     def __init__(self, env, robot, device,
                  memory=None, gamma=None, target_policy=None,
                  success_rate_milestone=0.8,
+                 success_rate_window_size=200,
                  current_level=0,
                  ):
         self.env = env
@@ -20,6 +54,7 @@ class Explorer(object):
 
         # curriculum learning
         self.success_rate_milestone = success_rate_milestone
+        self.sr_history = SRHistory(success_rate_window_size)
 
 
     def update_target_model(self, target_model):
@@ -88,6 +123,9 @@ class Explorer(object):
         success_rate = success / k
         collision_rate = collision / k
         assert success + collision + timeout == k
+
+        self.sr_history.push(success_rate)
+
         avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
@@ -107,10 +145,11 @@ class Explorer(object):
         if print_failure:
             logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
             logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
-        # todo: fix this, this is wrong, since k=1.
-        #  save the cumulative success rate as member and return true depending on that?
-        if success_rate > self.success_rate_milestone:
-            # since k=1, could say if success = 1; i prefer to keep this for compatibility with some potential upgrades
+
+        if self.sr_history.get_mean() > self.success_rate_milestone:
+            self.sr_history.clear()
+            print('level up prompted in explorer')
+            logging.info('level up prompted in explorer')
             return True
         else:
             return False

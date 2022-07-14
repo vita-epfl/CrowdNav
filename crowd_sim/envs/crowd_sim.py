@@ -159,7 +159,7 @@ class CrowdSim(gym.Env):
             return True
 
     def increase_cl_level(self):
-        print('Level increase prompted: Setting max_obstacle_radius from {} to {}'.format(
+        print('Level increase prompted in env: Setting max_obstacle_radius from {} to {}'.format(
             self.obstacle_max_radius,
             self.obstacle_max_radius+self.radius_increment
         ))

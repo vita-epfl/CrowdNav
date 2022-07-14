@@ -55,7 +55,10 @@ class MultiHumanRL(CADRL):
                     max_value = value
                     max_action = action
             if max_action is None:
-                raise ValueError('Value network is not well trained. ')
+                # original implemetation: todo: fix!!
+                # raise ValueError('Value network is not well trained. ')
+                print("max action is none!! falling back to random action!!")
+                max_action = self.action_space[np.random.choice(len(self.action_space))]
 
         if self.phase == 'train':
             self.last_state = self.transform(state)
