@@ -171,9 +171,8 @@ def main():
         if args.resume:
             epsilon = epsilon_end
         else:
-            if episode < epsilon_decay:
-                epsilon = epsilon_start + ( (epsilon_end - epsilon_start) / epsilon_decay ) * (episode - last_level_up)
-            else:
+            epsilon = epsilon_start + ( (epsilon_end - epsilon_start) / epsilon_decay ) * (episode - last_level_up)
+            if epsilon < epsilon_end:
                 epsilon = epsilon_end
         robot.policy.set_epsilon(epsilon)
 

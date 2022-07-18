@@ -8,11 +8,11 @@ class Parser:
         if mode == 'train' or mode == 'test':
             self.parser.add_argument('--env_config', type=str, default='configs/env.config')
             self.parser.add_argument('--policy_config', type=str, default='configs/policy.config')
+            self.parser.add_argument('--train_config', type=str, default='configs/train.config') # to visualize curriculum learning
             self.parser.add_argument('--policy', type=str, default='cadrl')
             self.parser.add_argument('--gpu', default=False, action='store_true')
             self.parser.add_argument('--debug', default=False, action='store_true')
             if mode == 'train':
-                self.parser.add_argument('--train_config', type=str, default='configs/train.config')
                 self.parser.add_argument('--output_dir', type=str, default='data/output')
                 self.parser.add_argument('--weights', type=str)
                 self.parser.add_argument('--resume', default=False, action='store_true')
