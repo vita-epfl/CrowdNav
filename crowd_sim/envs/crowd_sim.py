@@ -389,9 +389,21 @@ class CrowdSim(gym.Env):
             ## The random seed should also be added here, otherwise the
             ## generated environment would be totally different
             np.random.seed(counter_offset[phase] + self.case_counter[phase])
-            self.robot_gx, self.robot_gy = self.generate_agent_goal()
+            # self.robot_gx, self.robot_gy = self.generate_agent_goal(goal_range = self.square_width / 2)
             # self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            self.robot.set(-self.robot_gx, -self.robot_gy, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
+            # self.robot_gx, self.robot_gy = self.generate_agent_goal(goal_range = self.square_width / 2)
+            # self.robot_px, self.robot_py = self.generate_agent_goal(perturb = True, perturb_range = (self.boundary - self.square_width) / 2, goal_range = self.square_width / 2)
+            # self.robot.set(0, -self.square_width / 2, 0, self.square_width / 2, 0, 0, np.pi / 2)
+            # self.robot_gx, self.robot_gy = self.robot.get_goal_position()
+            while True:
+                self.robot_gx, self.robot_gy = self.generate_agent_goal(goal_range = self.square_width / 2)
+                self.robot_px, self.robot_py = self.generate_agent_goal(perturb = True, perturb_range = (self.boundary - self.square_width) / 2, goal_range = self.square_width / 2)
+
+                if np.abs(self.robot_gx - self.robot_px) > self.boundary / 2 or np.abs(self.robot_gy - self.robot_py) > self.boundary / 2:
+                    break
+
+            self.robot.set(self.robot_px, self.robot_py, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
+            # self.robot.set(self.robot_px, self.robot_py, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 ## Geneate static obstacles first
@@ -537,7 +549,7 @@ class CrowdSim(gym.Env):
         #     still = True
 
         if human.reached_destination():
-            gx, gy = self.generate_agent_goal()
+            gx, gy = self.generate_agent_goal(goal_range = self.square_width / 2)
             human.set(px, py, -gx, -gy, 0, 0, 0)
         # elif still:
         #     human.set(px, py, -human.gx, -human.gy, 0, 0, 0)
@@ -623,7 +635,7 @@ class CrowdSim(gym.Env):
         ## check if the robot run out of the boundary
         robot_x, robot_y = self.robot.get_position()
         out = False
-        if np.abs(robot_x) > self.boundary / 2 or np.abs(robot_y) > self.boundary / 2:
+        if np.abs(end_position[0]) + self.robot.radius > self.boundary / 2 or np.abs(end_position[1]) + self.robot.radius > self.boundary / 2:
             out = True
 
         if self.global_time >= self.time_limit - 1:
@@ -633,7 +645,7 @@ class CrowdSim(gym.Env):
         elif out:
             reward = self.out_boundary_penalty
             done = True
-            info = Boundary()
+            info = Collision()
         elif collision:
             reward = self.collision_penalty
             done = True
@@ -649,6 +661,11 @@ class CrowdSim(gym.Env):
             done = False
             info = Danger(dmin)
         else:
+            # delta_d = (-(norm(end_position - np.array(self.robot.get_goal_position()))) + (norm(np.array([robot_x, robot_y]) - np.array(self.robot.get_goal_position()))))
+            # if delta_d > 0:
+            #     reward = delta_d / self.robot.v_pref * self.time_step
+            # else:
+            #     reward = 0
             reward = 0
             done = False
             info = Nothing()
@@ -790,7 +807,7 @@ class CrowdSim(gym.Env):
             goal = mlines.Line2D([self.robot_gx], [self.robot_gy], color=goal_color, marker='*', linestyle='None', markersize=15, label='Goal')
             robot = plt.Circle(robot_positions[0], self.robot.radius, fill=True, color=robot_color)
             boundary = plt.Rectangle((-self.boundary / 2, -self.boundary / 2), self.boundary, self.boundary,
-             edgecolor = 'Blue',
+             edgecolor = 'black',
              fill=False,
              lw=5)
             ax.add_artist(robot)
@@ -844,12 +861,14 @@ class CrowdSim(gym.Env):
                     ax.add_artist(num)
 
             # add obs and their numbers
-            obs_positions = [[state[2][j].position for j in range(len(self.obs))] for state in self.states]
-            obs = [plt.Circle(obs_positions[0][i], self.obs[i].radius, fill=True, color='black')
+            obstacle_positions = [[state[2][j].position for j in range(len(self.obs))] for state in self.states]
+            obstacles = [plt.Circle(obstacle_positions[0][i], self.obs[i].radius, fill=True, color='black')
                       for i in range(len(self.obs))]
-
-            for i, ob in enumerate(obs):
+            obstacle_numbers = [plt.text(obstacles[i].center[0] - x_offset, obstacles[i].center[1] - y_offset, str(i),
+                                      color='white', fontsize=12) for i in range(len(self.obs))]
+            for i, ob in enumerate(obstacles):
                 ax.add_artist(ob)
+                ax.add_artist(obstacle_numbers[i])
             # add time annotation
             time = plt.text(-1, 8.5, 'Time: {}'.format(0), fontsize=16)
             ax.add_artist(time)
@@ -857,8 +876,11 @@ class CrowdSim(gym.Env):
             # compute attention scores
             if self.attention_weights is not None:
                 attention_scores = [
-                    plt.text(10, 5 - 0.6 * i, 'Human {}: {:.2f}'.format(i + 1, self.attention_weights[0][i]),
-                             fontsize=16) for i in range(len(self.humans))]
+                    plt.text(self.boundary / 2 + 0.5, 5 - 0.6 * i, 'Human {}: {:.3f}'.format(i + 1, self.attention_weights[0][i]),
+                             fontsize=12) for i in range(len(self.humans))]
+                attention_obstacle_scores = [
+                    plt.text(self.boundary / 2 + 0.5, 5 - 0.6 * (i + len(self.humans)), 'Obstacle {}: {:.3f}'.format(i + 1, self.attention_weights[0][i + len(self.humans)]),
+                             fontsize=12) for i in range(len(self.obs))]
 
             # compute orientation in each step and use arrow to show the direction
             radius = self.robot.radius
@@ -955,8 +977,13 @@ class CrowdSim(gym.Env):
                         ax.add_artist(arrow)
                     if self.attention_weights is not None:
                         human.set_color(str(self.attention_weights[frame_num][i]))
-                        attention_scores[i].set_text('human {}: {:.2f}'.format(i, self.attention_weights[frame_num][i]))
-
+                        attention_scores[i].set_text('human {}: {:.3f}'.format(i, self.attention_weights[frame_num][i]))
+                
+                for i, ob in enumerate(obstacles):
+                    if self.attention_weights is not None:
+                        ob.set_color(str(self.attention_weights[frame_num][i + len(self.humans)]))
+                        attention_obstacle_scores[i].set_text('obstacle {}: {:.3f}'.format(i, self.attention_weights[frame_num][i + len(self.humans)]))
+                
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             def plot_value_heatmap():
@@ -967,11 +994,17 @@ class CrowdSim(gym.Env):
                 # when any key is pressed draw the action value plot
                 fig, axis = plt.subplots()
                 speeds = [0] + self.robot.policy.speeds
-                rotations = self.robot.policy.rotations + [np.pi * 2]
+                # rotations = self.robot.policy.rotations + [np.pi * 2]
+                rotations = np.append(self.robot.policy.rotations, np.pi * 2)
+
+                angle_offset = (rotations[1] - rotations[0]) / 2
+                rotations = rotations - angle_offset
+                # print(self.attention_weights[global_step])
                 r, th = np.meshgrid(speeds, rotations)
                 z = np.array(self.action_values[global_step % len(self.states)][1:])
                 z = (z - np.min(z)) / (np.max(z) - np.min(z))
-                z = np.reshape(z, (16, 5))
+                z = np.reshape(z, (len(rotations) - 1, len(speeds) - 1))
+                
                 polar = plt.subplot(projection="polar")
                 polar.tick_params(labelsize=16)
                 mesh = plt.pcolormesh(th, r, z, vmin=0, vmax=1)
