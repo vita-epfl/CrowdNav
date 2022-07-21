@@ -81,9 +81,12 @@ class SARL(MultiHumanRL):
         self.model = ValueNetwork(self.input_dim(), self.self_state_dim, mlp1_dims, mlp2_dims, mlp3_dims,
                                   attention_dims, with_global_state, self.cell_size, self.cell_num)
         self.multiagent_training = config.getboolean('sarl', 'multiagent_training')
+        self.num_total_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+
         if self.with_om:
             self.name = 'OM-SARL'
         logging.info('Policy: {} {} global state'.format(self.name, 'w/' if with_global_state else 'w/o'))
+        logging.info('Number of parameters: {}'.format(self.num_total_params))
 
     def get_attention_weights(self):
         return self.model.attention_weights

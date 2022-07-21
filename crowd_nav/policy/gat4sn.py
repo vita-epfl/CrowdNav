@@ -20,7 +20,7 @@ class GraphAttentionLayerForSingleNode(nn.Module):
         nn.init.xavier_uniform_(self.W.data, gain = 1.414)
         self.a = nn.Parameter(torch.empty(size = (2 * out_dim, 1)))
         nn.init.xavier_uniform_(self.a.data, gain = 1.414)
-
+        self.attention_weights = None
         self.leakyrelu = nn.LeakyReLU(self.alpha)
 
     def forward(self, h):
@@ -48,6 +48,7 @@ class GraphAttentionLayerForSingleNode(nn.Module):
         attention = attention.view(B, N - 1)
         assert attention.shape == (B, N - 1)
         attention = F.softmax(attention, dim = 1)
+        self.attention_weights = attention.squeeze().data.cpu().numpy()
         # print("attention's shape = {}".format(attention.shape))
         # print("other_agent_states's shape = {}".format(other_agent_states.shape))
         h_prime = attention.unsqueeze(-1) * other_agent_states
@@ -138,8 +139,10 @@ class GAT4SN(MultiHumanRL):
         alpha = config.getfloat('gat4sn', 'alpha')
         self.model = ValueNetwork(self.input_dim(), self.self_state_dim, num_hidden_feature, num_out_feat, num_heads, mlp1_dims, mlp2_dims, mlp3_dims, alpha)
         self.multiagent_training = config.getboolean('gat4sn', 'multiagent_training')
+        self.num_total_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
 
-        logging.info('Policy: {} {} global state'.format(self.name, 'w/'))
+        logging.info('Policy: {} with {} attention heads'.format(self.name, num_heads))
+        logging.info('Number of parameters: {}'.format(self.num_total_params))
 
-    # def get_attention_weights(self):
-    #     return self.model.attention_weights
+    def get_attention_weights(self):
+        return self.model.gat.out_att.attention_weights

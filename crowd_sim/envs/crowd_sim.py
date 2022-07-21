@@ -1,4 +1,6 @@
+from curses import nonl
 import logging
+from crowd_nav.policy.gat4sn import GAT4SN
 import gym
 import matplotlib.lines as mlines
 import numpy as np
@@ -872,7 +874,8 @@ class CrowdSim(gym.Env):
             # add time annotation
             time = plt.text(-1, 8.5, 'Time: {}'.format(0), fontsize=16)
             ax.add_artist(time)
-
+            
+                
             # compute attention scores
             if self.attention_weights is not None:
                 attention_scores = [
@@ -881,6 +884,16 @@ class CrowdSim(gym.Env):
                 attention_obstacle_scores = [
                     plt.text(self.boundary / 2 + 0.5, 5 - 0.6 * (i + len(self.humans)), 'Obstacle {}: {:.3f}'.format(i + 1, self.attention_weights[0][i + len(self.humans)]),
                              fontsize=12) for i in range(len(self.obs))]
+
+            if self.robot.policy.name == 'GAT4SN':
+                max_edge_width = 30
+                alpha = 0.5
+                edge_color = 'red'
+                edges_to_humans = [plt.Line2D([robot_positions[0][0], human_positions[0][i][0]], [robot_positions[0][1], human_positions[0][i][1]], linestyle = '--', linewidth = self.attention_weights[0][i] * max_edge_width, color = edge_color, alpha = alpha) for i in range (len(self.humans))]
+                edges_to_obstacles = [plt.Line2D([robot_positions[0][0], obstacle_positions[0][i][0]], [robot_positions[0][1], obstacle_positions[0][i][1]], linestyle = '--', linewidth = self.attention_weights[0][i + len(humans)] * max_edge_width, color = edge_color, alpha = alpha) for i in range (len(self.obs))]
+                edges = edges_to_humans + edges_to_obstacles
+                for i, edge in enumerate(edges):
+                    ax.add_artist(edge)
 
             # compute orientation in each step and use arrow to show the direction
             radius = self.robot.radius
@@ -951,6 +964,7 @@ class CrowdSim(gym.Env):
             def update(frame_num):
                 nonlocal global_step
                 nonlocal arrows
+                
                 global_step = frame_num
                 robot.center = robot_positions[frame_num]
                 if self.robot.sensor == 'RGB':
@@ -984,6 +998,21 @@ class CrowdSim(gym.Env):
                         ob.set_color(str(self.attention_weights[frame_num][i + len(self.humans)]))
                         attention_obstacle_scores[i].set_text('obstacle {}: {:.3f}'.format(i, self.attention_weights[frame_num][i + len(self.humans)]))
                 
+                if self.robot.policy.name == 'GAT4SN':
+                    nonlocal edges
+                    nonlocal edge_color
+                    nonlocal alpha
+                    nonlocal max_edge_width
+                    for edge in edges:
+                        edge.remove()
+                    
+                    edges_to_humans = [plt.Line2D([robot_positions[frame_num][0], human_positions[frame_num][i][0]], [robot_positions[frame_num][1], human_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i] * max_edge_width, color = edge_color, alpha = alpha) for i in range (len(self.humans))]
+                    edges_to_obstacles = [plt.Line2D([robot_positions[frame_num][0], obstacle_positions[frame_num][i][0]], [robot_positions[frame_num][1], obstacle_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i + len(humans)] * max_edge_width, color = edge_color, alpha = alpha) for i in range (len(self.obs))]
+                    edges = edges_to_humans + edges_to_obstacles
+                    
+                    for i, edge in enumerate(edges):
+                        ax.add_artist(edge)
+
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
             def plot_value_heatmap():
