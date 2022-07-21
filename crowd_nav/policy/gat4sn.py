@@ -133,7 +133,7 @@ class GAT4SN(MultiHumanRL):
         mlp1_dims = [int(x) for x in config.get('gat4sn', 'mlp1_dims').split(', ')]
         mlp2_dims = [int(x) for x in config.get('gat4sn', 'mlp2_dims').split(', ')]
         mlp3_dims = [int(x) for x in config.get('gat4sn', 'mlp3_dims').split(', ')]
-        num_hidden_feature = mlp1_dims[-1]
+        num_hidden_feature = config.getint('gat4sn', 'num_hidden_feat')
         num_out_feat = int(mlp3_dims[0] / 2)
         num_heads = config.getint('gat4sn', 'num_heads')
         alpha = config.getfloat('gat4sn', 'alpha')

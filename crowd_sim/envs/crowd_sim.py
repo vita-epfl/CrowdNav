@@ -1006,8 +1006,9 @@ class CrowdSim(gym.Env):
                     for edge in edges:
                         edge.remove()
                     
-                    edges_to_humans = [plt.Line2D([robot_positions[frame_num][0], human_positions[frame_num][i][0]], [robot_positions[frame_num][1], human_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i] * max_edge_width, color = edge_color, alpha = alpha) for i in range (len(self.humans))]
-                    edges_to_obstacles = [plt.Line2D([robot_positions[frame_num][0], obstacle_positions[frame_num][i][0]], [robot_positions[frame_num][1], obstacle_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i + len(humans)] * max_edge_width, color = edge_color, alpha = alpha) for i in range (len(self.obs))]
+                    alpha = (self.attention_weights[frame_num] - np.min(self.attention_weights[frame_num])) / (np.max(self.attention_weights[frame_num]) - np.min(self.attention_weights[frame_num]))
+                    edges_to_humans = [plt.Line2D([robot_positions[frame_num][0], human_positions[frame_num][i][0]], [robot_positions[frame_num][1], human_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i] * max_edge_width, color = edge_color, alpha = alpha[i]) for i in range (len(self.humans))]
+                    edges_to_obstacles = [plt.Line2D([robot_positions[frame_num][0], obstacle_positions[frame_num][i][0]], [robot_positions[frame_num][1], obstacle_positions[frame_num][i][1]], linestyle = '--', linewidth = self.attention_weights[frame_num][i + len(humans)] * max_edge_width, color = edge_color, alpha = alpha[i + len(humans)]) for i in range (len(self.obs))]
                     edges = edges_to_humans + edges_to_obstacles
                     
                     for i, edge in enumerate(edges):
