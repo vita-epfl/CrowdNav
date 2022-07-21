@@ -1060,9 +1060,12 @@ class CrowdSim(gym.Env):
 
 
             if output_file is not None:
-                ffmpeg_writer = animation.writers['ffmpeg']
-                writer = ffmpeg_writer(fps=8, metadata=dict(artist='Me'), bitrate=1800)
-                anim.save(output_file, writer=writer)
+                # ffmpeg_writer = animation.writers['ffmpeg']
+                # writer = ffmpeg_writer(fps=8, metadata=dict(artist='Me'), bitrate=1800)
+                # anim.save(output_file, writer=writer)
+                writergif = animation.PillowWriter(fps = 8)
+                anim.save(output_file, writer=writergif)
+                plt.show()
             else:
                 plt.show()
         else:

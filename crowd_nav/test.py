@@ -18,6 +18,8 @@ def main():
     if args.model_dir is not None:
         env_config_file = os.path.join(args.model_dir, os.path.basename(args.env_config))
         policy_config_file = os.path.join(args.model_dir, os.path.basename(args.policy_config))
+        if args.video_file is not None:
+            video_file = os.path.join(args.model_dir, os.path.basename(args.video_file))
         if args.il:
             model_weights = os.path.join(args.model_dir, 'il_model.pth')
         else:
@@ -84,9 +86,9 @@ def main():
             logging.debug('Speed: %.2f', np.linalg.norm(current_pos - last_pos) / robot.time_step)
             last_pos = current_pos
         if args.traj:
-            env.render('traj', args.video_file)
+            env.render('traj', video_file)
         else:
-            env.render('video', args.video_file)
+            env.render('video', video_file)
 
         logging.info('It takes %.2f seconds to finish. Final status is %s', env.global_time, info)
         if robot.visible and info == 'reach goal':
