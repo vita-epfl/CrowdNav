@@ -14,7 +14,7 @@ from crowd_nav.args import Parser
 def main():
     parser = Parser(mode='test')
     args = parser.parse()
-
+    video_file = None
     if args.model_dir is not None:
         env_config_file = os.path.join(args.model_dir, os.path.basename(args.env_config))
         policy_config_file = os.path.join(args.model_dir, os.path.basename(args.policy_config))
