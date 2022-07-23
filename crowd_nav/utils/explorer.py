@@ -2,7 +2,7 @@ import logging
 import copy
 import torch
 from crowd_sim.envs.utils.info import *
-
+from tqdm import tqdm
 
 class Explorer(object):
     def __init__(self, env, robot, device, memory=None, gamma=None, target_policy=None):
@@ -32,7 +32,8 @@ class Explorer(object):
         cumulative_rewards = []
         collision_cases = []
         timeout_cases = []
-        for i in range(k):
+        # for i in range(k):
+        for i in tqdm(range(k)):
             ob = self.env.reset(phase)
             done = False
             states = []
@@ -82,7 +83,7 @@ class Explorer(object):
         avg_nav_time = sum(success_times) / len(success_times) if success_times else self.env.time_limit
 
         extra_info = '' if episode is None else 'in episode {} '.format(episode)
-        logging.info('{:<5} {}has success rate: {:.2f}, collision rate: {:.2f}, nav time: {:.2f}, total reward: {:.4f}'.
+        logging.info('{:<5} {}has success rate: {:.3f}, collision rate: {:.3f}, nav time: {:.3f}, total reward: {:.4f}'.
                      format(phase.upper(), extra_info, success_rate, collision_rate, avg_nav_time,
                             average(cumulative_rewards)))
         if phase in ['val', 'test']:
