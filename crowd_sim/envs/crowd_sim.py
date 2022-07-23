@@ -637,8 +637,23 @@ class CrowdSim(gym.Env):
         ## check if the robot run out of the boundary
         robot_x, robot_y = self.robot.get_position()
         out = False
-        if np.abs(end_position[0]) + self.robot.radius > self.boundary / 2 or np.abs(end_position[1]) + self.robot.radius > self.boundary / 2:
+
+        closest_dist_to_bd_x = self.boundary / 2 - (np.abs(end_position[0]) + self.robot.radius)
+        closest_dist_to_bd_y = self.boundary / 2 - (np.abs(end_position[1]) + self.robot.radius)
+
+        if closest_dist_to_bd_x < 0:
             out = True
+        else:
+            if closest_dist_to_bd_x < dmin:
+                dmin = closest_dist_to_bd_x
+        if closest_dist_to_bd_y < 0:
+            out = True
+        else:
+            if closest_dist_to_bd_y < dmin:
+                dmin = closest_dist_to_bd_y
+
+        # if np.abs(end_position[0]) + self.robot.radius > self.boundary / 2 or np.abs(end_position[1]) + self.robot.radius > self.boundary / 2:
+        #     out = True
 
         if self.global_time >= self.time_limit - 1:
             reward = 0
