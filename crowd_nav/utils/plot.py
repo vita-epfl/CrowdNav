@@ -17,7 +17,8 @@ def main():
     #models = ['LSTM-RL', 'SARL', 'OM-SARL']
     # models = ['Continuing', 'Slowing', 'Expanding','Expanding & Moving']
     # models = ['GAT4SN', 'SARL']
-    models = ['SARL', 'GAT4SN with 1 att. heads', 'GAT4SN with 2 att. heads', 'GAT4SN with 3 att. heads', 'GAT4SN with 4 att. heads']
+    # models = ['SARL', 'GAT4SN with 1 att. heads', 'GAT4SN with 2 att. heads', 'GAT4SN with 3 att. heads', 'GAT4SN with 4 att. heads']
+    models = ['SARL (Baseline)', 'GAT4SN (Ours)']
     max_episodes = 10000
 
     ax1 = ax2 = ax3 = ax4 = None
