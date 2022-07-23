@@ -32,7 +32,7 @@ class Parser:
             self.parser.add_argument('--plot_cr', default=False, action='store_true')
             self.parser.add_argument('--plot_time', default=False, action='store_true')
             self.parser.add_argument('--plot_reward', default=True, action='store_true')
-            self.parser.add_argument('--plot_train', default=True, action='store_true')
+            self.parser.add_argument('--plot_train', default=False, action='store_true')
             self.parser.add_argument('--plot_val', default=False, action='store_true')
             self.parser.add_argument('--window_size', type=int, default=200)
 
