@@ -81,11 +81,11 @@ def main():
     policy.set_env(env)
     robot.print_info()
 
-    n_humans = [5, 10, 15, 20]
-    n_obstacles = [5, 10, 15, 20]
+    n_humans = [0, 5, 10, 15]
+    n_obstacles = [0, 5, 10, 15]
 
-    n_fixed_humans = 10
-    n_fixed_obstacles = 10
+    n_fixed_humans = 5
+    n_fixed_obstacles = 5
 
     logging.info("General Evaluation: (Fixed #obstacles)")
     ## Start with fixed number of obstacles
@@ -98,7 +98,7 @@ def main():
         explorer.run_k_episodes(env.case_size[args.phase], args.phase, print_failure=True)
 
     logging.info("General Evaluation: (Fixed #humans)")
-    for i, n in enumerate(n_fixed_obstacles):
+    for i, n in enumerate(n_obstacles):
         env.human_num = n_fixed_humans
         env.static_obstacle_num = n
         logging.info("(#humans: {}, #obstacles: {})"
