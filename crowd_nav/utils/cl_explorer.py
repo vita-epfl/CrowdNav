@@ -190,7 +190,7 @@ class Explorer(object):
             self.memory.push((state, value))
 
     def increase_cl_level(self):
-        self.env.increase_cl_level()
+        return self.env.increase_cl_level()
 
 
 def average(input_list):

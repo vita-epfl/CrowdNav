@@ -168,6 +168,7 @@ class CrowdSim(gym.Env):
             print("Success: Obstacle radius increased successfully.")
         else:
             print("Fail: Max obstacle radius is reached. Setting max_radius to max radius given in curriculum learning config.")
+            return success
 
     def generate_random_obstacles(self, obs_num,phase):
         width = self.square_width

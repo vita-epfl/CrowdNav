@@ -201,11 +201,11 @@ def main():
                 torch.save(model.state_dict(), rl_weight_file)
 
         if level_up:
-            last_level_up = episode
-            current_level += 1
-            level_starts[current_level] = last_level_up
-            logging.info('Level %d starts at episode: %d Epsilon value: %f', current_level, last_level_up,epsilon)
-            explorer.increase_cl_level()
+            if explorer.increase_cl_level():
+                last_level_up = episode
+                current_level += 1
+                level_starts[current_level] = last_level_up
+                logging.info('Level %d starts at episode: %d Epsilon value: %f', current_level, last_level_up,epsilon)
 
     # final test
     explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
