@@ -1,6 +1,7 @@
 import logging
 import copy
 import torch
+from tqdm import tqdm
 
 from numpy import sum
 
@@ -76,7 +77,7 @@ class Explorer(object):
         cumulative_rewards = []
         collision_cases = []
         timeout_cases = []
-        for i in range(k):
+        for i in tqdm(range(k)):
             ob = self.env.reset(phase)
             done = False
             states = []

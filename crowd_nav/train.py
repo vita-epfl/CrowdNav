@@ -118,7 +118,7 @@ def main():
         il_policy.safety_space = safety_space
         robot.set_policy(il_policy)
         if args.debug:
-            explorer.run_k_episodes(1, 'train', update_memory=True, imitation_learning=True)
+            explorer.run_k_episodes(10, 'train', update_memory=True, imitation_learning=True)
         else:
             explorer.run_k_episodes(il_episodes, 'train', update_memory=True, imitation_learning=True)
         trainer.optimize_epoch(il_epochs)

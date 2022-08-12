@@ -107,7 +107,7 @@ class CrowdSim(gym.Env):
         logging.info('Training simulation: {}, test simulation: {}'.format(self.train_val_sim, self.test_sim))
         logging.info('Square width: {}, circle width: {}'.format(self.square_width, self.circle_radius))
         logging.info("Number of static obstacles: {}".format(self.static_obstacle_num))
-        logging.info("Static obstacles diameter range: {} - {}".format(2 * self.obstacle_min_radius, 2 * self.obstacle_max_radius))
+        # logging.info("Static obstacles diameter range: {} - {}".format(2 * self.obstacle_min_radius, 2 * self.obstacle_max_radius))
 
         #Fov Config
         self.robot_fov = np.pi * config.getfloat('robot' , 'FOV')
@@ -156,6 +156,15 @@ class CrowdSim(gym.Env):
             return False
         else:
             self.obstacle_max_radius = r_max
+            return True
+
+    def set_min_obst_r(self,r_min):
+        self.obstacle_min_radius = r_min
+        if r_min < self.cl_radius_min:
+            self.obstacle_min_radius = self.cl_radius_min
+            return False
+        else:
+            self.obstacle_min_radius = r_min
             return True
 
     def increase_cl_level(self):
@@ -213,7 +222,7 @@ class CrowdSim(gym.Env):
                 collide = False
                 for agent in [self.robot] + self.obs:
                     if norm((px - agent.px, py - agent.py)) < r + agent.radius + self.discomfort_dist + self.min_obst_offset or norm((px - self.robot_gx, py - self.robot_gy)) < r + self.discomfort_dist:
-                        collide = True
+                        collide = True # if environment is too small, increase boundary and square_width in env.config
                         break
                 if not collide:
                     break
