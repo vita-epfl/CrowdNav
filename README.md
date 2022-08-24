@@ -1,6 +1,6 @@
 # CrowdNav
 ## Abstract
-We envision a future with safe, interactive robots which can co-exist with people. Therefore, we choose the topic "Social Navigation". Some previous works have been done by Chen et. al. [[1]](https://arxiv.org/pdf/1809.08835.pdf) , including the benchmark environment and their method SARL. Our works focus mostly on making the environment more realistic and enabling the agent to perform navigation in such a complicated environment. 
+We envision a future with safe, interactive robots which can co-exist with people. For this reason we chose the topic "Social Navigation". Social navigation is the type of navigation, during which the agent aims to avoid conflicts with pedestrians in the environment while navigating towards its goal. SARL, the state of the art method proposed by Chen et. al. [[1]](https://arxiv.org/pdf/1809.08835.pdf), explores this problem in a simple environment without any obstacles. In our work, we investigate this problem further under more challenging conditions, explore the challenges, and share our insights in overcoming them.
 
 
 ## Graph Attention Network for Social Navigation (GAT4SN)
