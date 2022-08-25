@@ -1039,12 +1039,10 @@ class CrowdSim(gym.Env):
                 # when any key is pressed draw the action value plot
                 fig, axis = plt.subplots()
                 speeds = [0] + self.robot.policy.speeds
-                # rotations = self.robot.policy.rotations + [np.pi * 2]
                 rotations = np.append(self.robot.policy.rotations, np.pi * 2)
 
                 angle_offset = (rotations[1] - rotations[0]) / 2
                 rotations = rotations - angle_offset
-                # print(self.attention_weights[global_step])
                 r, th = np.meshgrid(speeds, rotations)
                 z = np.array(self.action_values[global_step % len(self.states)][1:])
                 z = (z - np.min(z)) / (np.max(z) - np.min(z))
