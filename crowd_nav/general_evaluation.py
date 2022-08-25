@@ -1,3 +1,4 @@
+# Script to serialize testing
 import logging
 import configparser
 import os
