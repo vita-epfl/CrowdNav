@@ -391,12 +391,6 @@ class CrowdSim(gym.Env):
             ## The random seed should also be added here, otherwise the
             ## generated environment would be totally different
             np.random.seed(counter_offset[phase] + self.case_counter[phase])
-            # self.robot_gx, self.robot_gy = self.generate_agent_goal(goal_range = self.square_width / 2)
-            # self.robot.set(0, -self.circle_radius, 0, self.circle_radius, 0, 0, np.pi / 2)
-            # self.robot_gx, self.robot_gy = self.generate_agent_goal(goal_range = self.square_width / 2)
-            # self.robot_px, self.robot_py = self.generate_agent_goal(perturb = True, perturb_range = (self.boundary - self.square_width) / 2, goal_range = self.square_width / 2)
-            # self.robot.set(0, -self.square_width / 2, 0, self.square_width / 2, 0, 0, np.pi / 2)
-            # self.robot_gx, self.robot_gy = self.robot.get_goal_position()
             while True:
                 self.robot_gx, self.robot_gy = self.generate_agent_goal(goal_range = self.square_width / 2)
                 self.robot_px, self.robot_py = self.generate_agent_goal(perturb = True, perturb_range = (self.boundary - self.square_width) / 2, goal_range = self.square_width / 2)
@@ -405,7 +399,7 @@ class CrowdSim(gym.Env):
                     break
 
             self.robot.set(self.robot_px, self.robot_py, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
-            # self.robot.set(self.robot_px, self.robot_py, self.robot_gx, self.robot_gy, 0, 0, np.pi / 2)
+
             if self.case_counter[phase] >= 0:
                 np.random.seed(counter_offset[phase] + self.case_counter[phase])
                 ## Geneate static obstacles first
