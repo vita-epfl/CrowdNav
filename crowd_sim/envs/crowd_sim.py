@@ -678,11 +678,6 @@ class CrowdSim(gym.Env):
             done = False
             info = Danger(dmin)
         else:
-            # delta_d = (-(norm(end_position - np.array(self.robot.get_goal_position()))) + (norm(np.array([robot_x, robot_y]) - np.array(self.robot.get_goal_position()))))
-            # if delta_d > 0:
-            #     reward = delta_d / self.robot.v_pref * self.time_step
-            # else:
-            #     reward = 0
             reward = 0
             done = False
             info = Nothing()
