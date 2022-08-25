@@ -32,29 +32,22 @@ class GraphAttentionLayerForSingleNode(nn.Module):
         O = out_dim
         '''
         B, N, D = h.shape
-        # print("B = {}".format(B))
-        # print("N = {}".format(N))
-        # print("D = {}".format(D))
         Wh = torch.mm(h.view(B * N, -1), self.W) ## Wh.shape = (B, N, O)
         Wh = Wh.view(B, N, -1)
-        assert Wh.shape == (B, N, self.out_dim)
+        # assert Wh.shape == (B, N, self.out_dim)
         robot_state = Wh[:, 0, :]
-        assert robot_state.shape == (B, self.out_dim)
+        # assert robot_state.shape == (B, self.out_dim)
         other_agent_states = Wh[:, 1:, :]
-        assert other_agent_states.shape == (B, N - 1, self.out_dim)
+        # assert other_agent_states.shape == (B, N - 1, self.out_dim)
         cat1 = torch.cat((robot_state.view(B, 1, -1).expand(B, N - 1, -1), other_agent_states), dim = -1)
-        assert cat1.shape == (B, N - 1, 2 * self.out_dim)
+        # assert cat1.shape == (B, N - 1, 2 * self.out_dim)
         attention = torch.mm(cat1.view(B * (N - 1), -1), self.a).squeeze()
         attention = attention.view(B, N - 1)
-        assert attention.shape == (B, N - 1)
+        # assert attention.shape == (B, N - 1)
         attention = F.softmax(attention, dim = 1)
         self.attention_weights = attention.squeeze().data.cpu().numpy()
-        # print("attention's shape = {}".format(attention.shape))
-        # print("other_agent_states's shape = {}".format(other_agent_states.shape))
         h_prime = attention.unsqueeze(-1) * other_agent_states
-        # h_prime = torch.matmul(attention, other_agent_states)
-        # print("h_prime's shape = {}".format(h_prime.shape))
-        assert h_prime.shape == (B, N - 1, self.out_dim)
+        # assert h_prime.shape == (B, N - 1, self.out_dim)
 
         h_prime_cat = torch.cat((robot_state.view(B, 1, -1), h_prime), dim = 1)
         if self.concat:
@@ -100,11 +93,11 @@ class ValueNetwork(nn.Module):
         B, N, D = state.shape
 
         robot_state = state[:, 0, :self.self_state_dim]
-        assert robot_state.shape == (B, self.self_state_dim)
+        # assert robot_state.shape == (B, self.self_state_dim)
         robot_state_embed = self.mlp1(robot_state)
 
         other_agent_states = state[:, :, self.self_state_dim:]
-        assert other_agent_states.shape == (B, N, self.other_agent_states_dim)
+        # assert other_agent_states.shape == (B, N, self.other_agent_states_dim)
         other_agent_states_embed = self.mlp2(other_agent_states.view(-1, self.other_agent_states_dim))
         other_agent_states_embed = other_agent_states_embed.view(B, N, -1)
 
