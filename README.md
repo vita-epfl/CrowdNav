@@ -1,29 +1,10 @@
 # CrowdNav
-
-**[`Website`](https://www.epfl.ch/labs/vita/research/planning/crowd-robot-interaction/) | [`Paper`](https://arxiv.org/abs/1809.08835) | [`Video`](https://youtu.be/0sNVtQ9eqjA)**
-
-This repository contains the codes for our ICRA 2019 paper. For more details, please refer to the paper
-[Crowd-Robot Interaction: Crowd-aware Robot Navigation with Attention-based Deep Reinforcement Learning](https://arxiv.org/abs/1809.08835).
-
-Please find our more recent work in the following links 
-- [Relational Graph Learning for Crowd Navigation, IROS, 2020](https://github.com/ChanganVR/RelationalGraphLearning).
-- [Social NCE: Contrastive Learning of Socially-aware Motion Representations, ICCV, 2021](https://github.com/vita-epfl/social-nce).
-
 ## Abstract
-Mobility in an effective and socially-compliant manner is an essential yet challenging task for robots operating in crowded spaces.
-Recent works have shown the power of deep reinforcement learning techniques to learn socially cooperative policies.
-However, their cooperation ability deteriorates as the crowd grows since they typically relax the problem as a one-way Human-Robot interaction problem.
-In this work, we want to go beyond first-order Human-Robot interaction and more explicitly model Crowd-Robot Interaction (CRI).
-We propose to (i) rethink pairwise interactions with a self-attention mechanism, and
-(ii) jointly model Human-Robot as well as Human-Human interactions in the deep reinforcement learning framework.
-Our model captures the Human-Human interactions occurring in dense crowds that indirectly affects the robot's anticipation capability.
-Our proposed attentive pooling mechanism learns the collective importance of neighboring humans with respect to their future states.
-Various experiments demonstrate that our model can anticipate human dynamics and navigate in crowds with time efficiency,
-outperforming state-of-the-art methods.
+We envision a future with safe, interactive robots which can co-exist with people. For this reason we chose the topic "Social Navigation". Social navigation is the type of navigation, during which the agent aims to avoid conflicts with pedestrians in the environment while navigating towards its goal. SARL, the state of the art method proposed by Chen et. al. [[1]](https://arxiv.org/pdf/1809.08835.pdf), explores this problem in a simple environment without any obstacles. In our work, we investigate this problem further under more challenging conditions, explore the challenges, and share our insights in overcoming them.
 
 
-## Method Overview
-<img src="https://i.imgur.com/YOPHXD1.png" width="1000" />
+## Graph Attention Network for Social Navigation (GAT4SN)
+![image info](./pictures/deep_v_network.png)
 
 ## Setup
 1. Install [Python-RVO2](https://github.com/sybrenstuvel/Python-RVO2) library
@@ -41,50 +22,31 @@ inside the crowd_nav/ folder.
 
 1. Train a policy.
 ```
-python train.py --policy sarl
+python train.py --policy gat4sn
 ```
 2. Test policies with 500 test cases.
 ```
-python test.py --policy orca --phase test
-python test.py --policy sarl --model_dir data/output --phase test
+python test.py --policy gat4sn --model_dir data/output --phase test
 ```
 3. Run policy for one episode and visualize the result.
 ```
-python test.py --policy orca --phase test --visualize --test_case 0
-python test.py --policy sarl --model_dir data/output --phase test --visualize --test_case 0
+python test.py --policy gat4sn --model_dir data/output --phase test --visualize --test_case 0
 ```
-4. Visualize a test case.
-```
-python test.py --policy sarl --model_dir data/output --phase test --visualize --test_case 0
-```
-5. Plot training curve.
+4. Plot training curve.
 ```
 python utils/plot.py data/output/output.log
 ```
 
 
 ## Simulation Videos
-CADRL             | LSTM-RL
+GAT4SN             | SARL
 :-------------------------:|:-------------------------:
-<img src="https://i.imgur.com/vrWsxPM.gif" width="400" />|<img src="https://i.imgur.com/6gjT0nG.gif" width="400" />
-SARL             |  OM-SARL
-<img src="https://i.imgur.com/rUtAGVP.gif" width="400" />|<img src="https://i.imgur.com/UXhcvZL.gif" width="400" />
+![image info](./pictures/gat4sn_test_case_40_H20.gif)|![image info](./pictures/sarl_test_case_40_H20.gif)
+![image info](./pictures/test_183_gat4sn.gif)|![image info](./pictures/test_183_sarl.gif)
+![image info](./pictures/test_178_gat4sn.gif)|![image info](./pictures/test_178_sarl.gif)
 
-
-## Learning Curve
-Learning curve comparison between different methods in an invisible setting.
-
-<img src="https://i.imgur.com/l5UC3qa.png" width="600" />
-
-## Citation
-If you find the codes or paper useful for your research, please cite our paper:
-```bibtex
-@inproceedings{chen2019crowd,
-  title={Crowd-robot interaction: Crowd-aware robot navigation with attention-based deep reinforcement learning},
-  author={Chen, Changan and Liu, Yuejiang and Kreiss, Sven and Alahi, Alexandre},
-  booktitle={2019 International Conference on Robotics and Automation (ICRA)},
-  pages={6015--6022},
-  year={2019},
-  organization={IEEE}
-}
-```
+## More Complicated Environment?
+Only Humans             | With Static Obstacles
+:-------------------------:|:-------------------------:
+![image info](./pictures/H30O0_0.gif)|![image info](./pictures/H10O10_1.gif)
+![image info](./pictures/gat4sn_test_case_40_H20.gif)|![image info](./pictures/H10O10_0.gif)

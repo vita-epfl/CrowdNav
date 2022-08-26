@@ -169,7 +169,7 @@ def main():
                 torch.save(model.state_dict(), rl_weight_file)
 
     # final test
-    explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode)
+    explorer.run_k_episodes(env.case_size['test'], 'test', episode=episode, print_failure = True)
 
 
 if __name__ == '__main__':
